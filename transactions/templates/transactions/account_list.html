@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block content %}
+{% include 'transactions/includes/transactions_quick_actions.html' %}
+<div class="container my-5">
+  <h3>Customer Accounts Setup</h3>
+  <a href="{% url 'transactions:account_create' %}" class="btn btn-success mb-3">Add New Account</a>
+  <table class="table table-bordered table-striped">
+    <thead>
+      <tr>
+        <th>ID</th>
+        <th>Account Code</th>
+        <th>Account Name</th>
+        <th>Initials</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+    {% for acc in accounts %}
+      <tr>
+        <td>{{ acc.id }}</td>
+        <td>{{ acc.account_code }}</td>
+        <td>{{ acc.account_name }}</td>
+        <td>{{ acc.acc_initials }}</td>
+        <td>
+          <a href="{% url 'transactions:account_update' acc.id %}" class="btn btn-primary btn-sm">Edit</a>
+          <a href="{% url 'transactions:account_delete' acc.id %}" class="btn btn-danger btn-sm">Delete</a>
+        </td>
+      </tr>
+    {% empty %}
+      <tr><td colspan="5" class="text-center">No accounts found.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

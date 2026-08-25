@@ -1,0 +1,50 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container mx-auto mt-12">
+    <h2 class="text-xl font-bold mb-4">Individual Expenses Report</h2>
+
+    <!-- Filter Form -->
+    <form method="GET" class="mb-4 flex flex-wrap gap-4">
+        {{ form.as_p }}
+        <button type="submit" class="bg-blue-500 text-white px-4 py-2 rounded">Filter</button>
+    </form>
+
+    {% if expenses %}
+    <!-- Generate PDF Button -->
+    <form method="GET" action="{% url 'accounting:generate_individual_expense_report_pdf' %}" target="_blank">
+        <input type="hidden" name="account" value="{{ form.account.value }}">
+        <input type="hidden" name="start_date" value="{{ form.start_date.value }}">
+        <input type="hidden" name="end_date" value="{{ form.end_date.value }}">
+        <button type="submit" class="bg-green-500 text-white px-4 py-2 rounded">Download PDF</button>
+    </form>
+
+    <!-- Expense Table -->
+    <div class="overflow-x-auto mt-4">
+        <table class="table-auto w-full border-collapse border border-gray-400">
+            <thead>
+                <tr class="bg-gray-200">
+                    <th class="border border-gray-400 px-4 py-2">Date</th>
+                    <th class="border border-gray-400 px-4 py-2">Description</th>
+                    <th class="border border-gray-400 px-4 py-2">Amount</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for expense in expenses %}
+                <tr>
+                    <td class="border border-gray-400 px-4 py-2">{{ expense.expense_date }}</td>
+                    <td class="border border-gray-400 px-4 py-2">{{ expense.description }}</td>
+                    <td class="border border-gray-400 px-4 py-2">{{ expense.amount }}</td>
+                </tr>
+                {% endfor %}
+                <tr class="bg-gray-100">
+                    <td colspan="2" class="border border-gray-400 px-4 py-2 font-bold">Total Expenses</td>
+                    <td class="border border-gray-400 px-4 py-2 font-bold">{{ total_expense }}</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <p class="text-gray-500 mt-4">No expenses found for the selected criteria.</p>
+    {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container my-5">
+  {% include 'transactions/includes/transactions_quick_actions.html' %}
+  <h4>Edit Mpesa Notification #{{ notification.id }}</h4>
+  <form method="post">
+    {% csrf_token %}
+    <div class="mb-3">
+      <label class="form-label">Transaction ID</label>
+      <input type="text" class="form-control" value="{{ notification.trans_id }}" disabled>
+    </div>
+        <div class="mb-3">
+      <label class="form-label">Name</label>
+      <input type="text" class="form-control" value="{{ notification.first_name}}" disabled>
+    </div>
+        <div class="mb-3">
+      <label class="form-label">Amount</label>
+      <input type="text" class="form-control" value="{{ notification.trans_amount }}" disabled>
+    </div>
+    <div class="mb-3">
+      <label class="form-label">Bill Reference Number</label>
+      <input type="text" name="BillRefNumber" class="form-control" value="{{ notification.bill_ref_number }}">
+    </div>
+    <button type="submit" class="btn btn-success">Save</button>
+    <a href="{% url 'transactions:unposted_notifications' %}" class="btn btn-secondary">Back</a>
+  </form>
+</div>
+{% endblock %}

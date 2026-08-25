@@ -1,0 +1,184 @@
+{% extends 'base.html' %}
+
+{% block title %}Loan Application — NODi Lite{% endblock %}
+
+{% block content %}
+<div class="page-shell">
+
+    {# ── Page Head ────────────────────────────────────────────────────── #}
+    <div class="page-head">
+        <div>
+            <h2><i class="bi bi-cash-coin me-2"></i>Loan Application</h2>
+            <p class="page-sub">Submit a new loan application for a member</p>
+        </div>
+        <a href="{% url 'loans:list' %}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left me-1"></i> Back to Loans
+        </a>
+    </div>
+
+    {# ── Messages ─────────────────────────────────────────────────────── #}
+    {% if messages %}
+    <div class="mb-3">
+        {% for message in messages %}
+        <div class="alert alert-{{ message.tags|default:'info' }} alert-dismissible fade show" role="alert">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <div class="card">
+        <div class="card-body p-4">
+            <form method="post" class="d365-form" id="loan-form">
+                {% csrf_token %}
+
+                {# ── Member & Product ─────────────────────────────────── #}
+                <h5 class="mb-3">
+                    <i class="bi bi-person me-1"></i> Member &amp; Product
+                </h5>
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <div class="field-group">
+                            <label for="id_member_number">Member Number *</label>
+                            <input type="text" name="member_number" id="id_member_number"
+                                   placeholder="Enter member number or search..."
+                                   value="{{ request.POST.member_number|default:'' }}" required>
+                            <span class="form-text">Enter the member's registration number</span>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="field-group">
+                            <label for="id_product">Loan Product *</label>
+                            <select name="product" id="id_product" required>
+                                <option value="">-- Select Product --</option>
+                                {% for product in products %}
+                                <option value="{{ product.pk }}"
+                                    {% if request.POST.product == product.pk|slugify %}selected{% endif %}>
+                                    {{ product.name }} ({{ product.interest_rate }}%)
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <hr class="my-4">
+
+                {# ── Loan Details ─────────────────────────────────────── #}
+                <h5 class="mb-3">
+                    <i class="bi bi-calculator me-1"></i> Loan Details
+                </h5>
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        <div class="field-group">
+                            <label for="id_amount">Loan Amount (KES) *</label>
+                            <input type="number" name="amount" id="id_amount" step="0.01" min="1"
+                                   value="{{ request.POST.amount|default:'' }}" required>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="field-group">
+                            <label for="id_interest_rate">Interest Rate (%) *</label>
+                            <input type="number" name="interest_rate" id="id_interest_rate"
+                                   step="0.01" min="0"
+                                   value="{{ request.POST.interest_rate|default:'' }}" required>
+                            <span class="form-text">Auto-filled from product if applicable</span>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="field-group">
+                            <label for="id_duration">Duration (Months) *</label>
+                            <input type="number" name="duration" id="id_duration" min="1"
+                                   value="{{ request.POST.duration|default:'' }}" required>
+                        </div>
+                    </div>
+                    <div class="col-12">
+                        <div class="field-group">
+                            <label for="id_purpose">Purpose</label>
+                            <textarea name="purpose" id="id_purpose" rows="3"
+                                      placeholder="Describe the purpose of this loan...">{{ request.POST.purpose|default:'' }}</textarea>
+                        </div>
+                    </div>
+                </div>
+
+                <hr class="my-4">
+
+                {# ── Guarantors ───────────────────────────────────────── #}
+                <h5 class="mb-3">
+                    <i class="bi bi-people me-1"></i> Guarantors
+                </h5>
+                <div id="guarantors-container">
+                    <div class="row g-3 mb-2 guarantor-row">
+                        <div class="col-md-5">
+                            <div class="field-group">
+                                <label>Guarantor Member No</label>
+                                <input type="text" name="guarantor_member_number[]"
+                                       placeholder="Member number">
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="field-group">
+                                <label>Guarantee Amount (KES)</label>
+                                <input type="number" name="guarantor_amount[]"
+                                       step="0.01" placeholder="Amount">
+                            </div>
+                        </div>
+                        <div class="col-md-3 d-flex align-items-end pb-2">
+                            <button type="button" class="btn btn-sm btn-outline-danger remove-guarantor"
+                                    onclick="removeGuarantor(this)" style="display:none;">
+                                <i class="bi bi-trash me-1"></i> Remove
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <button type="button" class="btn btn-sm btn-outline-secondary mb-3" onclick="addGuarantor()">
+                    <i class="bi bi-plus me-1"></i> Add Guarantor
+                </button>
+
+                <hr class="my-4">
+
+                {# ── Submit ───────────────────────────────────────────── #}
+                <div class="d-flex gap-2">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-send me-1"></i> Submit Application
+                    </button>
+                    <a href="{% url 'loans:list' %}" class="btn btn-outline-secondary">Cancel</a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function addGuarantor() {
+    var container = document.getElementById('guarantors-container');
+    var row = container.querySelector('.guarantor-row').cloneNode(true);
+    row.querySelectorAll('input').forEach(function(i) { i.value = ''; });
+    // Show the remove button on cloned rows
+    var removeBtn = row.querySelector('.remove-guarantor');
+    if (removeBtn) removeBtn.style.display = '';
+    container.appendChild(row);
+}
+
+function removeGuarantor(btn) {
+    var row = btn.closest('.guarantor-row');
+    if (row) row.remove();
+}
+
+// Auto-fill interest rate when product changes
+document.getElementById('id_product').addEventListener('change', function() {
+    var selected = this.options[this.selectedIndex];
+    if (selected && selected.value) {
+        var text = selected.textContent;
+        var match = text.match(/\((\d+(?:\.\d+)?)%\)/);
+        if (match) {
+            document.getElementById('id_interest_rate').value = match[1];
+        }
+    }
+});
+</script>
+{% endblock %}

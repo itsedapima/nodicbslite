@@ -1,0 +1,55 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container mx-auto mt-20">
+    <h2 class="text-center mb-4">All Incomes Report</h2>
+
+    <!-- Filter Form -->
+    <form method="GET" class="row g-3 align-items-center mb-3">
+        <div class="col-md-4">
+            <label for="start_date" class="form-label">Start Date:</label>
+            <input type="date" name="start_date" id="start_date" class="form-control" value="{{ start_date }}">
+        </div>
+        <div class="col-md-4">
+            <label for="end_date" class="form-label">End Date:</label>
+            <input type="date" name="end_date" id="end_date" class="form-control" value="{{ end_date }}">
+        </div>
+        <div class="col-md-4 d-flex align-items-end">
+            <p> <button type="submit" name="filter" value="1" class="btn btn-primary me-2">Filter</button>
+          
+             <a href="?start_date={{ start_date |date:'Y-m-d' }}&end_date={{ end_date|date:'Y-m-d' }}&export=pdf" class="btn btn-danger">Download PDF</a>
+        
+           
+            <a href="?start_date={{ start_date |date:'Y-m-d' }}&end_date={{ end_date |date:'Y-m-d'}}&export=excel" class="btn btn-success">Download Excel</a>
+            </p>
+        </div>
+    </form>
+
+    <!-- Income Table -->
+    <div class="table-responsive">
+        <table class="table table-bordered table-striped">
+            <thead class="table-dark">
+                <tr>
+                    <th>Date</th>
+                    <th>Reference</th>
+                    <th>Account</th>
+                    
+                    <th>Amount (KES)</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for income in incomes %}
+                <tr>
+                    <td>{{ income.income_date|date:"Y-m-d" }}</td>
+                    <td>{{ income.income_reference}}</td>
+                    <td>{{ income.description }}</td>
+                    <td class="text-end">{{ income.amount|floatformat:2 }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Total Income -->
+    <h3 class="text-end mt-3">Total Income: <span class="text-success">KES {{ total_income|floatformat:2 }}</span></h3>
+</div>
+{% endblock %}

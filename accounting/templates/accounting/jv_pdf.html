@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>JV {{ voucher.voucher_no }}</title>
+<style>
+  @page {
+    size: A4;
+    margin: 1.5cm;
+  }
+  body {
+    font-family: Helvetica, Arial, sans-serif;
+    font-size: 11px;
+    color: #333;
+    line-height: 1.4;
+  }
+  h1 {
+    font-size: 18px;
+    margin: 0 0 4px 0;
+    color: #1a1a2e;
+  }
+  .subtitle {
+    font-size: 10px;
+    color: #888;
+    margin-bottom: 12px;
+  }
+  .header-table {
+    width: 100%;
+    margin-bottom: 16px;
+  }
+  .header-table td {
+    padding: 4px 8px;
+    vertical-align: top;
+  }
+  .header-table .label {
+    font-weight: bold;
+    color: #666;
+    width: 120px;
+    font-size: 10px;
+    text-transform: uppercase;
+  }
+  .header-table .value {
+    font-size: 11px;
+  }
+  .status-posted {
+    color: #198754;
+    font-weight: bold;
+  }
+  .status-draft {
+    color: #6c757d;
+    font-weight: bold;
+  }
+  .status-pending {
+    color: #ffc107;
+    font-weight: bold;
+  }
+  .status-approved {
+    color: #0d6efd;
+    font-weight: bold;
+  }
+  .lines-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 12px;
+  }
+  .lines-table th {
+    background-color: #f0f0f0;
+    border-bottom: 2px solid #999;
+    padding: 6px 8px;
+    text-align: left;
+    font-size: 10px;
+    text-transform: uppercase;
+    color: #555;
+  }
+  .lines-table td {
+    border-bottom: 1px solid #ddd;
+    padding: 5px 8px;
+    font-size: 11px;
+  }
+  .lines-table .text-end {
+    text-align: right;
+  }
+  .lines-table .mono {
+    font-family: "Courier New", Courier, monospace;
+  }
+  .lines-table tfoot td {
+    border-top: 2px solid #333;
+    border-bottom: none;
+    font-weight: bold;
+    padding-top: 6px;
+  }
+  .footer-info {
+    margin-top: 24px;
+    font-size: 9px;
+    color: #999;
+    border-top: 1px solid #ccc;
+    padding-top: 6px;
+  }
+  hr {
+    border: none;
+    border-top: 1px solid #ddd;
+    margin: 8px 0;
+  }
+</style>
+</head>
+<body>
+
+<h1>Journal Voucher</h1>
+<div class="subtitle">{{ voucher.voucher_no }}</div>
+
+<table class="header-table">
+  <tr>
+    <td class="label">Voucher #</td>
+    <td class="value">{{ voucher.voucher_no }}</td>
+    <td class="label">Date</td>
+    <td class="value">{{ voucher.voucher_date|date:"d M Y" }}</td>
+  </tr>
+  <tr>
+    <td class="label">Status</td>
+    <td class="value">
+      {% if voucher.status == 'posted' %}
+        <span class="status-posted">POSTED</span>
+      {% elif voucher.status == 'approved' %}
+        <span class="status-approved">APPROVED</span>
+      {% elif voucher.status == 'draft' %}
+        <span class="status-draft">DRAFT</span>
+      {% elif voucher.status == 'pending' %}
+        <span class="status-pending">PENDING</span>
+      {% else %}
+        {{ voucher.status|upper }}
+      {% endif %}
+    </td>
+    <td class="label">Total Amount</td>
+    <td class="value mono">{{ voucher.total_amount|floatformat:2 }}</td>
+  </tr>
+  <tr>
+    <td class="label">Description</td>
+    <td class="value" colspan="3">{{ voucher.description|default:"—" }}</td>
+  </tr>
+</table>
+
+<hr>
+
+<table class="lines-table">
+  <thead>
+    <tr>
+      <th style="width:30px">#</th>
+      <th>Account</th>
+      <th>Description</th>
+      <th class="text-end" style="width:100px">Debit</th>
+      <th class="text-end" style="width:100px">Credit</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for line in voucher.lines.all %}
+    <tr>
+      <td>{{ forloop.counter }}</td>
+      <td>
+        {% if line.sacco_account %}
+          {{ line.sacco_account.account_code }} - {{ line.sacco_account.account_name }}
+        {% else %}
+          —
+        {% endif %}
+      </td>
+      <td>{{ line.description|default:"—" }}</td>
+      <td class="text-end mono">
+        {% if line.debit_amount %}{{ line.debit_amount|floatformat:2 }}{% endif %}
+      </td>
+      <td class="text-end mono">
+        {% if line.credit_amount %}{{ line.credit_amount|floatformat:2 }}{% endif %}
+      </td>
+    </tr>
+    {% empty %}
+    <tr>
+      <td colspan="5" style="text-align:center; color:#999; padding:20px;">No lines recorded.</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+  <tfoot>
+    <tr>
+      <td colspan="3" class="text-end">TOTALS</td>
+      <td class="text-end mono">{{ voucher.total_amount|floatformat:2 }}</td>
+      <td class="text-end mono">{{ voucher.total_amount|floatformat:2 }}</td>
+    </tr>
+  </tfoot>
+</table>
+
+<div class="footer-info">
+  <table class="header-table">
+    <tr>
+      <td class="label">Created By</td>
+      <td class="value">{{ voucher.created_by.get_full_name|default:voucher.created_by.username }}</td>
+      <td class="label">Created At</td>
+      <td class="value">{{ voucher.created_at|date:"d M Y H:i" }}</td>
+    </tr>
+    {% if voucher.posted_at %}
+    <tr>
+      <td class="label">Posted At</td>
+      <td class="value">{{ voucher.posted_at|date:"d M Y H:i" }}</td>
+      <td></td><td></td>
+    </tr>
+    {% endif %}
+    {% if voucher.approved_by %}
+    <tr>
+      <td class="label">Approved By</td>
+      <td class="value">{{ voucher.approved_by.get_full_name|default:voucher.approved_by.username }}</td>
+      <td class="label">Approved At</td>
+      <td class="value">{{ voucher.approved_at|date:"d M Y H:i" }}</td>
+    </tr>
+    {% endif %}
+  </table>
+</div>
+
+</body>
+</html>

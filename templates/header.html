@@ -1,0 +1,164 @@
+{% comment %}
+  header.html — included by base.html.
+  The previous full-page wrappers were removed (they produced invalid nested
+  HTML when included). Bootstrap 4 link/script removed (conflicted with the
+  BS5 loaded in base.html). All custom CSS lives in static/css/app.css.
+
+  FIXED: Now uses ONLY request.user (the authenticated logged-in user)
+{% endcomment %}
+
+<!-- Header (D365 command bar) -->
+<header class="header">
+
+    <!-- Left spacer / brand area (kept empty to preserve original centered-middle layout) -->
+    <div class="header-left" aria-hidden="true"></div>
+
+    <!-- Center: company name + live clock -->
+    <div class="header-middle">
+        <a href="{% url 'dashboard:dashboard' %}" class="brand-name">
+            <i class="bi bi-grid-3x3-gap-fill me-1" aria-hidden="true"></i>
+         <strong>{{ brand_name }}</strong>
+
+        </a>
+        <span class="brand-divider" aria-hidden="true"></span>
+        <span id="current-time" class="header-clock" aria-label="Current time">--:--:--</span>
+    </div>
+
+    <!-- Right cluster: nav menu (lg+), user avatar, mobile hamburger -->
+    <div class="header-right">
+
+        <!-- More menu — horizontal on lg+ screens -->
+        <div class="more-menu-wrapper d-none d-lg-flex">
+            {% include 'more_menu.html' %}
+        </div>
+
+        <!-- User profile dropdown -->
+        {% if request.user.is_authenticated %}
+        <div class="user-menu-wrapper">
+            <button type="button" id="user-menu-button" class="user-avatar-btn"
+                    aria-expanded="false" aria-haspopup="true"
+                    title="Account menu for {{ request.user.get_full_name|default:request.user.username }}">
+                <span class="visually-hidden">Open user menu</span>
+                <p class="name">
+                {# Use request.user - the authenticated logged-in user #}
+                {% if request.user.first_name %}
+                    {{ request.user.first_name|first|upper }}
+                {% elif request.user.last_name %}
+                    {{ request.user.last_name|first|upper }}
+                {% else %}
+                    {{ request.user.username|first|upper|default:"?" }}
+                {% endif %}
+                </p>
+
+            </button>
+
+            <div id="user-menu" class="user-menu hidden" role="menu" aria-orientation="vertical" aria-labelledby="user-menu-button">
+                <div class="user-menu-header">
+                    <p class="label">Signed in as</p>
+                    <p class="name">
+                    {# Use request.user.get_full_name() - Django's built-in method #}
+                    {% with full_name=request.user.get_full_name %}
+                        {% if full_name %}
+                            {{ full_name }}
+                        {% else %}
+                            {{ request.user.username }}
+                        {% endif %}
+                    {% endwith %}
+                    </p>
+                </div>
+                <a href="{% url 'approvals:list' %}" class="user-menu-item" role="menuitem">
+                    <i class="bi bi-hourglass-split" aria-hidden="true"></i>
+                    Pending Approvals
+                </a>
+                <a href="{% url 'administration:chama_details' %}" class="user-menu-item" role="menuitem">
+                    <i class="bi bi-shield-lock" aria-hidden="true"></i>
+                    System Administration
+                </a>
+                <a href="{% url 'administration:user_profile' %}" class="user-menu-item" role="menuitem">
+                    <i class="bi bi-person-circle" aria-hidden="true"></i>
+                    Profile
+                </a>
+                <a href="{% url 'accounts:logout' %}" class="user-menu-item danger" role="menuitem">
+                    <i class="bi bi-box-arrow-right" aria-hidden="true"></i>
+                    Logout
+                </a>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Hamburger (mobile only) -->
+        <button id="hamburger-menu-more" class="hamburger-btn d-lg-none" aria-label="Open navigation menu">
+            <i class="bi bi-list" aria-hidden="true"></i>
+        </button>
+    </div>
+</header>
+
+<!-- Mobile More Menu drawer -->
+<div id="mobile-more-menu" aria-hidden="true">
+    <button id="close-more-menu" aria-label="Close navigation menu">
+        <i class="bi bi-x-lg" aria-hidden="true"></i>
+    </button>
+    {% include 'more_menu.html' %}
+</div>
+
+<script>
+    // Live clock
+    (function () {
+        function updateClock() {
+            const now = new Date();
+            const timeString = now.toLocaleTimeString('en-US', { hour12: false });
+            const timeElement = document.getElementById('current-time');
+            if (timeElement) timeElement.textContent = timeString;
+        }
+        updateClock();
+        setInterval(updateClock, 1000);
+    })();
+
+    // Mobile drawer + user dropdown (vanilla JS to avoid jQuery dependency for header)
+    document.addEventListener('DOMContentLoaded', function () {
+
+        // Mobile drawer
+        const hamburger   = document.getElementById('hamburger-menu-more');
+        const drawer      = document.getElementById('mobile-more-menu');
+        const closeDrawer = document.getElementById('close-more-menu');
+
+        function openDrawer()  { drawer.classList.add('open');    drawer.setAttribute('aria-hidden', 'false'); }
+        function shutDrawer()  { drawer.classList.remove('open'); drawer.setAttribute('aria-hidden', 'true'); }
+
+        if (hamburger) hamburger.addEventListener('click', function (e) { e.stopPropagation(); openDrawer(); });
+        if (closeDrawer) closeDrawer.addEventListener('click', shutDrawer);
+        document.addEventListener('click', function (e) {
+            if (!drawer || !drawer.classList.contains('open')) return;
+            if (!drawer.contains(e.target) && e.target !== hamburger && !hamburger.contains(e.target)) {
+                shutDrawer();
+            }
+        });
+
+        // User profile dropdown
+        const userMenuButton = document.getElementById('user-menu-button');
+        const userMenu       = document.getElementById('user-menu');
+
+        if (userMenuButton && userMenu) {
+            userMenuButton.addEventListener('click', function (event) {
+                event.stopPropagation();
+                const isOpen = !userMenu.classList.contains('hidden');
+                userMenu.classList.toggle('hidden');
+                userMenuButton.setAttribute('aria-expanded', String(!isOpen));
+            });
+            document.addEventListener('click', function (event) {
+                if (!userMenu.classList.contains('hidden') &&
+                    !userMenu.contains(event.target) &&
+                    !userMenuButton.contains(event.target)) {
+                    userMenu.classList.add('hidden');
+                    userMenuButton.setAttribute('aria-expanded', 'false');
+                }
+            });
+            document.addEventListener('keydown', function (event) {
+                if (event.key === 'Escape' && !userMenu.classList.contains('hidden')) {
+                    userMenu.classList.add('hidden');
+                    userMenuButton.setAttribute('aria-expanded', 'false');
+                }
+            });
+        }
+    });
+</script>

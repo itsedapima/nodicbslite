@@ -1,0 +1,253 @@
+<!--loan_dispatch.html-->
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block content %}
+<div class="container my-5">
+  {% include 'loans/includes/loans_quick_actions.html' %}
+    <div class="card shadow">
+        <div class="card-header bg-primary text-white">
+            <h4 class="mb-0">New Loan Dispatch</h4>
+        </div>
+        <div class="card-body">
+            <form method="post" id="loanForm">
+                {% csrf_token %}
+                
+                <div class="row mb-3">
+                    <div class="col-md-3">
+                        <label class="form-label">Customer Number</label>
+                        {{ form.cust_no }} 
+                        <small id="cust_status" class="text-muted"></small>
+                    </div>
+                    <div class="col-md-5">
+                        <label class="form-label">Full Name</label>
+                        <input type="text" id="full_name_display" class="form-control bg-light" readonly>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Loan Type</label>
+                        {{ form.loan_type }}
+                    </div>
+                </div>
+
+                <div class="row mb-3">
+                    <div class="col-md-3">
+                        <label class="form-label">Loan Date</label>
+                        {{ form.loan_date }}
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Period (Months)</label>
+                        {{ form.loan_period }}
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Principal Amount</label>
+                        {{ form.principal }}
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Monthly Installment (Est. @ 12% p.a)</label>
+                        {{ form.installment }}
+                        <small class="text-muted d-block" style="font-size: 0.8rem;">Auto-calculated</small>
+                    </div>
+                </div>
+
+                <hr>
+                
+                <h5 class="text-muted">Deductions (Auto-Calculated)</h5>
+                <div class="row mb-3">
+                    <div class="col-md-4">
+                        <label class="form-label">Processing Fee (0.75%)</label>
+                        {{ form.processing_fee }}
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Insurance Fee (1%)</label>
+                        {{ form.insurance_fee }}
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Other Charges</label>
+                        {{ form.other_charges }}
+                    </div>
+                </div>
+
+                <div class="card bg-light mb-3 border-0">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <div>
+                                <h5 class="mb-0">Loan Offsets / Bridging</h5>
+                                <small class="text-danger">Note: A 10% fee applies to all offsets.</small>
+                            </div>
+                            <button type="button" class="btn btn-sm btn-dark" onclick="addOffsetRow()">
+                                <i class="bi bi-plus"></i> Add Offset
+                            </button>
+                        </div>
+                        
+                        <table class="table table-bordered bg-white" id="offsetTable">
+                            <thead>
+                                <tr>
+                                    <th style="width: 40%;">Account Type</th>
+                                    <th style="width: 30%;">Amount to Offset</th>
+                                    <th style="width: 20%;">Fee (10%)</th>
+                                    <th style="width: 10%;">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="offsetBody">
+                                </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="alert alert-info">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span class="h5 mb-0">Net Disbursed:</span>
+                        <span class="h3 mb-0 fw-bold" id="net_disbursed_display">0.00</span>
+                    </div>
+                    <div class="text-end small text-muted mt-1">
+                        (Principal - Fees - Offsets - Offset Fees)
+                    </div>
+                </div>
+
+                <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                    <a href="{% url 'loans:loan_dashboard' %}" class="btn btn-secondary me-md-2">Cancel</a>
+                    <button type="submit" class="btn btn-success px-5">Post Loan</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    // --- 1. Constants ---
+    const RATE_INSURANCE = 0.01; // 1%
+    const RATE_PROCESSING = 0.0075; // 0.75%
+    const RATE_OFFSET_FEE = 0.10; // 10%
+    const RATE_INTEREST_PA = 0.12; // 12% Per Annum
+
+    // --- 2. Dynamic Rows Logic ---
+    function addOffsetRow() {
+        const tbody = document.getElementById('offsetBody');
+        const rowCount = tbody.rows.length;
+        
+        if (rowCount >= 5) {
+            alert("Maximum 5 offsets allowed.");
+            return;
+        }
+
+        const row = document.createElement('tr');
+        row.innerHTML = `
+            <td>
+                <select name="offset_accounts[]" class="form-select" onchange="calculateTotals()">
+                    <option value="normal_loan">Normal Loan</option>
+                    <option value="emergency_loan">Emergency Loan</option>
+                    <option value="mobile_loan">Mobile Loan</option>
+                    <option value="savings">Savings</option>
+                    <option value="share_capital">Share Capital</option>
+                </select>
+            </td>
+            <td>
+                <input type="number" name="offset_amounts[]" class="form-control offset-amt" 
+                       step="0.01" placeholder="0.00" oninput="updateOffsetFee(this); calculateTotals()">
+            </td>
+            <td>
+                <input type="text" class="form-control offset-fee bg-light" readonly value="0.00">
+            </td>
+            <td>
+                <button type="button" class="btn btn-danger btn-sm" onclick="removeRow(this)">X</button>
+            </td>
+        `;
+        tbody.appendChild(row);
+    }
+
+    function removeRow(btn) {
+        btn.closest('tr').remove();
+        calculateTotals();
+    }
+
+    function updateOffsetFee(input) {
+        const amount = parseFloat(input.value) || 0;
+        const fee = amount * RATE_OFFSET_FEE;
+        // Find the fee input in the same row (next cell)
+        const row = input.closest('tr');
+        const feeInput = row.querySelector('.offset-fee');
+        feeInput.value = fee.toFixed(2);
+    }
+
+    // --- 3. Calculation Logic ---
+    
+    // Listeners for Principal and Period changes
+    const principalInput = document.getElementById('id_principal');
+    const periodInput = document.getElementById('id_loan_period');
+    const otherChargesInput = document.getElementById('id_other_charges');
+
+    [principalInput, periodInput, otherChargesInput].forEach(el => {
+        if(el) el.addEventListener('input', calculateTotals);
+    });
+
+    function calculateTotals() {
+        const principal = parseFloat(principalInput.value) || 0;
+        const period = parseFloat(periodInput.value) || 0;
+        const other = parseFloat(otherChargesInput.value) || 0;
+
+        // A. Auto-Calculate Fees
+        const insFee = principal * RATE_INSURANCE;
+        const procFee = principal * RATE_PROCESSING;
+
+        document.getElementById('id_insurance_fee').value = insFee.toFixed(2);
+        document.getElementById('id_processing_fee').value = procFee.toFixed(2);
+
+        // B. Auto-Calculate Installment (PMT)
+        // Rate per month = 12% / 12 = 1% (0.01)
+        let installment = 0;
+        if (principal > 0 && period > 0) {
+            const r = RATE_INTEREST_PA / 12;
+            const n = period;
+            // Formula: P * r * (1+r)^n / ((1+r)^n - 1)
+            const numerator = principal * r * Math.pow(1+r, n);
+            const denominator = Math.pow(1+r, n) - 1;
+            installment = numerator / denominator;
+        }
+        document.getElementById('id_installment').value = installment.toFixed(2);
+
+        // C. Calculate Offsets & Net Disbursed
+        let totalOffsets = 0;
+        let totalOffsetFees = 0;
+
+        document.querySelectorAll('.offset-amt').forEach(input => {
+            const val = parseFloat(input.value) || 0;
+            totalOffsets += val;
+            totalOffsetFees += (val * RATE_OFFSET_FEE);
+        });
+
+        const totalDeductions = insFee + procFee + other + totalOffsets + totalOffsetFees;
+        const net = principal - totalDeductions;
+
+        const display = document.getElementById('net_disbursed_display');
+        display.innerText = net.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+        
+        if (net < 0) {
+            display.classList.add('text-danger');
+            display.classList.remove('text-dark');
+        } else {
+            display.classList.remove('text-danger');
+            display.classList.add('text-dark');
+        }
+    }
+
+    // --- 4. Customer Search Logic ---
+    document.getElementById('id_cust_no').addEventListener('blur', function() {
+        const custNo = this.value;
+        if(custNo) {
+            fetch(`{% url 'loans:search_customer_api' %}?cust_no=${custNo}`)
+                .then(res => res.json())
+                .then(data => {
+                    const nameField = document.getElementById('full_name_display');
+                    const status = document.getElementById('cust_status');
+                    if(data.found) {
+                        nameField.value = data.full_name;
+                        status.innerHTML = '<span class="text-success"><i class="bi bi-check"></i> Verified</span>';
+                    } else {
+                        nameField.value = "";
+                        status.innerHTML = '<span class="text-danger">Customer not found</span>';
+                    }
+                });
+        }
+    });
+</script>
+{% endblock %}

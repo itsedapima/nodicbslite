@@ -1,0 +1,56 @@
+{% extends 'reports/_base_report.html' %}
+
+{% block filters %}
+<form method="get" class="filter-form row g-2 align-items-end">
+  <input type="hidden" name="mode" id="id_mode" value="{{ mode|default:'custom' }}">
+
+  {# ── Quick-filter chips ─────────────────────────────────────── #}
+  <div class="col-12 mb-2">
+    <div class="btn-group btn-group-sm" role="group" aria-label="Filter mode">
+      <button type="submit" class="btn {% if mode == 'this_month' %}btn-primary{% else %}btn-outline-primary{% endif %}"
+              onclick="document.getElementById('id_mode').value='this_month'">
+        <i class="bi bi-calendar-event"></i> This Month
+      </button>
+      <button type="submit" class="btn {% if mode == 'ytd' %}btn-primary{% else %}btn-outline-primary{% endif %}"
+              onclick="document.getElementById('id_mode').value='ytd'">
+        <i class="bi bi-calendar-range"></i> Year to Date
+      </button>
+      <button type="submit" class="btn {% if mode == 'custom' %}btn-primary{% else %}btn-outline-primary{% endif %}"
+              onclick="document.getElementById('id_mode').value='custom'; return false;"
+              id="btn_custom">
+        <i class="bi bi-calendar2-week"></i> Custom Range
+      </button>
+      <button type="submit" class="btn {% if mode == 'tenure' %}btn-primary{% else %}btn-outline-primary{% endif %}"
+              onclick="document.getElementById('id_mode').value='tenure'">
+        <i class="bi bi-clock-history"></i> Loan Tenure
+      </button>
+    </div>
+  </div>
+
+  {# ── Date inputs (visible only for Custom Range mode) ────────── #}
+  <div id="date_fields" class="col-12" style="{% if mode != 'custom' %}display:none{% endif %}">
+    <div class="row g-2 align-items-end">
+      <div class="col-md-3">
+        <label class="form-label">From</label>
+        <input type="date" name="start_date" value="{{ start_date|date:'Y-m-d' }}" class="form-control form-control-sm">
+      </div>
+      <div class="col-md-3">
+        <label class="form-label">To</label>
+        <input type="date" name="end_date" value="{{ end_date|date:'Y-m-d' }}" class="form-control form-control-sm">
+      </div>
+      <div class="col-md-3">
+        <button type="submit" class="btn btn-primary btn-sm w-100"
+                onclick="document.getElementById('id_mode').value='custom'">
+          <i class="bi bi-funnel"></i> Apply
+        </button>
+      </div>
+    </div>
+  </div>
+</form>
+
+<script>
+document.getElementById('btn_custom').addEventListener('click', function(e) {
+    document.getElementById('date_fields').style.display = '';
+});
+</script>
+{% endblock %}

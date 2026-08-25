@@ -1,0 +1,57 @@
+{% extends 'base.html' %}
+{% load humanize %}
+{% block title %}{{ member.first_name }} {{ member.last_name }} Statement — NODi Lite{% endblock %}
+{% block content %}
+<div class="page-shell">
+    <div class="page-head">
+        <div><h2><i class="bi bi-person-lines-fill me-2"></i>{{ member.first_name }} {{ member.last_name }} — Statement</h2></div>
+        <div class="d-flex gap-2">
+            <button type="button" class="btn btn-outline-secondary" onclick="window.print()"><i class="bi bi-printer me-1"></i> Print</button>
+            <a href="{% url 'members:detail' member.pk %}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left me-1"></i> Back</a>
+        </div>
+    </div>
+
+    <div class="card mb-3">
+        <div class="card-body py-2 px-3">
+            <div class="d-flex flex-wrap gap-4 align-items-center">
+                <div><span class="text-muted small">Member No:</span> <strong>{{ member.member_no|default:"-" }}</strong></div>
+                <div><span class="text-muted small">Phone:</span> <strong>{{ member.phone_number|default:"-" }}</strong></div>
+                <div><span class="text-muted small">ID No:</span> <strong>{{ member.id_number|default:"-" }}</strong></div>
+                <div><span class="text-muted small">Status:</span>
+                    {% if member.is_active %}<span class="badge bg-success">Active</span>
+                    {% else %}<span class="badge bg-danger">Inactive</span>{% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="grid-scroll">
+        <table class="grid-table">
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Reference</th>
+                    <th>Description</th>
+                    <th class="num">Debit</th>
+                    <th class="num">Credit</th>
+                    <th class="num">Balance</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for t in transactions %}
+                <tr>
+                    <td>{{ t.transaction_date|date:"d M Y" }}</td>
+                    <td>{{ t.reference|default:"-" }}</td>
+                    <td>{{ t.description|default:t.narration|default:"-" }}</td>
+                    <td class="num">{% if t.debit %}{{ t.debit|floatformat:2|intcomma }}{% else %}-{% endif %}</td>
+                    <td class="num">{% if t.credit %}{{ t.credit|floatformat:2|intcomma }}{% else %}-{% endif %}</td>
+                    <td class="num">{{ t.running_balance|floatformat:2|intcomma }}</td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="6" class="text-center text-muted py-4">No transactions found.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

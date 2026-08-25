@@ -1,0 +1,44 @@
+{% extends 'base.html' %}
+{% block title %}Member List Report — NODi Lite{% endblock %}
+{% block content %}
+<div class="page-shell">
+    <div class="page-head">
+        <div><h2><i class="bi bi-people me-2"></i>Member List Report</h2></div>
+        <a href="{% url 'reports:index' %}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left me-1"></i> Reports</a>
+    </div>
+
+    <form method="get" class="filter-bar">
+        <select name="status" class="form-select" onchange="this.form.submit()">
+            <option value="">All Status</option>
+            <option value="active" {% if status_filter == 'active' %}selected{% endif %}>Active</option>
+            <option value="dormant" {% if status_filter == 'dormant' %}selected{% endif %}>Dormant</option>
+            <option value="exited" {% if status_filter == 'exited' %}selected{% endif %}>Exited</option>
+        </select>
+    </form>
+
+    <div class="grid-scroll">
+        <table class="grid-table">
+            <thead><tr><th>#</th><th>Name</th><th>Member No.</th><th>Phone</th><th>ID Number</th><th>Join Date</th><th>Status</th></tr></thead>
+            <tbody>
+                {% for m in members %}
+                <tr>
+                    <td>{{ forloop.counter }}</td>
+                    <td><strong>{{ m.first_name }} {{ m.last_name }}</strong></td>
+                    <td>{{ m.member_number }}</td>
+                    <td>{{ m.phone_number }}</td>
+                    <td>{{ m.id_number|default:"-" }}</td>
+                    <td>{{ m.date_joined|date:"d M Y" }}</td>
+                    <td>
+                        {% if m.status == 'active' %}<span class="badge bg-success">Active</span>
+                        {% elif m.status == 'dormant' %}<span class="badge bg-warning">Dormant</span>
+                        {% else %}<span class="badge bg-secondary">Exited</span>{% endif %}
+                    </td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="7" class="text-center text-muted py-4">No members found.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

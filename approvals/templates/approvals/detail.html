@@ -1,0 +1,137 @@
+{% extends 'base.html' %}
+{% block title %}Approval #{{ approval_request.pk }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+
+  {# ── Messages ── #}
+  {% for msg in messages %}
+  <div class="alert alert-{{ msg.tags }} alert-dismissible fade show" role="alert">
+    {{ msg }}
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+  </div>
+  {% endfor %}
+
+  <div class="row">
+    {# ── Details card ── #}
+    <div class="col-lg-8">
+      <div class="card shadow-sm mb-3">
+        <div class="card-header d-flex justify-content-between align-items-center">
+          <h5 class="mb-0">
+            <i class="bi bi-check2-square me-2"></i>
+            {{ approval_request.get_action_type_display }} — #{{ approval_request.pk }}
+          </h5>
+          {% if approval_request.status == 'pending' %}
+            <span class="badge bg-warning text-dark">Pending</span>
+          {% elif approval_request.status == 'approved' %}
+            <span class="badge bg-success">Approved</span>
+          {% elif approval_request.status == 'rejected' %}
+            <span class="badge bg-danger">Rejected</span>
+          {% else %}
+            <span class="badge bg-secondary">{{ approval_request.get_status_display }}</span>
+          {% endif %}
+        </div>
+        <div class="card-body">
+          <table class="table table-borderless mb-0">
+            <tr>
+              <th class="text-muted" style="width:180px">Submitted By</th>
+              <td>{{ approval_request.maker.get_full_name|default:approval_request.maker.username }}</td>
+            </tr>
+            <tr>
+              <th class="text-muted">Submitted On</th>
+              <td>{{ approval_request.created_at|date:"d M Y H:i" }}</td>
+            </tr>
+            {% if approval_request.maker_note %}
+            <tr>
+              <th class="text-muted">Maker Note</th>
+              <td>{{ approval_request.maker_note }}</td>
+            </tr>
+            {% endif %}
+            {% if approval_request.checker %}
+            <tr>
+              <th class="text-muted">Actioned By</th>
+              <td>{{ approval_request.checker.get_full_name|default:approval_request.checker.username }}</td>
+            </tr>
+            <tr>
+              <th class="text-muted">Actioned On</th>
+              <td>{{ approval_request.actioned_at|date:"d M Y H:i" }}</td>
+            </tr>
+            {% endif %}
+            {% if approval_request.checker_note %}
+            <tr>
+              <th class="text-muted">Checker Note</th>
+              <td>{{ approval_request.checker_note }}</td>
+            </tr>
+            {% endif %}
+          </table>
+        </div>
+      </div>
+
+      {# ── Payload snapshot ── #}
+      {% if approval_request.payload %}
+      <div class="card shadow-sm mb-3">
+        <div class="card-header"><h6 class="mb-0">Submission Details</h6></div>
+        <div class="card-body">
+          <table class="table table-sm table-borderless mb-0">
+            {% for key, value in approval_request.payload.items %}
+            <tr>
+              <th class="text-muted text-capitalize" style="width:200px">{{ key|cut:"_" }}</th>
+              <td>{{ value }}</td>
+            </tr>
+            {% endfor %}
+          </table>
+        </div>
+      </div>
+      {% endif %}
+    </div>
+
+    {# ── Action panel ── #}
+    <div class="col-lg-4">
+      {% if can_action %}
+      <div class="card shadow-sm border-primary mb-3">
+        <div class="card-header bg-primary text-white">
+          <h6 class="mb-0"><i class="bi bi-shield-check me-1"></i> Approve / Reject</h6>
+        </div>
+        <div class="card-body">
+          <form method="post" action="{% url 'approvals:action' approval_request.pk %}">
+            {% csrf_token %}
+            <div class="mb-3">
+              <label class="form-label">Note (optional)</label>
+              <textarea name="note" class="form-control" rows="3" placeholder="Add a note…"></textarea>
+            </div>
+            <div class="d-grid gap-2">
+              <button type="submit" name="action" value="approve" class="btn btn-success">
+                <i class="bi bi-check-lg me-1"></i> Approve
+              </button>
+              <button type="submit" name="action" value="reject" class="btn btn-outline-danger">
+                <i class="bi bi-x-lg me-1"></i> Reject
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+      {% endif %}
+
+      {% if approval_request.is_pending and approval_request.maker == request.user %}
+      <div class="card shadow-sm">
+        <div class="card-body">
+          <form method="post" action="{% url 'approvals:cancel' approval_request.pk %}">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-outline-secondary w-100"
+                    onclick="return confirm('Cancel this approval request?')">
+              <i class="bi bi-x-circle me-1"></i> Cancel Request
+            </button>
+          </form>
+        </div>
+      </div>
+      {% endif %}
+
+      <div class="mt-3">
+        <a href="{% url 'approvals:list' %}" class="btn btn-outline-secondary w-100">
+          <i class="bi bi-arrow-left me-1"></i> Back to List
+        </a>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

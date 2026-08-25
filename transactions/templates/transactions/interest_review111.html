@@ -1,0 +1,183 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container my-5">
+    {% include 'transactions/includes/transactions_quick_actions.html' %}
+    <nav aria-label="breadcrumb" class="mb-4">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'transactions:calculate_interest' %}">Calculation Setup</a></li>
+            <li class="breadcrumb-item active">Review Batch #{{ batch.batch_no }}</li>
+        </ol>
+    </nav>
+
+    <span id="table-name" class="d-none">Batch_Review_{{ batch.batch_no }}</span>
+
+    <div class="row">
+        <div class="col-md-4">
+            <div class="card shadow-sm border-0 mb-4">
+                <div class="card-header bg-dark text-white py-3">
+                    <h5 class="mb-0">Batch Summary</h5>
+                </div>
+                <div class="card-body">
+                    <ul class="list-group list-group-flush">
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            Saving Type: <span class="fw-bold">{{ batch.get_saving_type_display }}</span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            Amount Shared: <span class="badge bg-primary rounded-pill">{{ batch.amount_to_share }}</span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            Annual Rate: <span class="badge bg-primary rounded-pill">{{ effective_rate }}%</span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            Cut-off Date: <span class="fw-bold">{{ batch.cut_off_date }}</span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between align-items-center bg-light">
+                            <strong>Total Payout:</strong> 
+                            <span class="text-success fw-bold">KES {{ batch.total_net_payout|floatformat:2 }}</span>
+                        </li>
+                    </ul>
+
+                    {% if not batch.is_posted %}
+                    <div class="mt-4">
+                        <form action="{% url 'transactions:post_interest_batch' batch.id %}" method="POST" id="postForm">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-success btn-lg w-100 shadow-sm" 
+                                    onclick="return confirm('CRITICAL: This will post interest to {{ batch.details.count }} members and update the General Ledger. Proceed?')">
+                                <i class="fas fa-check-double me-2"></i> Confirm & Post
+                            </button>
+                        </form>
+                        
+                        <form action="{% url 'transactions:delete_interest_batch' batch.id %}" method="POST" class="mt-2">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-link btn-sm text-danger w-100" 
+                                    onclick="return confirm('Delete this draft calculation?')">
+                                <i class="fas fa-trash-alt me-1"></i> Discard Draft
+                            </button>
+                        </form>
+                    </div>
+                    {% else %}
+                    <div class="alert alert-success mt-4 text-center">
+                        <i class="fas fa-check-circle fa-2x mb-2"></i><br>
+                        <strong>POSTED SUCCESSFULLY</strong><br>
+                        <small>Transaction records generated.</small>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-8">
+            <div class="card shadow-sm border-0">
+                <div class="card-header bg-white d-flex justify-content-between align-items-center py-3">
+                    <h5 class="mb-0 text-primary">Member Breakdown</h5>
+                    <div>
+                        <button id="exportButton" class="btn btn-outline-success btn-sm">
+                            <i class="fas fa-file-excel me-1"></i> Export to Excel
+                        </button>
+                        <span class="badge bg-secondary ms-2">{{ batch.details.count }} Members Included</span>
+                    </div>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive" style="max-height: 600px; overflow-y: auto;">
+                        <table id="dividends-table" class="table table-hover align-middle mb-0">
+                            <thead class="table-light sticky-top">
+                                <tr>
+                                    <th class="ps-4">Cust No</th>
+                                    <th>Member Name</th>
+                                    <th class="text-end">Weighted Avg Bal</th>
+                                    <th class="text-end pe-4">Interest Earned</th>
+                                    <th class="text-end pe-4">Tax</th>
+                                    <th class="text-end pe-4">Fee</th>
+                                    <th class="text-end pe-4">Net Payout</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for detail in batch.details.all %}
+                                <tr>
+                                    <td class="ps-4">{{ detail.cust_no }}</td>
+                                    <td>{{ detail.member_name }}</td>
+                                    <td class="text-end text-muted">{{ detail.weighted_avg_balance|floatformat:2 }}</td>
+                                    <td class="text-end pe-4 fw-bold "> {{ detail.gross_interest|floatformat:2 }}</td>
+                                    <td class="text-end text-danger">-{{ detail.withholding_tax }}</td>
+                                    <td class="text-end text-danger">-{{ detail.processing_fee }}</td>
+                                    <td class="text-end pe-4 fw-bold text-success">{{ detail.net_payout }}</td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="7" class="text-center py-5">No members met the criteria for interest.</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const exportButton = document.getElementById('exportButton');
+        const tableElement = document.getElementById('dividends-table');
+        const tableNameEl = document.getElementById('table-name');
+
+        if (exportButton) {
+            exportButton.addEventListener('click', function() {
+                // Fallback name if the element is missing
+                const fileName = tableNameEl ? tableNameEl.textContent.trim() : 'Export_Data';
+                const tableHtml = tableElement.outerHTML;
+
+                // Visual feedback
+                exportButton.disabled = true;
+                exportButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Exporting...';
+
+                fetch('{% url "reports:export_to_excel" %}', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': '{{ csrf_token }}'
+                    },
+                    body: JSON.stringify({
+                        table_html: tableHtml,
+                        file_name: fileName
+                    })
+                })
+                .then(response => {
+                    if (response.ok) return response.blob();
+                    throw new Error('Export failed.');
+                })
+                .then(blob => {
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.style.display = 'none';
+                    a.href = url;
+                    a.download = fileName + '.xlsx';
+                    document.body.appendChild(a);
+                    a.click();
+                    window.URL.revokeObjectURL(url);
+                    a.remove();
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('Failed to export table. Check console for details.');
+                })
+                .finally(() => {
+                    exportButton.disabled = false;
+                    exportButton.innerHTML = '<i class="fas fa-file-excel"></i> Export to Excel';
+                });
+            });
+        }
+
+        // Prevent double clicking the Post button
+        const postForm = document.getElementById('postForm');
+        if (postForm) {
+            postForm.onsubmit = function() {
+                const btn = this.querySelector('button[type="submit"]');
+                btn.disabled = true;
+                btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Posting...';
+            };
+        }
+    });
+</script>
+{% endblock %}

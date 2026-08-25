@@ -1,0 +1,102 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Journal Vouchers{% endblock %}
+
+{% block content %}
+{% include "accounting/includes/accounting_quick_actions.html" %}
+
+<div class="page-shell">
+  <div class="page-head">
+    <div>
+      <h4 class="mb-0"><i class="bi bi-journal-text me-2"></i>Journal Vouchers</h4>
+      <small class="text-muted">Posted journal entries</small>
+    </div>
+    <div>
+      <a href="{% url 'accounting:jv_new' %}" class="btn btn-primary btn-sm">
+        <i class="bi bi-plus-lg me-1"></i>New JV
+      </a>
+      <a href="{% url 'accounting:jv_draft_history' %}" class="btn btn-outline-secondary btn-sm ms-1">
+        <i class="bi bi-clock-history me-1"></i>Drafts
+      </a>
+    </div>
+  </div>
+
+  <div class="card border-0 shadow-sm">
+    <div class="grid-scroll">
+      <table class="grid-table table table-hover align-middle mb-0">
+        <thead>
+          <tr>
+            <th style="width:120px">Voucher #</th>
+            <th>Date</th>
+            <th>Description</th>
+            <th>Status</th>
+            <th class="text-end">Amount</th>
+            <th>Created By</th>
+            <th style="width:80px"></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for v in vouchers %}
+          <tr>
+            <td><a href="{% url 'accounting:jv_detail' v.pk %}" class="fw-semibold text-decoration-none">{{ v.voucher_no }}</a></td>
+            <td>{{ v.voucher_date|date:"d M Y" }}</td>
+            <td class="text-truncate" style="max-width:300px" title="{{ v.description }}">{{ v.description|truncatewords:10 }}</td>
+            <td>
+              {% if v.status == 'posted' %}
+                <span class="badge bg-success-subtle text-success">Posted</span>
+              {% elif v.status == 'approved' %}
+                <span class="badge bg-primary-subtle text-primary">Approved</span>
+              {% elif v.status == 'draft' %}
+                <span class="badge bg-secondary-subtle text-secondary">Draft</span>
+              {% elif v.status == 'pending' %}
+                <span class="badge bg-warning-subtle text-warning">Pending</span>
+              {% else %}
+                <span class="badge bg-danger-subtle text-danger">{{ v.status|title }}</span>
+              {% endif %}
+            </td>
+            <td class="text-end font-monospace">{{ v.total_amount|floatformat:2 }}</td>
+            <td>{{ v.created_by.get_full_name|default:v.created_by.username }}</td>
+            <td class="text-end">
+              <a href="{% url 'accounting:jv_detail' v.pk %}" class="btn btn-sm btn-outline-secondary" title="View">
+                <i class="bi bi-eye"></i>
+              </a>
+            </td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="7" class="text-center text-muted py-5">
+              <i class="bi bi-journal-x fs-1 d-block mb-2"></i>
+              No journal vouchers yet.
+              <a href="{% url 'accounting:jv_new' %}">Create the first one</a>.
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    {% if vouchers.has_other_pages %}
+    <div class="card-footer bg-transparent d-flex justify-content-center py-2">
+      <nav>
+        <ul class="pagination pagination-sm mb-0">
+          {% if vouchers.has_previous %}
+          <li class="page-item"><a class="page-link" href="?page={{ vouchers.previous_page_number }}">&laquo;</a></li>
+          {% endif %}
+          {% for num in vouchers.paginator.page_range %}
+            {% if vouchers.number == num %}
+            <li class="page-item active"><span class="page-link">{{ num }}</span></li>
+            {% elif num > vouchers.number|add:"-3" and num < vouchers.number|add:"3" %}
+            <li class="page-item"><a class="page-link" href="?page={{ num }}">{{ num }}</a></li>
+            {% endif %}
+          {% endfor %}
+          {% if vouchers.has_next %}
+          <li class="page-item"><a class="page-link" href="?page={{ vouchers.next_page_number }}">&raquo;</a></li>
+          {% endif %}
+        </ul>
+      </nav>
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

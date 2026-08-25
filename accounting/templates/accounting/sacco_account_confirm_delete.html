@@ -1,0 +1,32 @@
+{% extends 'base.html' %}
+{% block content %}
+{% include 'accounting/includes/accounting_quick_actions.html' %}
+<div class="container-fluid px-4 py-4">
+    <div class="row justify-content-center mt-5">
+        <div class="col-lg-5 col-md-7">
+            <div style="background: var(--d365-surface); border: 1px solid var(--d365-border); border-radius: .5rem; box-shadow: var(--d365-shadow-2);">
+                <div style="background: var(--d365-surface-alt); border-bottom: 2px solid var(--d365-border); padding: .75rem 1.25rem; border-radius: .5rem .5rem 0 0;">
+                    <span style="font-size: .8rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--d365-text-secondary);">
+                        Confirm Delete
+                    </span>
+                </div>
+                <div class="p-4 text-center">
+                    <p style="color: var(--d365-text); font-size: .9rem;">
+                        Are you sure you want to delete the account <strong>{{ account.account_name }}</strong>?
+                    </p>
+
+                    <form method="post" class="mt-4">
+                        {% csrf_token %}
+                        <button type="submit" style="background: var(--d365-danger); color: #fff; border: 1px solid var(--d365-danger); border-radius: .4rem; font-weight: 600; padding: .45rem 1.5rem; font-size: .85rem;" class="me-2">
+                            Yes, Delete
+                        </button>
+                        <a href="{% url 'accounting:sacco_account_list' %}" style="background: var(--d365-surface); color: var(--d365-text); border: 1px solid var(--d365-border-strong); border-radius: .4rem; font-weight: 600; padding: .45rem 1.5rem; font-size: .85rem; text-decoration: none; display: inline-block;">
+                            Cancel
+                        </a>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+{% block title %}Bulk Data Imports — {{ brand_name|default:"NODi Lite" }}{% endblock %}
+{% block content %}
+<div class="page-shell">
+
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags|default:'info' }} alert-dismissible fade show" role="alert">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        {% endfor %}
+    {% endif %}
+
+    <div class="page-head">
+        <div>
+            <h2><i class="bi bi-cloud-arrow-up-fill me-2"></i>Bulk Data Imports</h2>
+            <p class="page-sub">Load existing chama data from Excel — one workflow per data type</p>
+        </div>
+    </div>
+
+    <div class="quick-links">
+        <span class="ql-label">Import Hub</span>
+        <a href="{% url 'dashboard:dashboard' %}">
+            <i class="bi bi-speedometer2"></i> Dashboard
+        </a>
+        <a href="{% url 'customers:list_customers' %}">
+            <i class="bi bi-people-fill"></i> Members
+        </a>
+        <a href="{% url 'accounting:sacco_account_list' %}">
+            <i class="bi bi-piggy-bank-fill"></i> Chart of Accounts
+        </a>
+    </div>
+
+    <div class="alert alert-info d-flex align-items-start" role="alert">
+        <i class="bi bi-info-circle-fill me-2 fs-5"></i>
+        <div>
+            <strong>Recommended order.</strong> If this is a fresh onboarding, import in this sequence for cleanest results:
+            <ol class="mb-0 mt-1">
+                <li>Members / Customers</li>
+                <li>Next of Kin</li>
+                <li>SACCO Account Balances (opening balances)</li>
+                <li>Loan History</li>
+                <li>Loan Guarantors</li>
+                <li>Loan Collaterals</li>
+                <li>Savings Transactions</li>
+                <li>Loan Transactions</li>
+            </ol>
+        </div>
+    </div>
+
+    {% for app_label, imps in grouped.items %}
+        <h5 class="text-uppercase text-secondary mt-4 mb-2" style="letter-spacing:.05em; font-size:.8rem;">
+            {{ app_label|capfirst }} app
+        </h5>
+        <div class="row g-3">
+            {% for imp in imps %}
+            <div class="col-md-6 col-lg-4">
+                <div class="card h-100 shadow-sm border-0">
+                    <div class="card-body">
+                        <div class="d-flex align-items-center mb-2">
+                            <span class="badge bg-primary-subtle text-primary p-2 me-2">
+                                <i class="bi {{ imp.icon }} fs-5"></i>
+                            </span>
+                            <h6 class="mb-0">{{ imp.title }}</h6>
+                        </div>
+                        <p class="text-muted small mb-3" style="min-height:70px;">{{ imp.description|truncatechars:180 }}</p>
+                        <div class="d-flex gap-2">
+                            <a href="{% url 'data_imports:upload' imp.slug %}" class="btn btn-sm btn-primary flex-grow-1">
+                                <i class="bi bi-cloud-arrow-up me-1"></i> Start Import
+                            </a>
+                            <a href="{% url 'data_imports:download_template' imp.slug %}" class="btn btn-sm btn-outline-secondary" title="Download template">
+                                <i class="bi bi-file-earmark-excel"></i>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    {% endfor %}
+</div>
+{% endblock %}

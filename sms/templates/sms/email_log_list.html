@@ -1,0 +1,40 @@
+{% extends 'base.html' %}
+{% block title %}Email Log — NODi Lite{% endblock %}
+{% block content %}
+<div class="page-shell">
+    <div class="app-toolbar">
+        <div class="app-toolbar-body">
+            <h1 class="toolbar-title"><span class="toolbar-badge"><i class="bi bi-envelope"></i></span> Email Log</h1>
+        </div>
+    </div>
+
+    <div class="grid-scroll">
+        <table class="grid-table">
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Recipient</th>
+                    <th>Subject</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for log in logs %}
+                <tr>
+                    <td>{{ log.sent_at|date:"d M Y H:i" }}</td>
+                    <td>{{ log.recipient_name|default:log.email }}</td>
+                    <td>{{ log.subject|truncatewords:10 }}</td>
+                    <td>
+                        {% if log.status == 'sent' %}<span class="badge bg-success">Sent</span>
+                        {% elif log.status == 'failed' %}<span class="badge bg-danger">Failed</span>
+                        {% else %}<span class="badge bg-warning">Pending</span>{% endif %}
+                    </td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="4" class="text-center text-muted py-4">No email logs.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

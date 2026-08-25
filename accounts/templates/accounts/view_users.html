@@ -1,0 +1,96 @@
+{% extends "base.html" %}
+{% block title %}Users — {{ brand_name|default:"NODi Lite" }}{% endblock %}
+{% block content %}
+  {% include 'administration/includes/administration_quick_actions.html' %}
+<div class="page-shell">
+
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags|default:'info' }} alert-dismissible fade show" role="alert">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        {% endfor %}
+    {% endif %}
+
+    <div class="page-head">
+        <div>
+            <h2><i class="bi bi-people me-2"></i>System Users</h2>
+            <p class="page-sub">All users registered on the system.</p>
+        </div>
+        <a href="{% url 'accounts:add_user' %}" class="btn btn-primary">
+            <i class="bi bi-person-plus me-1"></i> Add User
+        </a>
+    </div>
+
+    <div class="card mb-3">
+        <div class="card-body">
+            <form method="GET" class="d-flex gap-2 flex-wrap">
+                <input type="text" name="q" value="{{ query }}"
+                       class="form-control" style="max-width: 22rem;"
+                       placeholder="Search by name, username, email, phone">
+                <button type="submit" class="btn btn-outline-primary">
+                    <i class="bi bi-search me-1"></i> Search
+                </button>
+                {% if query %}
+                    <a href="{% url 'accounts:view_users' %}" class="btn btn-outline-secondary">Clear</a>
+                {% endif %}
+            </form>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead>
+                    <tr>
+                        <th>Username</th>
+                        <th>Name</th>
+                        <th>Email</th>
+                        <th>Phone</th>
+                        <th>Role</th>
+                        <th>Status</th>
+                        <th class="text-end">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for u in users %}
+                    <tr>
+                        <td class="fw-semibold">{{ u.username }}</td>
+                        <td>{{ u.first_name }} {{ u.last_name }}</td>
+                        <td>{{ u.email }}</td>
+                        <td>{{ u.phone|default:"—" }}</td>
+                        <td>
+                            {% if u.is_admin %}
+                                <span class="role-pill is-admin">Admin</span>
+                            {% else %}
+                                <span class="role-pill">{{ u.get_role_display }}</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if u.is_active %}
+                                <span class="status-dot active">Active</span>
+                            {% else %}
+                                <span class="status-dot blocked">Blocked</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-end">
+                            <a href="{% url 'accounts:edit_user' u.id %}" class="btn btn-outline-primary btn-sm">
+                                <i class="bi bi-pencil"></i> Edit
+                            </a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="7" class="text-center text-secondary py-4">
+                            <i class="bi bi-inbox" style="font-size:1.5rem;"></i><br>
+                            No users found{% if query %} for "{{ query }}"{% endif %}.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

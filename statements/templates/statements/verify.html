@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ title }} — {{ company.company_name }}</title>
+
+    <!-- ═══ SECURITY: Block all navigation, indexing, and caching ═══ -->
+    <meta name="robots" content="noindex, nofollow, noarchive, nosnippet">
+    <meta name="referrer" content="no-referrer">
+    <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f5f6fa;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        /* ── Kill all link styling and clickability ── */
+        a, a:link, a:visited, a:hover, a:active {
+            pointer-events: none !important;
+            cursor: default !important;
+            text-decoration: none !important;
+            color: inherit !important;
+        }
+
+        .card {
+            background: #fff;
+            border-radius: 12px;
+            box-shadow: 0 4px 24px rgba(0,0,0,0.08);
+            max-width: 460px;
+            width: 100%;
+            overflow: hidden;
+        }
+        .card-header {
+            background: {{ color }};
+            color: #fff;
+            text-align: center;
+            padding: 32px 24px 24px;
+        }
+        .card-header .icon {
+            font-size: 48px;
+            display: block;
+            margin-bottom: 12px;
+        }
+        .card-header h1 {
+            font-size: 22px;
+            font-weight: 700;
+            margin: 0;
+        }
+        .card-body {
+            padding: 28px 24px;
+        }
+        .card-body p {
+            font-size: 14px;
+            line-height: 1.7;
+            color: #444;
+            margin-bottom: 16px;
+        }
+        .meta-table {
+            width: 100%;
+            font-size: 13px;
+            border-collapse: collapse;
+            margin-top: 8px;
+        }
+        .meta-table td {
+            padding: 6px 0;
+            border-bottom: 1px solid #f0f0f0;
+        }
+        .meta-table td:first-child {
+            color: #999;
+            width: 110px;
+        }
+        .meta-table td:last-child {
+            font-weight: 600;
+            color: #2c3e50;
+        }
+        .card-footer {
+            background: #fafafa;
+            padding: 16px 24px;
+            text-align: center;
+            font-size: 12px;
+            color: #999;
+            border-top: 1px solid #eee;
+        }
+        .card-footer strong { color: #555; }
+        .verify-badge {
+            display: inline-block;
+            margin-top: 12px;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+            color: #fff;
+            background: {{ color }};
+        }
+
+        /* ── Private browsing block overlay ── */
+        .private-block {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: #fff;
+            z-index: 9999;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 40px;
+        }
+        .private-block.active { display: flex; }
+        .private-block h2 { color: #e74c3c; margin-bottom: 12px; }
+        .private-block p { color: #666; font-size: 14px; line-height: 1.6; max-width: 400px; }
+    </style>
+</head>
+<body>
+    <!-- ═══ Private/Incognito Browsing Block ═══ -->
+    <div class="private-block" id="privateBlock">
+        <div>
+            <h2>Private Browsing Not Allowed</h2>
+            <p>
+                Statement verification cannot be performed in private or incognito mode.
+                Please open this link in a regular browser window.
+            </p>
+        </div>
+    </div>
+
+    <div class="card" id="verifyCard">
+        <div class="card-header">
+            <span class="icon">{{ icon }}</span>
+            <h1>{{ title }}</h1>
+        </div>
+        <div class="card-body">
+            <p>{{ message }}</p>
+            {% if record %}
+            <table class="meta-table">
+                <tr><td>Member</td><td>{{ record.customer_name }}</td></tr>
+                <tr><td>Account</td><td>{{ record.account_code }}</td></tr>
+                <tr><td>Type</td><td>{{ record.get_statement_type_display }}</td></tr>
+                <tr><td>Issued</td><td>{{ record.generated_at|date:"d M Y, H:i" }}</td></tr>
+                <tr><td>Valid Until</td><td>{{ record.expires_at|date:"d M Y" }}</td></tr>
+                <tr><td>Generated By</td><td>{{ record.generated_by|default:"System" }}</td></tr>
+            </table>
+            {% endif %}
+            {% if tb_verified %}
+            <div style="text-align:center; margin-bottom:12px;">
+                <span style="display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:600;padding:4px 10px;border-radius:999px;background:#d1fae5;color:#065f46;border:1px solid #6ee7b7;text-transform:uppercase;letter-spacing:.03em;">
+                    &#x2611; TigerBeetle Verified
+                </span>
+            </div>
+            {% endif %}
+            <div style="text-align:center;">
+                <span class="verify-badge">{{ company.company_name }} Verification Portal</span>
+            </div>
+        </div>
+        <div class="card-footer">
+            <strong>{{ company.company_name }}</strong><br>
+            {{ company.company_address }}{% if company.company_contact %} &middot; {{ company.company_contact }}{% endif %}
+        </div>
+    </div>
+</body>
+</html>

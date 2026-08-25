@@ -1,0 +1,121 @@
+{% extends "base.html" %}
+{% block title %}Sacco Accounts Ledger{% endblock %}
+{% block extra_css %}
+<style>
+.page-hero { background: linear-gradient(135deg, #0E2B4D 0%, #1a4170 100%); color: #fff; padding: 1.5rem; border-radius: .75rem; margin-bottom: 1.25rem; }
+.page-hero h1 { font-size: 1.4rem; font-weight: 700; margin: 0 0 .15rem; color: #fff; }
+.page-hero p { margin: 0; opacity: .85; font-size: .85rem; color: #fff; }
+.page-hero i { color: #fff; }
+.filter-bar { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; margin-bottom: 1.25rem; }
+.filter-bar .form-control { max-width: 360px; font-size: .85rem; border: 1px solid var(--d365-border-strong, #D2D0CE); border-radius: .4rem; }
+.filter-bar .form-control:focus { border-color: var(--d365-primary, #0078D4); box-shadow: 0 0 0 2px var(--d365-primary-tint-40, #DEECF9); }
+.data-card { background: var(--d365-surface, #fff); border: 1px solid var(--d365-border, #EDEBE9); border-radius: .5rem; box-shadow: var(--d365-shadow-2); overflow: hidden; }
+.data-card .table thead { background: var(--d365-surface-alt, #FAF9F8); }
+.data-card .table thead th { font-size: .75rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--d365-text-secondary, #605E5C); border-bottom: 2px solid var(--d365-border, #EDEBE9); padding: .65rem .75rem; }
+.data-card .table tbody td { font-size: .84rem; color: var(--d365-text, #323130); padding: .6rem .75rem; border-bottom: 1px solid var(--d365-border, #EDEBE9); }
+.data-card .table tbody tr:hover { background: var(--d365-primary-tint-40, #DEECF9); }
+.d365-pagination .page-link { font-size: .82rem; color: var(--d365-text, #323130); border-color: var(--d365-border, #EDEBE9); padding: .35rem .7rem; }
+.d365-pagination .page-item.active .page-link { background: var(--d365-primary, #0078D4); border-color: var(--d365-primary, #0078D4); color: #fff; }
+.d365-pagination .page-item.disabled .page-link { color: var(--d365-text-disabled, #A19F9D); }
+</style>
+{% endblock %}
+{% block content %}
+{% include 'accounting/includes/accounting_quick_actions.html' %}
+
+{% if messages %}
+{% for message in messages %}
+<div class="alert {% if message.tags %}alert-{{ message.tags }}{% else %}alert-info{% endif %} alert-dismissible fade show" role="alert" style="border-radius:.4rem;">
+    {{ message }}
+    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+</div>
+{% endfor %}
+{% endif %}
+
+<div class="page-hero">
+    <div class="d-flex justify-content-between align-items-start flex-wrap gap-2">
+        <div>
+            <h1><i class="bi bi-journal-text me-2"></i>Sacco Accounts Ledger</h1>
+            <p>View all ledger entries with debit and credit transactions.</p>
+        </div>
+    </div>
+</div>
+
+<div class="filter-bar">
+    <input type="text" id="liveSearch" class="form-control" placeholder="Search ledger entries...">
+</div>
+
+<div class="data-card">
+    <div class="table-responsive">
+        <table class="table table-hover mb-0" id="dataTable">
+            <thead>
+                <tr>
+                    <th>Transaction Date</th>
+                    <th>Account</th>
+                    <th>Code</th>
+                    <th>Reference</th>
+                    <th>Description</th>
+                    <th>Debit</th>
+                    <th>Credit</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for entry in ledger_entries %}
+                <tr>
+                    <td>{{ entry.date }}</td>
+                    <td class="fw-medium">{{ entry.sacco_account.account_name }}</td>
+                    <td>{{ entry.sacco_account.account_code }}</td>
+                    <td>{{ entry.reference|default:"-" }}</td>
+                    <td>{{ entry.description }}</td>
+                    <td class="text-danger fw-medium">{% if entry.debit_amount %}{{ entry.debit_amount|floatformat:2 }}{% else %}-{% endif %}</td>
+                    <td class="text-success fw-medium">{% if entry.credit_amount %}{{ entry.credit_amount|floatformat:2 }}{% else %}-{% endif %}</td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="7" class="text-center text-muted py-4">No transactions recorded.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+{% if ledger_entries.has_other_pages %}
+<nav aria-label="Pagination" class="mt-4">
+    <ul class="pagination d365-pagination justify-content-center">
+        {% if ledger_entries.has_previous %}
+            <li class="page-item">
+                <a class="page-link" href="?page=1">First</a>
+            </li>
+            <li class="page-item">
+                <a class="page-link" href="?page={{ ledger_entries.previous_page_number }}">&lsaquo;</a>
+            </li>
+        {% endif %}
+
+        <li class="page-item active">
+            <span class="page-link">{{ ledger_entries.number }}</span>
+        </li>
+
+        {% if ledger_entries.has_next %}
+            <li class="page-item">
+                <a class="page-link" href="?page={{ ledger_entries.next_page_number }}">&rsaquo;</a>
+            </li>
+            <li class="page-item">
+                <a class="page-link" href="?page={{ ledger_entries.paginator.num_pages }}">Last</a>
+            </li>
+        {% endif %}
+    </ul>
+    <p class="text-center text-muted small">
+        Page {{ ledger_entries.number }} of {{ ledger_entries.paginator.num_pages }}
+    </p>
+</nav>
+{% endif %}
+
+<script>
+document.getElementById('liveSearch').addEventListener('input', function() {
+    const q = this.value.toLowerCase();
+    document.querySelectorAll('#dataTable tbody tr').forEach(function(row) {
+        row.style.display = row.textContent.toLowerCase().includes(q) ? '' : 'none';
+    });
+});
+</script>
+{% endblock %}

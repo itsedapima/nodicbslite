@@ -1,0 +1,117 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block content %}
+<div class="bg-gray-50 min-h-screen p-4 sm:p-8">
+    <div class="max-w-full mx-auto bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+        
+        <div class="p-6 border-b border-gray-100 bg-gray-50/50">
+            <h1 class="text-xl font-bold text-gray-800 mb-4">{{ title }}</h1>
+            
+            <form method="GET" class="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
+                <div>
+                    <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Saving Type</label>
+                    <select name="saving_type" class="w-full border-gray-300 rounded-lg text-sm focus:ring-blue-500">
+                        <option value="share_capital" {% if saving_type == 'share_capital' %}selected{% endif %}>Share Capital</option>
+                        <option value="welfare_deposit" {% if saving_type == 'welfare_deposit' %}selected{% endif %}>Welfare Deposit</option>
+                        <option value="seed_deposit" {% if saving_type == 'seed_deposit' %}selected{% endif %}>Seed Deposit</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Start Date</label>
+                    <input type="date" name="start_date" value="{{ start_date }}" class="w-full border-gray-300 rounded-lg text-sm">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-gray-500 uppercase mb-1">End Date</label>
+                    <input type="date" name="end_date" value="{{ end_date }}" class="w-full border-gray-300 rounded-lg text-sm">
+                </div>
+                <div>
+                    <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg text-sm transition">
+                        Fetch History
+                    </button>
+                </div>
+            </form>
+        </div>
+        
+        <div class="p-4 bg-gray-50 border-t border-gray-100 flex justify-end space-x-3">
+            <button onclick="window.print()" class="px-4 py-2 bg-white border border-gray-300 rounded text-xs font-bold text-gray-600 hover:bg-gray-100">
+                Print PDF
+            </button>
+            
+            <a href="?{{ request.GET.urlencode }}&export=excel" 
+               class="px-4 py-2 bg-green-600 text-white rounded text-xs font-bold hover:bg-green-700 transition flex items-center">
+                <svg class="w-3 h-3 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clip-rule="evenodd"></path>
+                </svg>
+                Export to Excel
+            </a>
+        </div>
+
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200 border-collapse">
+                <thead class="bg-gray-800 text-white">
+                    <tr>
+                        <th class="sticky left-0 bg-gray-900 px-4 py-3 text-left text-xs font-bold uppercase z-10">Cust No</th>
+                        <th class="sticky left-[5.5rem] bg-gray-900 px-4 py-3 text-left text-xs font-bold uppercase z-10 border-r border-gray-700">Full Name</th>
+                        {% for month in months %}
+                        <th class="px-4 py-3 text-center text-xs font-bold uppercase min-w-[100px]">{{ month }}</th>
+                        {% endfor %}
+                        <th class="px-4 py-3 text-right text-xs font-bold uppercase bg-gray-700">Total</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-200 text-sm">
+                    {% for row in report_rows %}
+                    <tr class="hover:bg-blue-50 transition-colors">
+                        <td class="sticky left-0 bg-white px-4 py-3 font-mono font-bold text-gray-600">{{ row.cust_no }}</td>
+                        <td class="sticky left-[5.5rem] bg-white px-4 py-3 font-medium text-gray-900 border-r border-gray-100 whitespace-nowrap">{{ row.full_name }}</td>
+                        
+                        {% for val in row.monthly_values %}
+                        <td class="px-4 py-3 text-center {% if val == 0 %}text-gray-300{% else %}text-gray-700 font-semibold{% endif %}">
+                            {{ val|intcomma }}
+                        </td>
+                        {% endfor %}
+                        
+                        <td class="px-4 py-3 text-right font-black bg-gray-50 text-blue-700">
+                            {{ row.row_total|intcomma }}
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="{{ months|length|add:3 }}" class="p-10 text-center text-gray-400 italic">No savings data found for the selected criteria.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        {% if page_obj and page_obj.has_other_pages %}
+        <div class="p-4 bg-gray-50 border-t border-gray-200 flex items-center justify-between">
+            <div class="text-xs text-gray-500 font-medium">
+                Showing rows {{ page_obj.start_index }} to {{ page_obj.end_index }} of {{ page_obj.paginator.count|intcomma }} members
+            </div>
+            <div class="inline-flex space-x-1 shadow-sm rounded-lg overflow-hidden text-xs">
+                {% if page_obj.has_previous %}
+                    <a href="?saving_type={{ saving_type }}&start_date={{ start_date }}&end_date={{ end_date }}&page=1" class="px-3 py-2 bg-white text-gray-700 hover:bg-gray-100 border border-gray-300 font-bold">« First</a>
+                    <a href="?saving_type={{ saving_type }}&start_date={{ start_date }}&end_date={{ end_date }}&page={{ page_obj.previous_page_number }}" class="px-3 py-2 bg-white text-gray-700 hover:bg-gray-100 border-t border-b border-r border-gray-300 font-bold">‹ Previous</a>
+                {% else %}
+                    <span class="px-3 py-2 bg-gray-100 text-gray-400 border border-gray-300 cursor-not-allowed font-bold">« First</span>
+                    <span class="px-3 py-2 bg-gray-100 text-gray-400 border-t border-b border-r border-gray-300 cursor-not-allowed font-bold">‹ Previous</span>
+                {% endif %}
+
+                <span class="px-4 py-2 bg-blue-600 text-white border-t border-b border-gray-300 font-bold">
+                    Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
+                </span>
+
+                {% if page_obj.has_next %}
+                    <a href="?saving_type={{ saving_type }}&start_date={{ start_date }}&end_date={{ end_date }}&page={{ page_obj.next_page_number }}" class="px-3 py-2 bg-white text-gray-700 hover:bg-gray-100 border-t border-b border-l border-gray-300 font-bold">Next ›</a>
+                    <a href="?saving_type={{ saving_type }}&start_date={{ start_date }}&end_date={{ end_date }}&page={{ page_obj.paginator.num_pages }}" class="px-3 py-2 bg-white text-gray-700 hover:bg-gray-100 border border-gray-300 font-bold">Last »</a>
+                {% else %}
+                    <span class="px-3 py-2 bg-gray-100 text-gray-400 border-t border-b border-l border-gray-300 cursor-not-allowed font-bold">Next ›</span>
+                    <span class="px-3 py-2 bg-gray-100 text-gray-400 border border-gray-300 cursor-not-allowed font-bold">Last »</span>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

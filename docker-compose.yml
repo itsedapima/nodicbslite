@@ -1,0 +1,164 @@
+# ═══════════════════════════════════════════════════════════════════════════════
+# __TENANT__ — Docker Compose (Production)
+# ═══════════════════════════════════════════════════════════════════════════════
+# NODi Lite — Lightweight Chama Management
+#
+# Architecture:
+#   PostgreSQL  → shared peshap-db instance (peshap_pgbouncer / peshap_shared_db)
+#   Redis       → per-tenant, task queue + caching
+#
+# Prerequisites:
+#   1. peshap-db must be running (shared Postgres + PgBouncer)
+#   2. peshap-proxy must be running (Nginx reverse proxy)
+#   3. edge_net must exist:  docker network create edge_net
+#   4. Tenant must be provisioned in peshap-db
+#
+# Deploy to: /var/www/__TENANT__/
+# ═══════════════════════════════════════════════════════════════════════════════
+
+services:
+  # ─── Redis — Task queue + caching (per-tenant) ────────────────────────────
+  redis:
+    image: redis:7-alpine
+    container_name: __TENANT___redis
+    command: redis-server --maxmemory 128mb --maxmemory-policy allkeys-lru --requirepass ${REDIS_PASSWORD}
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+    expose: ["6379"]
+    volumes: [redis_data:/data]
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli -a $$REDIS_PASSWORD ping || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+          cpus: "0.25"
+    networks: [tenant_net]
+    restart: always
+
+  # ─── Web (Gunicorn) ────────────────────────────────────────────────────────
+  web:
+    env_file: .env
+    build: .
+    container_name: __TENANT___web
+    environment:
+      CONTAINER_ROLE: web
+      DJANGO_DEBUG: ${DJANGO_DEBUG}
+      DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY}
+      DJANGO_ALLOWED_HOSTS: ${DJANGO_ALLOWED_HOSTS}
+      CSRF_TRUSTED_ORIGINS: ${CSRF_TRUSTED_ORIGINS:-}
+      DB_NAME: ${DB_NAME}
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_HOST: peshap_pgbouncer
+      DB_PORT: "6432"
+      BACKUP_DB_HOST: peshap_shared_db
+      BACKUP_DB_PORT: "5432"
+      REDIS_HOST: __TENANT___redis
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+      GUNICORN_WORKERS: ${GUNICORN_WORKERS:-2}
+      CHAMA_NAME: ${CHAMA_NAME}
+      CHAMA_DISPLAY_NAME: ${CHAMA_DISPLAY_NAME:-}
+    volumes:
+      - static_volume:/app/staticfiles
+      - media_volume:/app/mediafiles
+      - backups_volume:/app/backups
+    expose: ["8000"]
+    depends_on:
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8000/accounts/login/ || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: "0.75"
+    networks:
+      tenant_net:
+        aliases:
+          - __TENANT__-web
+      edge_net:
+        aliases:
+          - __TENANT__-web
+    restart: always
+
+  # ─── Worker (Django-Q2 background tasks) ───────────────────────────────────
+  worker:
+    env_file: .env
+    build: .
+    container_name: __TENANT___worker
+    environment:
+      CONTAINER_ROLE: worker
+      CHAMA_NAME: ${CHAMA_NAME}
+      CHAMA_DISPLAY_NAME: ${CHAMA_DISPLAY_NAME:-}
+      WEB_HOST: __TENANT__-web
+      DJANGO_DEBUG: ${DJANGO_DEBUG}
+      DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY}
+      DJANGO_ALLOWED_HOSTS: ${DJANGO_ALLOWED_HOSTS}
+      DB_NAME: ${DB_NAME}
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_HOST: peshap_pgbouncer
+      DB_PORT: "6432"
+      BACKUP_DB_HOST: peshap_shared_db
+      BACKUP_DB_PORT: "5432"
+      REDIS_HOST: __TENANT___redis
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+    volumes:
+      - media_volume:/app/mediafiles
+      - backups_volume:/app/backups
+    depends_on:
+      redis:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: "0.75"
+    networks:
+      - tenant_net
+      - edge_net
+    restart: always
+
+  # ─── Dozzle — Real-time Docker log viewer ─────────────────────────────────
+  dozzle:
+    image: amir20/dozzle:latest
+    container_name: __TENANT___dozzle
+    environment:
+      DOZZLE_BASE: /__TENANT__-logs
+      DOZZLE_NO_ANALYTICS: "true"
+      DOZZLE_FILTER: "name=__TENANT___*"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    expose: ["8080"]
+    networks: [tenant_net, edge_net]
+    restart: always
+
+volumes:
+  redis_data:
+    name: __TENANT___redis_data
+  static_volume:
+    name: __TENANT___static_volume
+  media_volume:
+    name: __TENANT___media_volume
+  backups_volume:
+    name: __TENANT___backups_volume
+
+networks:
+  tenant_net:
+    name: __TENANT___net
+    driver: bridge
+    ipam:
+      config:
+        - subnet: __SUBNET__
+  edge_net:
+    external: true
+    name: edge_net

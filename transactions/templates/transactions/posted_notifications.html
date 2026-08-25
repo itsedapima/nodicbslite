@@ -1,0 +1,282 @@
+{% extends "base.html" %}
+{% load humanize %}
+
+{% block title %}Posted M-Pesa Notifications | NODi CBS{% endblock %}
+
+{% block extra_css %}
+<style>
+  .page-hero {
+    background: linear-gradient(135deg, #0E2B4D 0%, #1a4170 100%);
+    color: #fff;
+    padding: 1.5rem 1.5rem;
+    border-radius: .75rem;
+    margin-bottom: 1.25rem;
+  }
+  .page-hero h1 { font-size: 1.4rem; font-weight: 700; margin: 0 0 .15rem; color: #fff; }
+  .page-hero p  { margin: 0; opacity: .85; font-size: .85rem; color: #fff; }
+  .page-hero i   { color: #fff; }
+
+  .filter-bar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: .5rem;
+    margin-bottom: 1.25rem;
+  }
+  .filter-bar .form-control {
+    max-width: 320px;
+    font-size: .85rem;
+    border: 1px solid var(--d365-border-strong, #D2D0CE);
+    border-radius: .4rem;
+  }
+  .filter-bar .form-control:focus {
+    border-color: var(--d365-primary, #0078D4);
+    box-shadow: 0 0 0 2px var(--d365-primary-tint-40, #DEECF9);
+  }
+  .btn-d365 {
+    font-size: .82rem;
+    padding: .35rem .85rem;
+    border-radius: .4rem;
+    font-weight: 600;
+    transition: all .15s ease;
+  }
+  .btn-d365-primary {
+    background: var(--d365-primary, #0078D4);
+    color: #fff;
+    border: 1px solid var(--d365-primary, #0078D4);
+  }
+  .btn-d365-primary:hover {
+    background: var(--d365-primary-hover, #106EBE);
+    border-color: var(--d365-primary-hover, #106EBE);
+    color: #fff;
+  }
+  .btn-d365-outline {
+    background: var(--d365-surface, #fff);
+    color: var(--d365-text, #323130);
+    border: 1px solid var(--d365-border-strong, #D2D0CE);
+  }
+  .btn-d365-outline:hover {
+    background: var(--d365-primary-tint-40, #DEECF9);
+    color: var(--d365-primary, #0078D4);
+    border-color: var(--d365-primary, #0078D4);
+  }
+  .btn-d365-success {
+    background: var(--d365-success, #107C10);
+    color: #fff;
+    border: 1px solid var(--d365-success, #107C10);
+  }
+  .btn-d365-success:hover {
+    background: #0b5e0b;
+    border-color: #0b5e0b;
+    color: #fff;
+  }
+
+  .data-card {
+    background: var(--d365-surface, #fff);
+    border: 1px solid var(--d365-border, #EDEBE9);
+    border-radius: .5rem;
+    box-shadow: var(--d365-shadow-2);
+    overflow: hidden;
+  }
+  .data-card .table thead {
+    background: var(--d365-surface-alt, #FAF9F8);
+  }
+  .data-card .table thead th {
+    font-size: .75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+    color: var(--d365-text-secondary, #605E5C);
+    border-bottom: 2px solid var(--d365-border, #EDEBE9);
+    padding: .65rem .75rem;
+  }
+  .data-card .table tbody td {
+    font-size: .84rem;
+    color: var(--d365-text, #323130);
+    padding: .6rem .75rem;
+    border-bottom: 1px solid var(--d365-border, #EDEBE9);
+  }
+  .data-card .table tbody tr:hover {
+    background: var(--d365-primary-tint-40, #DEECF9);
+  }
+
+  .d365-pagination .page-link {
+    font-size: .82rem;
+    color: var(--d365-text, #323130);
+    border-color: var(--d365-border, #EDEBE9);
+    padding: .35rem .7rem;
+  }
+  .d365-pagination .page-item.active .page-link {
+    background: var(--d365-primary, #0078D4);
+    border-color: var(--d365-primary, #0078D4);
+    color: #fff;
+  }
+  .d365-pagination .page-item.disabled .page-link {
+    color: var(--d365-text-disabled, #A19F9D);
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+{% include 'transactions/includes/transactions_quick_actions.html' %}
+
+<!-- Page hero -->
+<div class="page-hero">
+    <h1><i class="bi bi-device-ssd me-2"></i>Posted M-Pesa Notifications</h1>
+    <p>
+        {% if query %}
+            Search results for "<strong>{{ query }}</strong>"
+        {% else %}
+            M-Pesa notifications that have been successfully posted to member accounts.
+        {% endif %}
+    </p>
+</div>
+
+<!-- Filter bar -->
+<div class="filter-bar">
+    <form method="GET" class="d-flex align-items-center gap-2">
+        <div class="input-group" style="max-width:320px;">
+            <span class="input-group-text" style="background:var(--d365-surface-alt);border-color:var(--d365-border-strong);"><i class="bi bi-search" style="font-size:.85rem;color:var(--d365-text-secondary);"></i></span>
+            <input type="text" name="q" id="liveSearch" class="form-control" placeholder="Search by receipt, member, bill ref..." value="{{ query }}" style="border-left:0;">
+        </div>
+        <button class="btn btn-d365 btn-d365-primary" type="submit">Search</button>
+        {% if query %}
+            <a href="{% url 'transactions:posted_notifications' %}" class="btn btn-d365 btn-d365-outline">Clear</a>
+        {% endif %}
+    </form>
+    <div class="ms-auto">
+        <button id="exportButton" class="btn btn-d365 btn-d365-success">
+            <i class="bi bi-file-earmark-excel me-1"></i>Export to Excel
+        </button>
+    </div>
+</div>
+
+<!-- Data table card -->
+<div class="data-card">
+    <div class="table-responsive">
+        <table id="notifications-table" class="table table-hover align-middle mb-0">
+            <thead>
+                <tr>
+                    <th class="ps-3">Receipt No</th>
+                    <th>Date</th>
+                    <th>Amount</th>
+                    <th>Org Balance</th>
+                    <th>Bill Ref</th>
+                    <th>Member No</th>
+                    <th>Account</th>
+                    <th class="pe-3">Posted At</th>
+                </tr>
+            </thead>
+            <tbody>
+            {% for n in page_obj %}
+            <tr>
+                <td class="ps-3 font-monospace fw-semibold" style="color:var(--d365-primary);">{{ n.mpesa_notification.trans_id }}</td>
+                <td style="color:var(--d365-text-secondary);">{{ n.mpesa_notification.trans_time|date:"Y-m-d H:i" }}</td>
+                <td class="fw-bold" style="color:var(--d365-success);">{{ n.mpesa_notification.trans_amount|intcomma }}</td>
+                <td class="fw-bold" style="color:var(--d365-success);">{{ n.mpesa_notification.org_account_balance|intcomma }}</td>
+                <td class="font-monospace fw-bold">{{ n.mpesa_notification.bill_ref_number }}</td>
+                <td>{{ n.customer_no }}</td>
+                <td>
+                    <span style="display:inline-block;padding:.2rem .55rem;font-size:.75rem;font-weight:600;background:var(--d365-primary-tint-40);color:var(--d365-primary);border-radius:.3rem;">
+                        {{ n.account_type }}
+                    </span>
+                </td>
+                <td class="pe-3" style="color:var(--d365-text-secondary);">{{ n.posted_at|date:"Y-m-d H:i" }}</td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="8" class="text-center py-5" style="color:var(--d365-text-disabled);">
+                    <i class="bi bi-inbox d-block mb-2" style="font-size:1.75rem;"></i>
+                    No posted notifications found.
+                </td>
+            </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+{% if page_obj.has_other_pages %}
+<nav aria-label="Page navigation" class="mt-4">
+    <ul class="pagination d365-pagination justify-content-center">
+        {% if page_obj.has_previous %}
+            <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if query %}&q={{ query }}{% endif %}">
+                    <i class="bi bi-chevron-left" style="font-size:.7rem;"></i> Previous
+                </a>
+            </li>
+        {% else %}
+            <li class="page-item disabled">
+                <span class="page-link"><i class="bi bi-chevron-left" style="font-size:.7rem;"></i> Previous</span>
+            </li>
+        {% endif %}
+
+        <li class="page-item active">
+            <span class="page-link">{{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span>
+        </li>
+
+        {% if page_obj.has_next %}
+            <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if query %}&q={{ query }}{% endif %}">
+                    Next <i class="bi bi-chevron-right" style="font-size:.7rem;"></i>
+                </a>
+            </li>
+        {% else %}
+            <li class="page-item disabled">
+                <span class="page-link">Next <i class="bi bi-chevron-right" style="font-size:.7rem;"></i></span>
+            </li>
+        {% endif %}
+    </ul>
+</nav>
+{% endif %}
+
+<script>
+document.getElementById('liveSearch').addEventListener('input', function() {
+    const q = this.value.toLowerCase();
+    document.querySelectorAll('#notifications-table tbody tr').forEach(function(row) {
+        row.style.display = row.textContent.toLowerCase().includes(q) ? '' : 'none';
+    });
+});
+
+document.addEventListener('DOMContentLoaded', function() {
+    const exportButton = document.getElementById('exportButton');
+    const tableElement = document.getElementById('notifications-table');
+    const tableName = 'Posted Mpesa Notifications';
+
+    exportButton.addEventListener('click', function() {
+        const tableHtml = tableElement.outerHTML;
+
+        fetch('{% url "reports:export_to_excel" %}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': '{{ csrf_token }}'
+            },
+            body: JSON.stringify({
+                table_html: tableHtml,
+                file_name: tableName
+            })
+        })
+        .then(response => {
+            if (response.ok) { return response.blob(); }
+            throw new Error('Network response was not ok.');
+        })
+        .then(blob => {
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.style.display = 'none';
+            a.href = url;
+            a.download = tableName + '.xlsx';
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            a.remove();
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Failed to export table. Please try again.');
+        });
+    });
+});
+</script>
+{% endblock %}

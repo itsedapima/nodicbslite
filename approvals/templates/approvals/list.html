@@ -1,0 +1,86 @@
+{% extends 'base.html' %}
+{% block title %}Approval Requests{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h4 class="mb-0"><i class="bi bi-check2-square me-2"></i>Approval Requests</h4>
+  </div>
+
+  {# ── Status filter tabs ── #}
+  <ul class="nav nav-pills mb-3">
+    {% for val, label in status_choices %}
+    <li class="nav-item">
+      <a class="nav-link {% if status_filter == val %}active{% endif %}"
+         href="?status={{ val }}">{{ label }}</a>
+    </li>
+    {% endfor %}
+  </ul>
+
+  {# ── Messages ── #}
+  {% for msg in messages %}
+  <div class="alert alert-{{ msg.tags }} alert-dismissible fade show" role="alert">
+    {{ msg }}
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+  </div>
+  {% endfor %}
+
+  {# ── Table ── #}
+  <div class="card shadow-sm">
+    <div class="table-responsive">
+      <table class="table table-hover mb-0 align-middle">
+        <thead class="table-light">
+          <tr>
+            <th>#</th>
+            <th>Action</th>
+            <th>Submitted By</th>
+            <th>Status</th>
+            <th>Note</th>
+            <th>Date</th>
+            <th>Actioned By</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for req in approval_requests %}
+          <tr>
+            <td>{{ req.pk }}</td>
+            <td>{{ req.get_action_type_display }}</td>
+            <td>{{ req.maker.get_full_name|default:req.maker.username }}</td>
+            <td>
+              {% if req.status == 'pending' %}
+                <span class="badge bg-warning text-dark">Pending</span>
+              {% elif req.status == 'approved' %}
+                <span class="badge bg-success">Approved</span>
+              {% elif req.status == 'rejected' %}
+                <span class="badge bg-danger">Rejected</span>
+              {% else %}
+                <span class="badge bg-secondary">{{ req.get_status_display }}</span>
+              {% endif %}
+            </td>
+            <td class="text-muted small">{{ req.maker_note|truncatewords:10 }}</td>
+            <td class="small">{{ req.created_at|date:"d M Y H:i" }}</td>
+            <td>
+              {% if req.checker %}
+                {{ req.checker.get_full_name|default:req.checker.username }}
+              {% else %}
+                —
+              {% endif %}
+            </td>
+            <td>
+              <a href="{% url 'approvals:detail' req.pk %}" class="btn btn-sm btn-outline-primary">
+                <i class="bi bi-eye"></i> View
+              </a>
+            </td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="8" class="text-center text-muted py-4">No {{ status_filter }} requests.</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}

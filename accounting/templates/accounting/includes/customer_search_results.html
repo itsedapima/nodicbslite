@@ -1,0 +1,29 @@
+{% if results %}
+    <table class="table table-hover border mt-3 small">
+        <thead class="table-light">
+            <tr>
+                <th>Select</th>
+                <th>Member No</th>
+                <th>Full Name</th>
+                <th>National ID</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in results %}
+            <tr>
+                <td>
+                    <input type="radio" name="selected_customer" 
+                           class="customer-radio" 
+                           data-no="{{ item.cust_no }}" 
+                           data-name="{{ item.full_name }}">
+                </td>
+                <td><strong>{{ item.cust_no }}</strong></td>
+                <td>{{ item.full_name }}</td>
+                <td>{{ item.id_number|default:"N/A" }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+{% else %}
+    <div class="alert alert-warning mt-3 py-2">No members found.</div>
+{% endif %}

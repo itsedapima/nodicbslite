@@ -1,0 +1,124 @@
+{% extends 'base.html' %}
+{% block content %}
+{% include 'loans/includes/loans_quick_actions.html' %}
+<div class="container-fluid px-4 py-4">
+
+    <div class="card" style="background: var(--d365-surface); border: 1px solid var(--d365-border); border-radius: .5rem; box-shadow: var(--d365-shadow-2);">
+        <div class="card-header d-flex justify-content-between" style="background: var(--d365-surface-alt); border-bottom: 2px solid var(--d365-border); font-size: .8rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--d365-text-secondary);">
+            <span>Add Collateral</span>
+            <small style="font-weight: 400; text-transform: none; letter-spacing: normal; font-size: .8rem;">Ref: Loan #{{ loan.id }} - {{ loan.customer.full_name }}</small>
+        </div>
+        <div class="card-body">
+            <form method="post">
+                {% csrf_token %}
+
+                <!-- Type Selection -->
+                <div class="mb-4">
+                    <label class="form-label" style="font-weight: 600; font-size: .82rem; color: var(--d365-text);">Collateral Type</label>
+                    {{ form.collateral_type }}
+                </div>
+
+                <!-- Dynamic Fields Container -->
+                <div class="row">
+                    <!-- Left: Valuation (Always Visible) -->
+                    <div class="col-md-6 border-end">
+                        <h6 style="color: var(--d365-primary); font-weight: 700;" class="mb-3">Valuation Details</h6>
+                        <div class="mb-3">
+                            <label class="form-label" style="font-weight: 600; font-size: .82rem; color: var(--d365-text);">Open Market Value (OMV)</label>
+                            {{ form.market_value }}
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label" style="font-weight: 600; font-size: .82rem; color: var(--d365-text);">Forced Sale Value (FSV)</label>
+                            {{ form.forced_sale_value }}
+                        </div>
+                        <div class="row">
+                            <div class="col-6 mb-3">
+                                <label class="form-label" style="font-weight: 600; font-size: .82rem; color: var(--d365-text);">Mortgage Value</label>
+                                {{ form.mortgage_value }}
+                            </div>
+                            <div class="col-6 mb-3">
+                                <label class="form-label" style="font-weight: 600; font-size: .82rem; color: var(--d365-text);">Insurance Value</label>
+                                {{ form.insurance_value }}
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Right: Specific Details (Dynamic) -->
+                    <div class="col-md-6">
+                        <h6 style="color: var(--d365-primary); font-weight: 700;" class="mb-3">Asset Details</h6>
+
+                        <!-- LAND FIELDS -->
+                        <div id="land-section" style="display:none;">
+                            <div class="mb-3">
+                                <label class="form-label" style="font-weight: 600; font-size: .82rem; color: var(--d365-text);">Title Deed Number</label>
+                                {{ form.title_deed_no }}
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label" style="font-weight: 600; font-size: .82rem; color: var(--d365-text);">Location / Block</label>
+                                {{ form.location }}
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label" style="font-weight: 600; font-size: .82rem; color: var(--d365-text);">Size (Ha/Acres)</label>
+                                {{ form.size }}
+                            </div>
+                        </div>
+
+                        <!-- VEHICLE FIELDS -->
+                        <div id="vehicle-section" style="display:none;">
+                            <div class="mb-3">
+                                <label class="form-label" style="font-weight: 600; font-size: .82rem; color: var(--d365-text);">Registration / Plate No</label>
+                                {{ form.registration_no }}
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label" style="font-weight: 600; font-size: .82rem; color: var(--d365-text);">Chassis Number</label>
+                                {{ form.chassis_no }}
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label" style="font-weight: 600; font-size: .82rem; color: var(--d365-text);">Make / Model</label>
+                                {{ form.model }}
+                            </div>
+                        </div>
+
+                        <div class="mb-3 mt-3">
+                            <label class="form-label" style="font-weight: 600; font-size: .82rem; color: var(--d365-text);">Description / Remarks</label>
+                            {{ form.description }}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Buttons -->
+                <div class="d-flex gap-2 mt-4">
+                    <button type="submit" class="btn btn-sm" style="background: var(--d365-primary); color: #fff; border: 1px solid var(--d365-primary); border-radius: .4rem; font-weight: 600;">Save Collateral</button>
+                    <a href="{% url 'loans:view_collaterals' %}" class="btn btn-sm" style="background: var(--d365-surface); color: var(--d365-text); border: 1px solid var(--d365-border-strong); border-radius: .4rem; font-weight: 600;">Cancel</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const typeSelect = document.getElementById('id_collateral_type');
+        const landSection = document.getElementById('land-section');
+        const vehicleSection = document.getElementById('vehicle-section');
+
+        function toggleFields() {
+            const val = typeSelect.value;
+
+            // Reset displays
+            landSection.style.display = 'none';
+            vehicleSection.style.display = 'none';
+
+            if (val === 'land') {
+                landSection.style.display = 'block';
+            } else if (val === 'vehicle') {
+                vehicleSection.style.display = 'block';
+            }
+        }
+
+        // Run on load and on change
+        typeSelect.addEventListener('change', toggleFields);
+        toggleFields();
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,111 @@
+{% extends 'base.html' %}
+{% block title %}Chama Information — NODi Lite{% endblock %}
+{% block content %}
+<div class="page-shell">
+    <div class="page-head">
+        <div>
+            <h2><i class="bi bi-building me-2"></i>Chama Information</h2>
+            <p class="page-sub">View and update your chama details</p>
+        </div>
+    </div>
+
+    {% if info %}
+    <div class="card mb-4">
+        <div class="card-header"><i class="bi bi-info-circle me-1"></i> Current Information</div>
+        <table class="detail-table">
+            <tr><th>Brand Name</th><td>{{ info.brand_name|default:"-" }}</td></tr>
+            <tr><th>Chama Name</th><td>{{ info.chama_name|default:"-" }}</td></tr>
+            <tr><th>Contact</th><td>{{ info.chama_contact|default:"-" }}</td></tr>
+            <tr><th>Registration No.</th><td>{{ info.registration_no|default:"-" }}</td></tr>
+            <tr><th>Address</th><td>{{ info.chama_address|default:"-" }}</td></tr>
+            <tr><th>Location</th><td>{{ info.chama_location|default:"-" }}</td></tr>
+            <tr><th>M-Pesa Paybill</th><td>{{ info.mpesa_paybill|default:"-" }}</td></tr>
+            <tr><th>Logo</th><td>{% if info.chama_logo %}{{ info.chama_logo.name }}{% else %}-{% endif %}</td></tr>
+            <tr><th>Brand Footer</th><td>{{ info.brand_footer|default:"-" }}</td></tr>
+        </table>
+    </div>
+    {% endif %}
+
+    <div class="card">
+        <div class="card-header"><i class="bi bi-pencil-square me-1"></i> Edit Information</div>
+        <div class="card-body p-4">
+            <form method="post" enctype="multipart/form-data" class="d365-form">
+                {% csrf_token %}
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <div class="field-group">
+                            <label for="id_brand_name">Brand Name</label>
+                            <input type="text" name="brand_name" id="id_brand_name"
+                                   value="{{ info.brand_name|default:'' }}">
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="field-group">
+                            <label for="id_chama_name">Chama Name</label>
+                            <input type="text" name="chama_name" id="id_chama_name"
+                                   value="{{ info.chama_name|default:'' }}">
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="field-group">
+                            <label for="id_chama_contact">Contact Info</label>
+                            <input type="text" name="chama_contact" id="id_chama_contact"
+                                   value="{{ info.chama_contact|default:'' }}">
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="field-group">
+                            <label for="id_registration_no">Registration No.</label>
+                            <input type="text" name="registration_no" id="id_registration_no"
+                                   value="{{ info.registration_no|default:'' }}">
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="field-group">
+                            <label for="id_chama_address">Address</label>
+                            <input type="text" name="chama_address" id="id_chama_address"
+                                   value="{{ info.chama_address|default:'' }}">
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="field-group">
+                            <label for="id_chama_location">Location</label>
+                            <input type="text" name="chama_location" id="id_chama_location"
+                                   value="{{ info.chama_location|default:'' }}">
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="field-group">
+                            <label for="id_mpesa_paybill">M-Pesa Paybill</label>
+                            <input type="text" name="mpesa_paybill" id="id_mpesa_paybill"
+                                   value="{{ info.mpesa_paybill|default:'' }}">
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="field-group">
+                            <label for="id_chama_logo">Logo</label>
+                            <input type="file" name="chama_logo" id="id_chama_logo" class="form-control"
+                                   accept="image/*">
+                            {% if info.chama_logo %}
+                            <span class="form-text">Current: {{ info.chama_logo.name }}</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="col-md-12">
+                        <div class="field-group">
+                            <label for="id_brand_footer">Brand Footer</label>
+                            <input type="text" name="brand_footer" id="id_brand_footer"
+                                   value="{{ info.brand_footer|default:'' }}">
+                        </div>
+                    </div>
+                </div>
+                <div class="mt-4">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-check-lg me-1"></i> Update Information
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

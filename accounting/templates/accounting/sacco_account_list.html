@@ -1,0 +1,113 @@
+{% extends 'base.html' %}
+{% load humanize %}
+{% block title %}Sacco Accounts{% endblock %}
+{% block extra_css %}
+<style>
+.page-hero { background: linear-gradient(135deg, #0E2B4D 0%, #1a4170 100%); color: #fff; padding: 1.5rem; border-radius: .75rem; margin-bottom: 1.25rem; }
+.page-hero h1 { font-size: 1.4rem; font-weight: 700; margin: 0 0 .15rem; color: #fff; }
+.page-hero p { margin: 0; opacity: .85; font-size: .85rem; color: #fff; }
+.page-hero i { color: #fff; }
+.filter-bar { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; margin-bottom: 1.25rem; }
+.filter-bar .form-control { max-width: 360px; font-size: .85rem; border: 1px solid var(--d365-border-strong, #D2D0CE); border-radius: .4rem; }
+.filter-bar .form-control:focus { border-color: var(--d365-primary, #0078D4); box-shadow: 0 0 0 2px var(--d365-primary-tint-40, #DEECF9); }
+.btn-d365 { font-size: .82rem; padding: .35rem .85rem; border-radius: .4rem; font-weight: 600; transition: all .15s ease; }
+.btn-d365-primary { background: var(--d365-primary, #0078D4); color: #fff; border: 1px solid var(--d365-primary, #0078D4); }
+.btn-d365-primary:hover { background: var(--d365-primary-hover, #106EBE); border-color: var(--d365-primary-hover, #106EBE); color: #fff; }
+.data-card { background: var(--d365-surface, #fff); border: 1px solid var(--d365-border, #EDEBE9); border-radius: .5rem; box-shadow: var(--d365-shadow-2); overflow: hidden; }
+.data-card .table thead { background: var(--d365-surface-alt, #FAF9F8); }
+.data-card .table thead th { font-size: .75rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--d365-text-secondary, #605E5C); border-bottom: 2px solid var(--d365-border, #EDEBE9); padding: .65rem .75rem; }
+.data-card .table tbody td { font-size: .84rem; color: var(--d365-text, #323130); padding: .6rem .75rem; border-bottom: 1px solid var(--d365-border, #EDEBE9); }
+.data-card .table tbody tr:hover { background: var(--d365-primary-tint-40, #DEECF9); }
+.action-icon { display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 30px; border-radius: .3rem; border: 1px solid var(--d365-border, #EDEBE9); background: var(--d365-surface, #fff); color: var(--d365-text-secondary, #605E5C); font-size: .82rem; transition: all .12s ease; text-decoration: none; }
+.action-icon:hover { background: var(--d365-primary-tint-40, #DEECF9); color: var(--d365-primary, #0078D4); border-color: var(--d365-primary-tint-30, #C7E0F4); }
+</style>
+{% endblock %}
+{% block content %}
+{% include 'accounting/includes/accounting_quick_actions.html' %}
+
+{% if messages %}
+{% for message in messages %}
+<div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert" style="border-radius:.4rem;">
+    {{ message }}
+    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+</div>
+{% endfor %}
+{% endif %}
+
+<div class="page-hero">
+    <h1><i class="bi bi-safe me-2"></i>Sacco Accounts</h1>
+    <p>Manage your General Ledger accounts and real-time balances.</p>
+</div>
+
+<div class="filter-bar">
+    <input type="text" id="liveSearch" class="form-control" placeholder="Search accounts...">
+    <span class="text-muted" style="font-size:.82rem;">{{ accounts.count }} accounts registered</span>
+    <div class="ms-auto">
+        <a href="{% url 'accounting:sacco_account_create' %}" class="btn btn-d365 btn-d365-primary">
+            <i class="bi bi-plus-lg me-1"></i>Add Sacco Account
+        </a>
+    </div>
+</div>
+
+<div class="data-card">
+    <div class="table-responsive">
+        <table class="table table-hover mb-0" id="dataTable">
+            <thead>
+                <tr>
+                    <th>Code</th>
+                    <th>Account Name</th>
+                    <th>Group</th>
+                    <th class="text-end">Balance</th>
+                    <th class="text-center">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for account in accounts %}
+                <tr>
+                    <td>
+                        <span class="badge bg-light text-dark border fw-bold">{{ account.account_code }}</span>
+                    </td>
+                    <td>
+                        <div class="fw-bold">{{ account.account_name }}</div>
+                    </td>
+                    <td>
+                        <span class="badge {% if account.account_group == 'Income' %}bg-success-subtle text-success{% elif account.account_group == 'Expenditure' %}bg-warning-subtle text-warning{% else %}bg-info-subtle text-info{% endif %}">
+                            {{ account.account_group }}
+                        </span>
+                    </td>
+                    <td class="text-end fw-bold">
+                        {{ account.balance.balance|default:"0.00"|intcomma }}
+                    </td>
+                    <td class="text-center">
+                        <div class="d-inline-flex gap-1">
+                            <a href="{% url 'accounting:sacco_account_update' account.id %}" class="action-icon" title="Edit">
+                                <i class="bi bi-pencil-square"></i>
+                            </a>
+                            <a href="{% url 'accounting:sacco_account_delete' account.id %}"
+                               class="action-icon"
+                               title="Delete"
+                               onclick="return confirm('Are you sure you want to delete this account?');">
+                                <i class="bi bi-trash"></i>
+                            </a>
+                        </div>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="5" class="text-center text-muted py-4">No records found.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+document.getElementById('liveSearch').addEventListener('input', function() {
+    const q = this.value.toLowerCase();
+    document.querySelectorAll('#dataTable tbody tr').forEach(function(row) {
+        row.style.display = row.textContent.toLowerCase().includes(q) ? '' : 'none';
+    });
+});
+</script>
+{% endblock %}

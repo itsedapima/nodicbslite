@@ -1,0 +1,116 @@
+{% extends "base.html" %}
+{% load humanize %}
+
+{% block title %}Savings Transactions - NODi Lite{% endblock %}
+
+{% block content %}
+<div class="app-toolbar">
+    <div class="app-toolbar-title">
+        <h1>Savings Transactions</h1>
+    </div>
+    <div class="app-toolbar-actions">
+        <a href="{% url 'transactions:savings_deposit' %}" class="d365-btn d365-btn-primary">
+            <i class="fluent-icon">add</i> Deposit
+        </a>
+        <a href="{% url 'transactions:savings_withdraw' %}" class="d365-btn d365-btn-secondary">
+            <i class="fluent-icon">arrow_upload</i> Withdraw
+        </a>
+    </div>
+</div>
+
+<div class="d365-card d365-filter-bar">
+    <form method="get" class="d365-form d365-form-inline">
+        <div class="d365-form-group">
+            <label class="d365-label" for="date_from">From</label>
+            <input type="date" id="date_from" name="date_from" class="d365-input" value="{{ request.GET.date_from }}">
+        </div>
+        <div class="d365-form-group">
+            <label class="d365-label" for="date_to">To</label>
+            <input type="date" id="date_to" name="date_to" class="d365-input" value="{{ request.GET.date_to }}">
+        </div>
+        <div class="d365-form-group">
+            <label class="d365-label" for="member">Member</label>
+            <input type="text" id="member" name="member" class="d365-input" placeholder="Search member..." value="{{ request.GET.member }}">
+        </div>
+        <div class="d365-form-group">
+            <label class="d365-label" for="status">Status</label>
+            <select id="status" name="status" class="d365-select">
+                <option value="">All</option>
+                <option value="completed" {% if request.GET.status == "completed" %}selected{% endif %}>Completed</option>
+                <option value="pending" {% if request.GET.status == "pending" %}selected{% endif %}>Pending</option>
+                <option value="reversed" {% if request.GET.status == "reversed" %}selected{% endif %}>Reversed</option>
+            </select>
+        </div>
+        <div class="d365-form-group">
+            <button type="submit" class="d365-btn d365-btn-primary">Filter</button>
+        </div>
+    </form>
+</div>
+
+<div class="d365-card">
+    <div class="d365-grid-table-wrapper">
+        <table class="d365-grid-table">
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Reference</th>
+                    <th>Member</th>
+                    <th>Type</th>
+                    <th class="text-right">Amount</th>
+                    <th class="text-right">Balance</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for tx in page_obj %}
+                <tr>
+                    <td>{{ tx.date|date:"d M Y" }}</td>
+                    <td>{{ tx.reference }}</td>
+                    <td>
+                        <a href="{% url 'members:detail' tx.member.pk %}" class="d365-link">{{ tx.member }}</a>
+                    </td>
+                    <td>
+                        {% if tx.type == "deposit" %}
+                        <span class="d365-badge d365-badge-success">Deposit</span>
+                        {% else %}
+                        <span class="d365-badge d365-badge-warning">Withdrawal</span>
+                        {% endif %}
+                    </td>
+                    <td class="text-right">{{ tx.amount|intcomma }}</td>
+                    <td class="text-right">{{ tx.balance|intcomma }}</td>
+                    <td>
+                        {% if tx.status == "completed" %}
+                        <span class="d365-badge d365-badge-success">Completed</span>
+                        {% elif tx.status == "pending" %}
+                        <span class="d365-badge d365-badge-warning">Pending</span>
+                        {% elif tx.status == "reversed" %}
+                        <span class="d365-badge d365-badge-danger">Reversed</span>
+                        {% else %}
+                        <span class="d365-badge">{{ tx.status|title }}</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="7" class="d365-empty-state">No transactions found.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    {% if page_obj.has_other_pages %}
+    <div class="d365-pagination">
+        {% if page_obj.has_previous %}
+        <a href="?page={{ page_obj.previous_page_number }}" class="d365-btn d365-btn-sm">Previous</a>
+        {% endif %}
+        <span class="d365-pagination-info">
+            Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
+        </span>
+        {% if page_obj.has_next %}
+        <a href="?page={{ page_obj.next_page_number }}" class="d365-btn d365-btn-sm">Next</a>
+        {% endif %}
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

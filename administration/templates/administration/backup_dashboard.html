@@ -1,0 +1,97 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block content %}
+{% include 'administration/includes/administration_quick_actions.html' %}
+<div class="container my-5">
+
+   {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags|default:'info' }} alert-dismissible fade show" role="alert">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        {% endfor %}
+    {% endif %}
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2><i class="bi bi-database-fill-lock"></i> Database Backups</h2>
+        <a href="{% url 'administration:trigger_backup' %}" class="btn btn-primary"
+           onclick="this.classList.add('disabled'); this.innerHTML='<span class=\'spinner-border spinner-border-sm me-1\'></span> Running...';">
+            <i class="bi bi-play-fill"></i> Run Backup Now
+        </a>
+    </div>
+
+    <div class="card shadow-sm">
+        <div class="card-header bg-white d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">Backup History</h5>
+            <small class="text-muted"><i class="bi bi-info-circle"></i> Backup files are retained on the server for 7 days</small>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-hover mb-0 align-middle">
+                <thead class="table-light">
+                    <tr>
+                        <th>Date/Time</th>
+                        <th>Filename</th>
+                        <th>Size</th>
+                        <th>Status</th>
+                        <th>File</th>
+                        <th>Logs</th>
+                        <th class="text-end">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for log in logs %}
+                    <tr>
+                        <td>{{ log.timestamp|date:"M d, Y H:i" }}</td>
+                        <td class="text-monospace small">{{ log.file_name }}</td>
+                        <td>{{ log.file_size }}</td>
+                        <td>
+                            {% if log.status == 'success' %}
+                                <span class="badge bg-success-soft text-success">Success</span>
+                            {% else %}
+                                <span class="badge bg-danger-soft text-danger">Failed</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if log.status == 'success' %}
+                                {% if log.file_on_disk %}
+                                    <span class="badge bg-success-soft text-success" title="File is available on the server">
+                                        <i class="bi bi-check-circle-fill"></i> On Server
+                                    </span>
+                                {% else %}
+                                    <span class="badge bg-warning-soft text-warning" title="File was removed by the 7-day retention policy">
+                                        <i class="bi bi-clock-history"></i> Expired
+                                    </span>
+                                {% endif %}
+                            {% else %}
+                                <span class="text-muted">—</span>
+                            {% endif %}
+                        </td>
+                        <td class="small text-muted">{{ log.message|truncatechars:50 }}</td>
+                        <td class="text-end">
+                            {% if log.status == 'success' and log.file_on_disk %}
+                                <a href="{% url 'administration:download_backup' log.pk %}" class="btn btn-sm btn-outline-secondary">
+                                    <i class="bi bi-download"></i> Download
+                                </a>
+                            {% elif log.status == 'success' %}
+                                <button class="btn btn-sm btn-outline-secondary" disabled title="File expired — removed after 7-day retention">
+                                    <i class="bi bi-clock-history"></i> Expired
+                                </button>
+                            {% else %}
+                                <button class="btn btn-sm btn-outline-secondary" disabled title="No file available — backup failed">
+                                    <i class="bi bi-download"></i> N/A
+                                </button>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="7" class="text-center py-4">No backup logs found. Click <strong>Run Backup Now</strong> to create your first backup.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

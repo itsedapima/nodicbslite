@@ -1,0 +1,74 @@
+{% extends 'base.html' %}
+{% load humanize %}
+{% block content %}
+<div class="container mx-auto mt-20">
+    <div class="container">
+        <!-- Message display section -->
+        {% if messages %}
+        <div class="container mt-4">
+            {% for message in messages %}
+            <div class="alert {% if message.tags %}alert-{{ message.tags }}{% else %}alert-info{% endif %}" role="alert">
+                {{ message }}
+                <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        <h2>Income List</h2>
+
+        <!-- Search Form -->
+        <form method="GET" action="{% url 'accounting:income_list' %}" class="form-inline mb-3">
+            <input type="text" name="q" class="form-control mr-2" placeholder="Search by Invoice, Description, Amount, Date" value="{{ query }}">
+            <button type="submit" class="btn btn-primary">Search</button>
+        </form>
+
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Description</th>
+                    <th>Reference</th>
+                    <th>Amount</th>
+                  
+                    <th>Status</th>
+                    <th>Action</th>
+                    <th>View</th>
+                    <th>Edit</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for income in incomes %}
+                <tr>
+                    <td>{{ income.income_date |date:'Y-m-d' }}</td>
+                    <td>{{ income.description }}</td>
+                    <td>{{ income.income_reference }}</td>
+                    <td>{{ income.amount |intcomma}}</td>
+                    
+                    <td>{{ income.reconciliation_status }}</td>
+                    <td>
+                        {% if income.reconciliation_status == "unreconciled" %}
+                            <a href="{% url 'accounting:reconcile_income' income.id %}" class="btn btn-primary">Reconcile</a>
+                        {% else %}
+                            <span class="text-success">Already Reconciled</span>
+                        {% endif %}
+                        </td>
+                        <td>
+                        <a href="{% url 'accounting:view_income' income.id %}" class="btn btn-info">View</a>
+                        </td>
+                        <td>
+                        <a href="{% url 'accounting:edit_income' income.id %}" class="btn btn-warning">Edit</a>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="6" class="text-center">No results found</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

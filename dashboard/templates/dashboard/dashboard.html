@@ -1,0 +1,396 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block title %}Dashboard — {{ brand_name|default:"NODi Lite" }}{% endblock %}
+
+{% block content %}
+<div class="page-shell">
+
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags|default:'info' }} alert-dismissible fade show" role="alert">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        {% endfor %}
+    {% endif %}
+
+    <div class="page-head">
+        <div>
+            <h2><i class="bi bi-speedometer2 me-2"></i>{{ chama_name|default:"NODi Lite" }} — Dashboard</h2>
+            <p class="page-sub">Overview of your chama's financial position</p>
+        </div>
+    </div>
+
+    <div class="quick-links">
+        <span class="ql-label">Quick Links</span>
+        <a href="{% url 'transactions:post_transaction_empty' %}">
+            <i class="bi bi-plus-lg"></i> New Posting
+        </a>
+        <a href="{% url 'transactions:bulk_post_transaction' %}">
+            <i class="bi bi-layers-half"></i> Bulk Posting
+        </a>
+        <a href="{% url 'transactions:unposted_notifications' %}">
+            <i class="bi bi-phone-vibrate"></i> M-Pesa Pending
+        </a>
+        <a href="{% url 'statements:panel' %}">
+            <i class="bi bi-file-earmark-text"></i> Statements
+        </a>
+        <a href="{% url 'dashboard:savings_monthly_report' %}">
+            <i class="bi bi-bar-chart-line"></i> Savings Report
+        </a>
+        <a href="{% url 'approvals:list' %}">
+            <i class="bi bi-check2-square"></i> Approvals
+        </a>
+
+        <span class="ql-divider"></span>
+
+        <div class="ql-dropdown">
+            <button type="button">
+                <i class="bi bi-three-dots"></i> More <i class="bi bi-chevron-down" style="font-size:.6rem;"></i>
+            </button>
+            <div class="ql-dropdown-menu">
+                <a href="{% url 'reports:reports_dashboard' %}">
+                    <i class="bi bi-file-earmark-bar-graph"></i> Reports Hub
+                </a>
+                <a href="{% url 'data_imports:hub' %}">
+                    <i class="bi bi-cloud-arrow-up-fill"></i> Data Imports
+                </a>
+                <a href="{% url 'customers:list_customers' %}">
+                    <i class="bi bi-people-fill"></i> Members
+                </a>
+                <a href="{% url 'accounting:sacco_account_list' %}">
+                    <i class="bi bi-piggy-bank-fill"></i> Chart of Accounts
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-3 mb-4">
+
+        <div class="col-12 col-sm-6 col-lg-3">
+            <div class="card h-100">
+                <div class="card-body">
+                    <div class="d-flex align-items-center gap-3">
+                        <div class="icon-shape">
+                            <i class="bi bi-people-fill"></i>
+                        </div>
+                        <div>
+                            <div class="kpi-label">Members</div>
+                            <div class="kpi-value">{{ total_members|default:0|intcomma }}</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-12 col-sm-6 col-lg-3">
+            <div class="card h-100">
+                <div class="card-body">
+                    <div class="d-flex align-items-center gap-3">
+                        <div class="icon-shape tone-success">
+                            <i class="bi bi-piggy-bank-fill"></i>
+                        </div>
+                        <div>
+                            <div class="kpi-label">Loans Liquidity (KES)</div>
+                            <div class="kpi-value">{{ loans_liquidity|default:0|floatformat:0|intcomma }}</div>
+                            <div class="kpi-sub">
+                                Deposits (excl. shares) + repayments &minus; disbursed
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-12 col-sm-6 col-lg-3">
+            <div class="card h-100">
+                <div class="card-body">
+                    <div class="d-flex align-items-center gap-3">
+                        <div class="icon-shape tone-warning">
+                            <i class="bi bi-cash-coin"></i>
+                        </div>
+                        <div>
+                            <div class="kpi-label">Loan Balance (KES)</div>
+                            <div class="kpi-value">{{ running_loan_balance|default:0|floatformat:0|intcomma }}</div>
+                            <div class="kpi-sub">
+                                Principal disbursed: <strong>{{ total_principal|default:0|floatformat:0|intcomma }}</strong>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-12 col-sm-6 col-lg-3">
+            <div class="card h-100">
+                <div class="card-body">
+                    <div class="d-flex align-items-center gap-3">
+                        <div class="icon-shape tone-info">
+                            <i class="bi bi-phone-fill"></i>
+                        </div>
+                        <div>
+                            <div class="kpi-label">Pending M-Pesa (KES)</div>
+                            <div class="kpi-value">{{ total_pending|default:0|floatformat:0|intcomma }}</div>
+                            <div class="kpi-sub">
+                                {% if total_pending %}
+                                <span class="badge bg-warning">Needs reconciliation</span>
+                                {% else %}
+                                <span class="text-muted">No pending items</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    {% if total_pending %}
+    <div class="alert alert-warning alert-dismissible fade show mb-4" role="alert">
+        <i class="bi bi-phone-vibrate me-2"></i>
+        <strong>KES {{ total_pending|floatformat:0|intcomma }}</strong> in M-Pesa transactions pending reconciliation.
+        <a href="{% url 'transactions:unposted_notifications' %}" class="alert-link fw-semibold ms-1">
+            Review now <i class="bi bi-arrow-right"></i>
+        </a>
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+    {% endif %}
+
+    <div class="row g-3 mb-4">
+        {# Loan Portfolio — table-style like Savings Breakdown #}
+        <div class="col-lg-6">
+            <div class="card h-100 shadow-sm">
+                <div class="card-header d-flex justify-content-between align-items-center py-3">
+                    <span class="fw-bold"><i class="bi bi-graph-up me-1"></i> Loan Portfolio</span>
+                    <span class="text-secondary fw-semibold" style="font-size:.75rem; text-transform:uppercase; letter-spacing:.05em;">
+                        Balance: KES {{ running_loan_balance|default:0|floatformat:0|intcomma }}
+                    </span>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive mb-0">
+                        <table class="table table-hover align-middle mb-0 text-nowrap">
+                            <thead class="table-light sticky-top border-bottom">
+                                <tr>
+                                    <th class="ps-3" style="font-size: 0.8rem;">Item</th>
+                                    <th class="text-end" style="font-size: 0.8rem;">Amount (KES)</th>
+                                    <th class="text-end pe-3" style="font-size: 0.8rem; width:30%;">Share</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for item in loan_portfolio_data %}
+                                <tr>
+                                    <td class="ps-3">
+                                        <span class="fw-semibold">{{ item.label }}</span>
+                                    </td>
+                                    <td class="text-end font-monospace small fw-bold{% if item.color %} {{ item.color }}{% endif %}">
+                                        {{ item.amount|floatformat:0|intcomma }}
+                                    </td>
+                                    <td class="text-end pe-3" style="min-width:8rem;">
+                                        {% if item.pct is not None %}
+                                        <div class="d-flex align-items-center gap-2 justify-content-end">
+                                            <div style="flex:1; max-width:6rem; height:.4rem; background:#e3e6ec; border-radius:2px; overflow:hidden;">
+                                                <div style="width:{{ item.pct }}%; height:100%; background:{{ item.bar_color|default:'#0E2B4D' }};"></div>
+                                            </div>
+                                            <span class="text-secondary font-monospace" style="font-size:.75rem; min-width:2.5rem; text-align:right;">{{ item.pct }}%</span>
+                                        </div>
+                                        {% else %}
+                                        <span class="text-secondary">&mdash;</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {# Income & M-Pesa Volume — table-style like Savings Breakdown #}
+        <div class="col-lg-6">
+            <div class="card h-100 shadow-sm">
+                <div class="card-header d-flex justify-content-between align-items-center py-3">
+                    <span class="fw-bold"><i class="bi bi-pie-chart-fill me-1"></i> Income &amp; M-Pesa Volume</span>
+                    <span class="text-secondary fw-semibold" style="font-size:.75rem; text-transform:uppercase; letter-spacing:.05em;">
+                        M-Pesa: KES {{ total_mpesa_volume|default:0|floatformat:0|intcomma }}
+                    </span>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive mb-0">
+                        <table class="table table-hover align-middle mb-0 text-nowrap">
+                            <thead class="table-light sticky-top border-bottom">
+                                <tr>
+                                    <th class="ps-3" style="font-size: 0.8rem;">Item</th>
+                                    <th class="text-end" style="font-size: 0.8rem;">Amount (KES)</th>
+                                    <th class="text-end pe-3" style="font-size: 0.8rem; width:30%;">Share</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for item in income_data %}
+                                <tr>
+                                    <td class="ps-3">
+                                        <span class="fw-semibold">{{ item.label }}</span>
+                                    </td>
+                                    <td class="text-end font-monospace small fw-bold{% if item.color %} {{ item.color }}{% endif %}">
+                                        {{ item.amount|floatformat:0|intcomma }}
+                                    </td>
+                                    <td class="text-end pe-3" style="min-width:8rem;">
+                                        {% if item.pct is not None %}
+                                        <div class="d-flex align-items-center gap-2 justify-content-end">
+                                            <div style="flex:1; max-width:6rem; height:.4rem; background:#e3e6ec; border-radius:2px; overflow:hidden;">
+                                                <div style="width:{{ item.pct }}%; height:100%; background:{{ item.bar_color|default:'#0E2B4D' }};"></div>
+                                            </div>
+                                            <span class="text-secondary font-monospace" style="font-size:.75rem; min-width:2.5rem; text-align:right;">{{ item.pct }}%</span>
+                                        </div>
+                                        {% else %}
+                                        <span class="text-secondary">&mdash;</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {# ── BOTTOM DUAL GRID: Account Profiles + Savings Breakdown ────────── #}
+    <div class="row g-3 mb-4">
+
+        {# System Account Profiles & GL Mappings #}
+        <div class="col-12 col-lg-6">
+            <div class="card h-100 shadow-sm">
+                <div class="card-header bg-light d-flex justify-content-between align-items-center py-3">
+                    <span class="fw-bold"><i class="bi bi-gear-wide-connected me-1"></i> Account Profiles & GL Mapping</span>
+                    <span class="badge bg-secondary-subtle text-secondary border border-secondary fw-normal">{{ account_configs|length }} Active Products</span>
+                </div>
+                <div class="card-body p-0" style="max-height: 290px; overflow-y: auto;">
+                    <div class="table-responsive mb-0">
+                        <table class="table table-hover align-middle mb-0 text-nowrap">
+                            <thead class="table-light sticky-top border-bottom">
+                                <tr>
+                                    <th class="ps-3" style="font-size: 0.8rem; width: 15%;">Account Code</th>
+                                    <th style="font-size: 0.8rem; width: 45%;">Account Name</th>
+                                    <th style="font-size: 0.8rem; width: 15%;">Suffix</th>
+                                    <th class="pe-3" style="font-size: 0.8rem; width: 25%;">GL Account</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for config in account_configs %}
+                                <tr>
+                                    <td class="ps-3 font-monospace small fw-bold text-dark">
+                                        {{ config.account_code }}
+                                    </td>
+                                    <td>
+                                        <span class="small fw-semibold text-secondary d-block text-truncate" style="max-width: 220px;" title="{{ config.account_name }}">
+                                            {{ config.account_name }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-light text-dark border font-monospace px-2 py-1" style="font-size: 0.75rem;">
+                                            {{ config.acc_initials }}
+                                        </span>
+                                    </td>
+                                    <td class="pe-3">
+                                        {% if config.sacco_gl_account %}
+                                            <code class="text-primary fw-bold font-monospace" style="font-size: 0.85rem;">{{ config.get_gl_code }}</code>
+                                        {% else %}
+                                            <span class="text-warning small fw-semibold"><i class="bi bi-exclamation-triangle-fill me-1"></i>Unmapped</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="4" class="text-center py-5 text-muted">
+                                        <i class="bi bi-folder-x fs-2 d-block mb-2"></i>
+                                        No active financial configuration mappings discovered.
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {# Savings Breakdown #}
+        <div class="col-12 col-lg-6">
+            <div class="card h-100 shadow-sm">
+                <div class="card-header d-flex justify-content-between align-items-center py-3">
+                    <span class="fw-bold"><i class="bi bi-wallet2 me-1"></i> Savings Breakdown</span>
+                    <span class="text-secondary fw-semibold" style="font-size:.75rem; text-transform:uppercase; letter-spacing:.05em;">
+                        Total: KES {{ total_deposits|default:0|floatformat:0|intcomma }}
+                    </span>
+                </div>
+                <div class="card-body p-0" style="max-height: 290px; overflow-y: auto;">
+                    <div class="table-responsive mb-0">
+                        <table class="table table-hover align-middle mb-0 text-nowrap">
+                            <thead class="table-light sticky-top border-bottom">
+                                <tr>
+                                    <th class="ps-3" style="font-size: 0.8rem;">Savings Type</th>
+                                    <th class="text-end" style="font-size: 0.8rem;">Balance (KES)</th>
+                                    <th class="text-end pe-3" style="font-size: 0.8rem; width:30%;">Share</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for s in savings_data %}
+                                <tr>
+                                    <td class="ps-3">
+                                        <span class="fw-semibold">
+                                            {{ s.display_name }}
+                                            {% if s.is_share %}
+                                              <span class="badge bg-info text-dark ms-1" style="font-size:.6rem;">Core Capital</span>
+                                            {% endif %}
+                                        </span>
+                                    </td>
+                                    <td class="text-end font-monospace small fw-bold">{{ s.balance|floatformat:0|intcomma }}</td>
+                                    <td class="text-end pe-3" style="min-width:8rem;">
+                                        {% if total_deposits and total_deposits > 0 %}
+                                            {% widthratio s.balance total_deposits 100 as pct %}
+                                            <div class="d-flex align-items-center gap-2 justify-content-end">
+                                                <div style="flex:1; max-width:6rem; height:.4rem; background:#e3e6ec; border-radius:2px; overflow:hidden;">
+                                                    <div style="width:{{ pct }}%; height:100%; background:{% if s.is_share %}#0dcaf0{% else %}#0E2B4D{% endif %};"></div>
+                                                </div>
+                                                <span class="text-secondary font-monospace" style="font-size:.75rem; min-width:2.5rem; text-align:right;">{{ pct }}%</span>
+                                            </div>
+                                        {% else %}
+                                            <span class="text-secondary">&mdash;</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="3" class="text-center text-secondary py-5">
+                                        <i class="bi bi-inbox fs-2 d-block mb-2"></i> No savings activity yet.
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    var tooltipTriggerList = [].slice.call(
+        document.querySelectorAll('[data-bs-toggle="tooltip"]')
+    );
+    tooltipTriggerList.forEach(function (el) {
+        new bootstrap.Tooltip(el);
+    });
+});
+</script>
+{% endblock %}

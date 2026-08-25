@@ -1,0 +1,306 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load widget_tweaks %}
+{% block title %}{% if editing %}Edit Customer{% else %}Add New Customer{% endif %}{% endblock %}
+{% block content %}
+  {% include 'customers/includes/customer_quick_actions.html' %}
+
+<style>
+  .onboard-steps { display: flex; align-items: center; }
+  .onboard-step { text-align: center; flex: 1 1 0; }
+  .onboard-step .dot {
+    width: 2.25rem; height: 2.25rem; margin: 0 auto;
+    border-radius: 50%;
+    display: inline-flex; align-items: center; justify-content: center;
+    font-weight: 600; font-size: .9375rem;
+    border: 2px solid var(--d365-border-strong);
+    background: var(--d365-surface);
+    color: var(--d365-text-secondary);
+    transition: background .2s ease, border-color .2s ease, color .2s ease;
+  }
+  .onboard-step .dot.is-active {
+    background: var(--d365-primary);
+    border-color: var(--d365-primary);
+    color: #fff;
+    box-shadow: 0 0 0 4px var(--d365-primary-tint-40);
+  }
+  .onboard-step .dot.is-done {
+    background: var(--d365-success);
+    border-color: var(--d365-success);
+    color: #fff;
+  }
+  .onboard-step .dot.is-done::before { content: "\f26e"; font-family: "bootstrap-icons"; }
+  .onboard-step .dot.is-done span { display: none; }
+  .onboard-step .label {
+    margin-top: .4rem; font-size: .8125rem; font-weight: 600;
+    color: var(--d365-text-secondary);
+  }
+  .onboard-step.current .label { color: var(--d365-primary-active); }
+  .onboard-rail {
+    flex: 0 0 auto; width: 3rem; height: 2px;
+    background: var(--d365-border-strong);
+  }
+  .onboard-rail.filled { background: var(--d365-success); }
+  .field-error { color: var(--d365-danger); font-size: .75rem; margin-top: .25rem; }
+  /* Toggle switch row */
+  .toggle-row {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: .75rem 1rem;
+    border: 1px solid var(--d365-border);
+    border-radius: .5rem;
+    background: var(--d365-surface);
+  }
+  .toggle-row + .toggle-row { margin-top: .5rem; }
+  .toggle-meta .toggle-title { font-weight: 600; font-size: .875rem; }
+  .toggle-meta .toggle-hint {
+    font-size: .75rem; color: var(--d365-text-secondary); margin-top: .125rem;
+  }
+</style>
+
+<div class="container my-4">
+  <div class="row justify-content-center">
+    <div class="col-lg-9 col-xl-8">
+      <div class="card p-4 p-md-5">
+        <h1 class="text-center mb-1 fs-3 fw-bold">{% if editing %}Edit Customer{% else %}Add Customer{% endif %}</h1>
+        <p class="text-center text-secondary mb-4" style="font-size:.875rem;">
+          {% if editing %}Update {{ customer.full_name }}'s details.{% else %}Complete the three steps to register a member.{% endif %}
+        </p>
+
+        <!-- ── Progress indicator ── -->
+        <div class="onboard-steps mb-4">
+          <div class="onboard-step {% if step == 1 %}current{% endif %}">
+            <div class="dot {% if step == 1 %}is-active{% elif step > 1 %}is-done{% endif %}"><span>1</span></div>
+            <div class="label">Personal</div>
+          </div>
+          <div class="onboard-rail {% if step > 1 %}filled{% endif %}"></div>
+          <div class="onboard-step {% if step == 2 %}current{% endif %}">
+            <div class="dot {% if step == 2 %}is-active{% elif step > 2 %}is-done{% endif %}"><span>2</span></div>
+            <div class="label">Communication</div>
+          </div>
+          <div class="onboard-rail {% if step > 2 %}filled{% endif %}"></div>
+          <div class="onboard-step {% if step == 3 %}current{% endif %}">
+            <div class="dot {% if step == 3 %}is-active{% endif %}"><span>3</span></div>
+            <div class="label">Economic</div>
+          </div>
+        </div>
+
+        {% if form.non_field_errors %}
+        <div class="alert alert-danger" role="alert">
+          {% for error in form.non_field_errors %}<div>{{ error }}</div>{% endfor %}
+        </div>
+        {% endif %}
+
+        <form method="post" id="onboard-form">
+          {% csrf_token %}
+          <input type="hidden" name="step" value="{{ step }}">
+
+          <!-- ════════════════════════════════════════════════════════ -->
+          <!-- STEP 1 — Personal Details                               -->
+          <!-- ════════════════════════════════════════════════════════ -->
+          {% if step == 1 %}
+          <div class="row g-3">
+            {% if form.customer_type %}
+            <div class="col-md-6">
+              <label class="form-label" for="{{ form.customer_type.id_for_label }}">Member Type</label>
+              {{ form.customer_type|add_class:"form-select" }}
+              {% for e in form.customer_type.errors %}<div class="field-error">{{ e }}</div>{% endfor %}
+            </div>
+            {% endif %}
+            <div class="col-md-4">
+              <label class="form-label" for="{{ form.first_name.id_for_label }}">First name</label>
+              {{ form.first_name|add_class:"form-control" }}
+              {% for e in form.first_name.errors %}<div class="field-error">{{ e }}</div>{% endfor %}
+            </div>
+            <div class="col-md-4">
+              <label class="form-label" for="{{ form.middle_name.id_for_label }}">Middle name</label>
+              {{ form.middle_name|add_class:"form-control" }}
+            </div>
+            <div class="col-md-4">
+              <label class="form-label" for="{{ form.last_name.id_for_label }}">Last name</label>
+              {{ form.last_name|add_class:"form-control" }}
+              {% for e in form.last_name.errors %}<div class="field-error">{{ e }}</div>{% endfor %}
+            </div>
+            <div class="col-12">
+              <label class="form-label" for="{{ form.full_name.id_for_label }}">Full name</label>
+              {{ form.full_name|add_class:"form-control" }}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label" for="{{ form.gender.id_for_label }}">Gender</label>
+              {{ form.gender|add_class:"form-select" }}
+              {% for e in form.gender.errors %}<div class="field-error">{{ e }}</div>{% endfor %}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label" for="{{ form.marital_status.id_for_label }}">Marital status</label>
+              {{ form.marital_status|add_class:"form-select" }}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label" for="{{ form.dob.id_for_label }}">Date of birth</label>
+              {{ form.dob|add_class:"form-control" }}
+              {% for e in form.dob.errors %}<div class="field-error">{{ e }}</div>{% endfor %}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label" for="{{ form.branch.id_for_label }}">Registration branch</label>
+              {{ form.branch|add_class:"form-select" }}
+              {% for e in form.branch.errors %}<div class="field-error">{{ e }}</div>{% endfor %}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label" for="{{ form.national_id.id_for_label }}">National ID</label>
+              {{ form.national_id|add_class:"form-control" }}
+              {% for e in form.national_id.errors %}<div class="field-error">{{ e }}</div>{% endfor %}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label" for="{{ form.kra_pin.id_for_label }}">KRA PIN</label>
+              {{ form.kra_pin|add_class:"form-control" }}
+            </div>
+          </div>
+          <div class="d-flex justify-content-end mt-4">
+            <button type="submit" class="btn btn-primary">Next <i class="bi bi-arrow-right ms-1"></i></button>
+          </div>
+
+          <!-- ════════════════════════════════════════════════════════ -->
+          <!-- STEP 2 — Communication & Residence                      -->
+          <!-- ════════════════════════════════════════════════════════ -->
+          {% elif step == 2 %}
+          <h6 class="fw-bold text-secondary text-uppercase mb-3" style="font-size:.75rem; letter-spacing:.06em;">
+            Contact information
+          </h6>
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label" for="{{ form.phone.id_for_label }}">Phone</label>
+              {{ form.phone|add_class:"form-control" }}
+              {% for e in form.phone.errors %}<div class="field-error">{{ e }}</div>{% endfor %}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label" for="{{ form.reg_email.id_for_label }}">Email address</label>
+              {{ form.reg_email|add_class:"form-control" }}
+              {% for e in form.reg_email.errors %}<div class="field-error">{{ e }}</div>{% endfor %}
+            </div>
+          </div>
+
+          <h6 class="fw-bold text-secondary text-uppercase mt-4 mb-3" style="font-size:.75rem; letter-spacing:.06em;">
+            Residential address
+          </h6>
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label" for="{{ form.postal_address.id_for_label }}">Postal address</label>
+              {{ form.postal_address|add_class:"form-control" }}
+              {% for e in form.postal_address.errors %}<div class="field-error">{{ e }}</div>{% endfor %}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label" for="{{ form.postal_code.id_for_label }}">Postal code</label>
+              {{ form.postal_code|add_class:"form-control" }}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label" for="{{ form.town.id_for_label }}">Town</label>
+              {{ form.town|add_class:"form-control" }}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label" for="{{ form.home_address.id_for_label }}">Home address</label>
+              {{ form.home_address|add_class:"form-control" }}
+            </div>
+          </div>
+
+          <h6 class="fw-bold text-secondary text-uppercase mt-4 mb-3" style="font-size:.75rem; letter-spacing:.06em;">
+            Notification preferences
+          </h6>
+          <div class="toggle-row">
+            <div class="toggle-meta">
+              <div class="toggle-title">SMS &amp; email notifications</div>
+              <div class="toggle-hint">Allow the system to send transactional alerts, statements, and reminders to this member.</div>
+            </div>
+            <div class="form-check form-switch mb-0">
+              {{ form.default_notifications_setting }}
+            </div>
+          </div>
+
+          <div class="d-flex justify-content-between mt-4">
+            <a href="{% if editing %}{% url 'customers:edit_customer_stepper' pk=customer.pk step=1 %}{% else %}{% url 'customers:add_customer_stepper' step=1 %}{% endif %}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left me-1"></i> Previous</a>
+            <button type="submit" class="btn btn-primary">Next <i class="bi bi-arrow-right ms-1"></i></button>
+          </div>
+
+          <!-- ════════════════════════════════════════════════════════ -->
+          <!-- STEP 3 — Economic Activity & Flags                      -->
+          <!-- ════════════════════════════════════════════════════════ -->
+          {% elif step == 3 %}
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label" for="{{ form.employment_status.id_for_label }}">Employment status</label>
+              {{ form.employment_status|add_class:"form-select" }}
+              {% for e in form.employment_status.errors %}<div class="field-error">{{ e }}</div>{% endfor %}
+            </div>
+            <div id="profession-field" class="col-md-6 {% if form.employment_status.value != 'employed' %}d-none{% endif %}">
+              <label class="form-label" for="{{ form.profession.id_for_label }}">Profession</label>
+              {{ form.profession|add_class:"form-control" }}
+            </div>
+            <div id="economic-activity-field" class="col-md-6 {% if form.employment_status.value != 'self_employed' %}d-none{% endif %}">
+              <label class="form-label" for="{{ form.economic_activity.id_for_label }}">Economic activity</label>
+              {{ form.economic_activity|add_class:"form-control" }}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label" for="{{ form.monthly_income.id_for_label }}">Monthly income</label>
+              {{ form.monthly_income|add_class:"form-control" }}
+              {% for e in form.monthly_income.errors %}<div class="field-error">{{ e }}</div>{% endfor %}
+            </div>
+          </div>
+
+          <h6 class="fw-bold text-secondary text-uppercase mt-4 mb-3" style="font-size:.75rem; letter-spacing:.06em;">
+            Account flags
+          </h6>
+          <div class="toggle-row">
+            <div class="toggle-meta">
+              <div class="toggle-title">Registration fee paid</div>
+              <div class="toggle-hint">Mark as paid once the member has cleared the one-time registration fee.</div>
+            </div>
+            <div class="form-check form-switch mb-0">
+              {{ form.reg_fee_is_paid }}
+            </div>
+          </div>
+          <div class="toggle-row">
+            <div class="toggle-meta">
+              <div class="toggle-title">Treasury account</div>
+              <div class="toggle-hint">Designate this as the company pooling account for collective investments and dues calculation.</div>
+            </div>
+            <div class="form-check form-switch mb-0">
+              {{ form.is_treasury }}
+            </div>
+          </div>
+
+          <div class="d-flex justify-content-between mt-4">
+            <a href="{% if editing %}{% url 'customers:edit_customer_stepper' pk=customer.pk step=2 %}{% else %}{% url 'customers:add_customer_stepper' step=2 %}{% endif %}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left me-1"></i> Previous</a>
+            <button type="submit" class="btn btn-success"><i class="bi bi-check-lg me-1"></i> {% if editing %}Update{% else %}Finish{% endif %}</button>
+          </div>
+          {% endif %}
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  // Auto-compose full name on step 1
+  var first = document.getElementById('id_first_name');
+  var middle = document.getElementById('id_middle_name');
+  var last = document.getElementById('id_last_name');
+  var full = document.getElementById('id_full_name');
+  function updateFullName() {
+    if (!full) return;
+    full.value = [first && first.value.trim(), middle && middle.value.trim(), last && last.value.trim()]
+      .filter(Boolean).join(' ');
+  }
+  [first, middle, last].forEach(function (el) { if (el) el.addEventListener('input', updateFullName); });
+
+  // Conditional fields on step 3
+  var status = document.getElementById('id_employment_status');
+  var prof = document.getElementById('profession-field');
+  var econ = document.getElementById('economic-activity-field');
+  function updateVisibility() {
+    if (!status) return;
+    var v = status.value;
+    if (prof) prof.classList.toggle('d-none', v !== 'employed');
+    if (econ) econ.classList.toggle('d-none', v !== 'self_employed');
+  }
+  if (status) { updateVisibility(); status.addEventListener('change', updateVisibility); }
+});
+</script>
+{% endblock %}

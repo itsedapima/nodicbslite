@@ -1,0 +1,180 @@
+{% extends "base.html" %}
+{% load static %}
+{% block content %}
+    {% include 'customers/includes/customer_quick_actions.html' %}
+
+<div class="container-fluid px-4 py-3">
+
+    <div class="d-flex align-items-center gap-2 mb-4">
+        <span class="toolbar-badge" style="background:var(--d365-danger-bg); color:var(--d365-danger);">
+            <i class="bi bi-door-open"></i>
+        </span>
+        <h5 class="mb-0" style="color:var(--d365-text); font-weight:600;">Member Exit &amp; Settlement</h5>
+    </div>
+
+    <div class="row g-3">
+        <!-- Left column: Search + Validation -->
+        <div class="col-md-5">
+            <div class="card" style="border:1px solid var(--d365-border); border-radius:var(--d365-radius-lg); box-shadow:var(--d365-shadow-2);">
+                <div class="card-header" style="background:var(--d365-surface-alt); border-bottom:1px solid var(--d365-border); font-size:.8125rem; font-weight:600; color:var(--d365-text-secondary);">
+                    <i class="bi bi-search me-1"></i> 1. Find Member
+                </div>
+                <div class="card-body position-relative">
+                    <input type="text" id="memberSearch" class="form-control form-control-sm"
+                           placeholder="Type Name or Member No..."
+                           style="border-color:var(--d365-border-strong); border-radius:var(--d365-radius-sm);">
+                    <div id="resultsList" class="list-group shadow"
+                         style="position:absolute; z-index:1000; width:calc(100% - 2rem); display:none;"></div>
+                </div>
+            </div>
+
+            <div id="validationCard" class="card d-none mt-3" style="border:1px solid var(--d365-border); border-radius:var(--d365-radius-lg); box-shadow:var(--d365-shadow-2);">
+                <div class="card-header" style="background:var(--d365-surface-alt); border-bottom:1px solid var(--d365-border); font-size:.8125rem; font-weight:600; color:var(--d365-text-secondary);">
+                    <i class="bi bi-shield-check me-1"></i> 2. Financial Validation
+                </div>
+                <div class="card-body">
+                    <ul class="list-group list-group-flush" style="font-size:.8125rem;">
+                        <li class="list-group-item d-flex justify-content-between" style="border-color:var(--d365-border);">
+                            Savings Balance: <strong id="valSavings" style="color:var(--d365-success);">0.00</strong>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between" style="border-color:var(--d365-border);">
+                            Loan Balance: <strong id="valLoans" style="color:var(--d365-danger);">0.00</strong>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between" style="border-color:var(--d365-border);">
+                            Active Guarantees: <span id="valGuarantees" class="badge" style="background:var(--d365-primary-tint-40); color:var(--d365-primary);">0</span>
+                        </li>
+                    </ul>
+                    <div id="errorMsg" class="d-none mt-3 px-3 py-2" style="background:var(--d365-warning-bg); border-left:3px solid var(--d365-warning); border-radius:var(--d365-radius-sm); font-size:.8125rem; color:var(--d365-text);"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right column: Exit Form -->
+        <div class="col-md-7">
+            <div class="card d-none" id="exitFormCard" style="border:1px solid var(--d365-border); border-radius:var(--d365-radius-lg); box-shadow:var(--d365-shadow-2);">
+                <div class="card-header" style="background:var(--d365-surface-alt); border-bottom:1px solid var(--d365-border); font-size:.8125rem; font-weight:600; color:var(--d365-text-secondary);">
+                    <i class="bi bi-file-earmark-text me-1"></i> 3. Exit Details
+                </div>
+                <div class="card-body">
+                    <form id="exitForm">
+                        {% csrf_token %}
+                        <input type="hidden" name="cust_no" id="targetCustNo">
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label" style="font-size:.8125rem; font-weight:600; color:var(--d365-text-secondary);">Exit Type</label>
+                                <select name="exit_type" id="exitType" class="form-select form-select-sm" style="border-color:var(--d365-border-strong); border-radius:var(--d365-radius-sm);">
+                                    <option value="exited">Voluntary Exit</option>
+                                    <option value="deceased">Deceased</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label" style="font-size:.8125rem; font-weight:600; color:var(--d365-text-secondary);">Exit Date</label>
+                                <input type="date" name="exit_date" class="form-control form-control-sm" value="{% now 'Y-m-d' %}" style="border-color:var(--d365-border-strong); border-radius:var(--d365-radius-sm);">
+                            </div>
+                        </div>
+
+                        <div id="deathDateGroup" class="mb-3 d-none">
+                            <label class="form-label" style="font-size:.8125rem; font-weight:600; color:var(--d365-text-secondary);">Date of Death</label>
+                            <input type="date" name="death_date" class="form-control form-control-sm" style="border-color:var(--d365-border-strong); border-radius:var(--d365-radius-sm);">
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label" style="font-size:.8125rem; font-weight:600; color:var(--d365-text-secondary);">Reason for Leaving</label>
+                            <textarea name="reason" class="form-control form-control-sm" rows="3" style="border-color:var(--d365-border-strong); border-radius:var(--d365-radius-sm);"></textarea>
+                        </div>
+
+                        <div class="px-3 py-2 mb-3" style="background:var(--d365-info-bg); border-left:3px solid var(--d365-info); border-radius:var(--d365-radius-sm); font-size:.78rem; color:var(--d365-text);">
+                            <i class="bi bi-info-circle me-1"></i>
+                            All savings will be swept (preserving minimums) into the Collection Account.
+                            Staff can then create a banker's cheque from the accounting module when ready.
+                        </div>
+
+                        <button type="submit" id="btnSubmit" class="btn btn-sm w-100 py-2" disabled
+                                style="background:var(--d365-danger); color:#fff; border:none; border-radius:var(--d365-radius-sm); font-weight:600;">
+                            <i class="bi bi-check2-circle me-1"></i> Process Exit &amp; Consolidate Funds
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+const searchInput = document.getElementById('memberSearch');
+const resultsList = document.getElementById('resultsList');
+
+// AJAX Live Search
+searchInput.addEventListener('keyup', function() {
+    if (this.value.length < 2) { resultsList.style.display = 'none'; return; }
+
+    fetch(`/customers/search-ajax/?term=${this.value}`)
+        .then(res => res.json())
+        .then(data => {
+            resultsList.innerHTML = '';
+            if (data.length > 0) {
+                data.forEach(item => {
+                    const btn = document.createElement('button');
+                    btn.className = 'list-group-item list-group-item-action';
+                    btn.style.cssText = 'font-size:.8125rem; cursor:pointer; border-color:var(--d365-border);';
+                    btn.innerHTML = `<strong>${item.name}</strong> <small style="color:var(--d365-text-secondary);">(${item.cust_no})</small>`;
+                    btn.onclick = () => selectMember(item.cust_no, item.name);
+                    resultsList.appendChild(btn);
+                });
+                resultsList.style.display = 'block';
+            }
+        });
+});
+
+function selectMember(custNo, name) {
+    searchInput.value = name;
+    resultsList.style.display = 'none';
+    document.getElementById('targetCustNo').value = custNo;
+
+    // Validate Financials
+    fetch(`/customers/validate-exit/${custNo}/`)
+        .then(res => res.json())
+        .then(data => {
+            document.getElementById('validationCard').classList.remove('d-none');
+            document.getElementById('exitFormCard').classList.remove('d-none');
+
+            document.getElementById('valSavings').innerText = data.savings_balance.toLocaleString();
+            document.getElementById('valLoans').innerText = data.loan_balance.toLocaleString();
+            document.getElementById('valGuarantees').innerText = data.active_guarantees.length;
+
+            const errorMsg = document.getElementById('errorMsg');
+            const btn = document.getElementById('btnSubmit');
+
+            if (!data.can_exit) {
+                errorMsg.classList.remove('d-none');
+                errorMsg.innerHTML = "<strong>Cannot Exit:</strong> Member has active loans or is currently a guarantor.";
+                btn.disabled = true;
+            } else {
+                errorMsg.classList.add('d-none');
+                btn.disabled = false;
+            }
+        });
+}
+
+// Toggle Death Date field
+document.getElementById('exitType').addEventListener('change', function() {
+    document.getElementById('deathDateGroup').classList.toggle('d-none', this.value !== 'deceased');
+});
+
+// Process Exit
+document.getElementById('exitForm').onsubmit = function(e) {
+    e.preventDefault();
+    if (!confirm("Are you sure? This will consolidate all savings into the Collection Account. You can create a banker's cheque later from accounting.")) return;
+
+    fetch('/customers/process-exit/', {
+        method: 'POST',
+        body: new FormData(this)
+    })
+    .then(res => res.json())
+    .then(data => {
+        alert(data.message);
+        window.location.reload();
+    });
+};
+</script>
+{% endblock %}

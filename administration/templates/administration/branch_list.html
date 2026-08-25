@@ -1,0 +1,80 @@
+{% extends 'base.html' %}
+{% block content %}
+{% include 'administration/includes/administration_quick_actions.html' %}
+<div class="container py-4">
+
+  <div class="d-flex justify-content-between align-items-center mb-4">
+      <h2 class="mb-0"><i class="bi bi-building me-2"></i>Company Branches</h2>
+      <a href="{% url 'administration:branch_create' %}" class="btn btn-primary">
+        <i class="bi bi-plus-lg"></i> Add New Branch
+      </a>
+  </div>
+
+  <div class="card border-0 shadow-sm">
+    <div class="card-header bg-white d-flex align-items-center justify-content-between">
+      <h6 class="mb-0"><i class="bi bi-building me-2"></i>Branches</h6>
+      <input type="text" id="liveSearch" class="form-control form-control-sm" style="max-width:260px" placeholder="Search...">
+    </div>
+    <div class="card-body p-0">
+      <div class="table-responsive">
+        <table class="table table-hover mb-0" id="dataTable">
+          <thead>
+            <tr>
+              <th>Code</th>
+              <th>Branch Name</th>
+              <th>Location</th>
+              <th>Type</th>
+              <th>Status</th>
+              <th class="text-center">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for branch in branches %}
+            <tr>
+              <td><code>{{ branch.branch_code }}</code></td>
+              <td class="fw-semibold">{{ branch.name }}</td>
+              <td>{{ branch.city }}, {{ branch.country }}</td>
+              <td>
+                {% if branch.is_headquarters %}
+                  <span class="badge bg-purple">HQ</span>
+                {% else %}
+                  <span class="badge bg-info text-dark">Standard</span>
+                {% endif %}
+              </td>
+              <td>
+                {% if branch.is_active %}
+                  <span class="text-success fw-medium">Active</span>
+                {% else %}
+                  <span class="text-muted fst-italic">Inactive</span>
+                {% endif %}
+              </td>
+              <td class="text-center">
+                <a href="{% url 'administration:branch_detail' branch.pk %}" class="btn btn-sm btn-outline-primary me-1">
+                  <i class="bi bi-eye"></i> View
+                </a>
+                <a href="{% url 'administration:branch_update' branch.pk %}" class="btn btn-sm btn-outline-warning">
+                  <i class="bi bi-pencil"></i> Edit
+                </a>
+              </td>
+            </tr>
+            {% empty %}
+            <tr>
+              <td colspan="6" class="text-center text-muted py-4">No branches found. Click "Add New Branch" to register one.</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+document.getElementById('liveSearch').addEventListener('input', function() {
+    const q = this.value.toLowerCase();
+    document.querySelectorAll('#dataTable tbody tr').forEach(function(row) {
+        row.style.display = row.textContent.toLowerCase().includes(q) ? '' : 'none';
+    });
+});
+</script>
+{% endblock %}

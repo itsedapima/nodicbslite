@@ -1,0 +1,346 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block extra_css %}
+<style>
+  .page-hero {
+    background: linear-gradient(135deg, #0E2B4D 0%, #1a4170 100%);
+    color: #fff;
+    padding: 1.5rem 1.5rem;
+    border-radius: .75rem;
+    margin-bottom: 1.25rem;
+  }
+  .page-hero h1 { font-size: 1.4rem; font-weight: 700; margin: 0 0 .15rem; color: #fff; }
+  .page-hero p  { margin: 0; opacity: .85; font-size: .85rem; color: #fff; }
+  .page-hero i  { color: #fff; }
+  .page-hero .hero-meta {
+    display: inline-block;
+    font-size: .78rem;
+    font-weight: 600;
+    background: rgba(255,255,255,.15);
+    padding: .25rem .65rem;
+    border-radius: .35rem;
+    margin-top: .5rem;
+    color: #fff;
+  }
+
+  .filter-bar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: .5rem;
+    margin-bottom: 1.25rem;
+  }
+  .filter-bar .form-control {
+    max-width: 280px;
+    font-size: .85rem;
+    border: 1px solid var(--d365-border-strong, #D2D0CE);
+    border-radius: .4rem;
+  }
+  .filter-bar .form-control:focus {
+    border-color: var(--d365-primary, #0078D4);
+    box-shadow: 0 0 0 2px var(--d365-primary-tint-40, #DEECF9);
+  }
+  .btn-d365 {
+    font-size: .82rem;
+    padding: .35rem .85rem;
+    border-radius: .4rem;
+    font-weight: 600;
+    transition: all .15s ease;
+  }
+  .btn-d365-primary {
+    background: var(--d365-primary, #0078D4);
+    color: #fff;
+    border: 1px solid var(--d365-primary, #0078D4);
+  }
+  .btn-d365-primary:hover {
+    background: var(--d365-primary-hover, #106EBE);
+    border-color: var(--d365-primary-hover, #106EBE);
+    color: #fff;
+  }
+  .btn-d365-outline {
+    background: transparent;
+    color: var(--d365-text, #323130);
+    border: 1px solid var(--d365-border-strong, #D2D0CE);
+  }
+  .btn-d365-outline:hover {
+    background: var(--d365-surface-alt, #FAF9F8);
+    border-color: var(--d365-text-secondary, #605E5C);
+  }
+
+  .data-card {
+    background: var(--d365-surface, #fff);
+    border: 1px solid var(--d365-border, #EDEBE9);
+    border-radius: .5rem;
+    box-shadow: var(--d365-shadow-2);
+    overflow: hidden;
+  }
+  .data-card .table thead {
+    background: var(--d365-surface-alt, #FAF9F8);
+  }
+  .data-card .table thead th {
+    font-size: .75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+    color: var(--d365-text-secondary, #605E5C);
+    border-bottom: 2px solid var(--d365-border, #EDEBE9);
+    padding: .65rem .75rem;
+  }
+  .data-card .table tbody td {
+    font-size: .84rem;
+    color: var(--d365-text, #323130);
+    padding: .6rem .75rem;
+    border-bottom: 1px solid var(--d365-border, #EDEBE9);
+  }
+  .data-card .table tbody tr:hover {
+    background: var(--d365-primary-tint-40, #DEECF9);
+  }
+
+  .status-pill {
+    display: inline-block;
+    font-size: .72rem;
+    font-weight: 600;
+    padding: .2rem .6rem;
+    border-radius: 1rem;
+    line-height: 1.4;
+  }
+  .status-pill-posted  { background: #DFF6DD; color: var(--d365-success, #107C10); }
+  .status-pill-draft   { background: #FFF4CE; color: #6B4D00; }
+
+  .batch-id-pill {
+    display: inline-block;
+    font-size: .75rem;
+    font-weight: 600;
+    padding: .15rem .45rem;
+    border-radius: .3rem;
+    font-family: monospace;
+    background: var(--d365-surface-alt, #FAF9F8);
+    color: var(--d365-text, #323130);
+    border: 1px solid var(--d365-border, #EDEBE9);
+  }
+
+  .action-btn-view {
+    font-size: .75rem;
+    padding: .2rem .55rem;
+    border-radius: .3rem;
+    font-weight: 600;
+    background: var(--d365-primary-tint-40, #DEECF9);
+    color: var(--d365-primary, #0078D4);
+    border: 1px solid var(--d365-primary-tint-30, #C7E0F4);
+    transition: all .12s ease;
+    text-decoration: none;
+  }
+  .action-btn-view:hover {
+    background: var(--d365-primary, #0078D4);
+    color: #fff;
+  }
+
+  .card-header-bar {
+    background: var(--d365-surface, #fff);
+    border-bottom: 1px solid var(--d365-border, #EDEBE9);
+    padding: .6rem 1rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .card-header-bar h6 {
+    margin: 0;
+    font-size: .85rem;
+    font-weight: 600;
+    color: var(--d365-text, #323130);
+  }
+
+  .d365-pagination .page-link {
+    font-size: .82rem;
+    color: var(--d365-text, #323130);
+    border-color: var(--d365-border, #EDEBE9);
+    padding: .35rem .7rem;
+  }
+  .d365-pagination .page-item.active .page-link {
+    background: var(--d365-primary, #0078D4);
+    border-color: var(--d365-primary, #0078D4);
+    color: #fff;
+  }
+  .d365-pagination .page-item.disabled .page-link {
+    color: var(--d365-text-disabled, #A19F9D);
+  }
+
+  .pag-footer {
+    background: var(--d365-surface, #fff);
+    border-top: 1px solid var(--d365-border, #EDEBE9);
+    padding: .75rem 1rem;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: center;
+    gap: .75rem;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+{% include 'loans/includes/loans_quick_actions.html' %}
+
+<!-- Page hero -->
+<div class="page-hero">
+    <div class="d-flex flex-wrap justify-content-between align-items-start">
+        <div>
+            <h1><i class="bi bi-folder2-open me-2"></i>Interest Run Archive Ledger</h1>
+            <p>Historical repository of all computed and posted dynamic interest runs.</p>
+        </div>
+        <div>
+            <span class="hero-meta">
+                <i class="bi bi-archive me-1"></i> Total Runs: {{ page_obj.paginator.count }}
+            </span>
+        </div>
+    </div>
+</div>
+
+<!-- Filter bar -->
+<div class="filter-bar">
+    <a href="{% url 'loans:interest_charge' %}" class="btn btn-d365 btn-d365-outline">
+        <i class="bi bi-arrow-left me-1"></i> Interest Generation Panel
+    </a>
+    <div class="ms-auto">
+        <div class="input-group" style="max-width:260px;">
+            <span class="input-group-text" style="background:var(--d365-surface-alt);border-color:var(--d365-border-strong);"><i class="bi bi-search" style="font-size:.85rem;color:var(--d365-text-secondary);"></i></span>
+            <input type="text" id="liveSearch" class="form-control" placeholder="Search batches..." style="border-left:0;">
+        </div>
+    </div>
+</div>
+
+<!-- Data table card -->
+<div class="data-card">
+    <div class="card-header-bar">
+        <h6><i class="bi bi-folder2-open me-2"></i>Historical Run Batches</h6>
+    </div>
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0" id="dataTable">
+            <thead>
+                <tr>
+                    <th class="ps-3">Batch ID</th>
+                    <th>Loan Product</th>
+                    <th>Target Date</th>
+                    <th class="text-end">Interest Rate</th>
+                    <th class="text-end">Aggregated Sum</th>
+                    <th class="text-center">Current Status</th>
+                    <th class="text-center pe-3">Record Trace Link</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for batch in page_obj %}
+                    <tr>
+                        <td class="ps-3">
+                            <span class="batch-id-pill">#{{ batch.id }}</span>
+                        </td>
+                        <td>
+                            <strong>{{ batch.loan_type|title }}</strong>
+                        </td>
+                        <td>
+                            <span class="fw-semibold" style="color:var(--d365-text-secondary);">
+                                {{ batch.target_date|date:"F d, Y" }}
+                            </span>
+                        </td>
+                        <td class="text-end font-monospace fw-semibold" style="color:var(--d365-text-secondary);">
+                            {{ batch.interest_rate }}%
+                        </td>
+                        <td class="text-end font-monospace fw-bold" style="color:var(--d365-success, #107C10);">
+                            KES {{ batch.total_interest|floatformat:2|intcomma }}
+                        </td>
+                        <td class="text-center">
+                            {% if batch.status == 'posted' %}
+                                <span class="status-pill status-pill-posted">
+                                    <i class="bi bi-lock-fill me-1"></i> Posted to Ledger
+                                </span>
+                            {% else %}
+                                <span class="status-pill status-pill-draft">
+                                    <i class="bi bi-pencil-square me-1"></i> Retained Draft
+                                </span>
+                            {% endif %}
+                        </td>
+                        <td class="text-center pe-3">
+                            <a href="{% url 'loans:interest_batch_detail' batch.id %}" class="action-btn-view">
+                                <i class="bi bi-search me-1"></i> View details
+                            </a>
+                        </td>
+                    </tr>
+                {% empty %}
+                    <tr>
+                        <td colspan="7" class="text-center py-5" style="color:var(--d365-text-disabled);">
+                            <i class="bi bi-inbox d-block mb-2" style="font-size:1.75rem;"></i>
+                            No records found.
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    {# --- D365 PAGINATION --- #}
+    {% if page_obj.has_other_pages %}
+    <div class="pag-footer">
+        <div style="color:var(--d365-text-secondary);font-size:.82rem;">
+            Showing batch items <span class="fw-semibold">{{ page_obj.start_index }}</span> to <span class="fw-semibold">{{ page_obj.end_index }}</span> of <span class="fw-semibold">{{ page_obj.paginator.count }}</span> records
+        </div>
+
+        <nav aria-label="Archive navigation">
+            <ul class="pagination d365-pagination pagination-sm mb-0">
+                {% if page_obj.has_previous %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page=1" aria-label="First">
+                            <i class="bi bi-chevron-double-left" style="font-size:.7rem;"></i> First
+                        </a>
+                    </li>
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.previous_page_number }}" aria-label="Previous">
+                            <i class="bi bi-chevron-left" style="font-size:.7rem;"></i> Prev
+                        </a>
+                    </li>
+                {% else %}
+                    <li class="page-item disabled">
+                        <span class="page-link"><i class="bi bi-chevron-double-left" style="font-size:.7rem;"></i> First</span>
+                    </li>
+                    <li class="page-item disabled">
+                        <span class="page-link"><i class="bi bi-chevron-left" style="font-size:.7rem;"></i> Prev</span>
+                    </li>
+                {% endif %}
+
+                <li class="page-item active" aria-current="page">
+                    <span class="page-link">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+                </li>
+
+                {% if page_obj.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.next_page_number }}" aria-label="Next">
+                            Next <i class="bi bi-chevron-right" style="font-size:.7rem;"></i>
+                        </a>
+                    </li>
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}" aria-label="Last">
+                            Last <i class="bi bi-chevron-double-right" style="font-size:.7rem;"></i>
+                        </a>
+                    </li>
+                {% else %}
+                    <li class="page-item disabled">
+                        <span class="page-link">Next <i class="bi bi-chevron-right" style="font-size:.7rem;"></i></span>
+                    </li>
+                    <li class="page-item disabled">
+                        <span class="page-link">Last <i class="bi bi-chevron-double-right" style="font-size:.7rem;"></i></span>
+                    </li>
+                {% endif %}
+            </ul>
+        </nav>
+    </div>
+    {% endif %}
+</div>
+
+<script>
+document.getElementById('liveSearch').addEventListener('input', function() {
+    const q = this.value.toLowerCase();
+    document.querySelectorAll('#dataTable tbody tr').forEach(function(row) {
+        row.style.display = row.textContent.toLowerCase().includes(q) ? '' : 'none';
+    });
+});
+</script>
+{% endblock %}

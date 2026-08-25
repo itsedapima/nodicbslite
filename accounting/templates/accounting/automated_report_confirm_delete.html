@@ -1,0 +1,16 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container mt-5">
+    <h2 class="text-center">Confirm Delete</h2>
+    <p class="text-center">Are you sure you want to delete <strong>{{ report.name }}</strong>?</p>
+
+    <div class="text-center">
+        <form action="{% url 'accounting:automated_report_delete' report.id %}" method="post">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-danger">Yes, Delete</button>
+            <a href="{% url 'accounting:automated_reports_list' %}" class="btn btn-secondary">Cancel</a>
+        </form>
+    </div>
+</div>
+{% endblock %}

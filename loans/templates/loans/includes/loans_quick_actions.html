@@ -1,0 +1,180 @@
+{% comment %}
+  loans_quick_actions.html — D365 quick-links toolbar
+  Mirrors the dashboard quick-links pill style for visual consistency.
+{% endcomment %}
+
+<style>
+  .quick-links {
+    position: -webkit-sticky;
+    position: sticky;
+    top: var(--header-height, 3.25rem);
+    z-index: 1030;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    display: flex;
+    flex-wrap: wrap;
+    gap: .35rem;
+    margin-bottom: 1.5rem;
+    padding: .55rem .7rem;
+    background: #f5f7fb;
+    border: 1px solid #e3e6ec;
+    border-radius: .45rem;
+  }
+  .quick-links .ql-label {
+    font-size: .7rem;
+    color: #6c757d;
+    text-transform: uppercase;
+    letter-spacing: .05em;
+    align-self: center;
+    margin-right: .35rem;
+    font-weight: 700;
+  }
+  .quick-links a,
+  .quick-links .ql-dropdown > button {
+    font-size: .8rem;
+    padding: .25rem .65rem;
+    background: #fff;
+    border: 1px solid #d8dde5;
+    border-radius: 999px;
+    color: #0E2B4D;
+    text-decoration: none;
+    transition: all .15s ease;
+    white-space: nowrap;
+    cursor: pointer;
+  }
+  .quick-links a:hover,
+  .quick-links .ql-dropdown > button:hover {
+    background: #0E2B4D;
+    color: #fff;
+    border-color: #0E2B4D;
+  }
+  .quick-links a i,
+  .quick-links .ql-dropdown > button i { font-size: .85rem; margin-right: .25rem; }
+
+  /* Dropdown inside quick-links */
+  .ql-dropdown { position: relative; display: inline-block; }
+  .ql-dropdown .ql-dropdown-menu {
+    display: none;
+    position: absolute;
+    top: calc(100% + .35rem);
+    right: 0;
+    min-width: 220px;
+    background: var(--d365-surface, #fff);
+    border: 1px solid var(--d365-border, #EDEBE9);
+    border-radius: .45rem;
+    box-shadow: var(--d365-shadow-2, 0 1.6px 3.6px rgba(0,0,0,.10));
+    z-index: 1050;
+    padding: .35rem 0;
+  }
+  /* Invisible bridge so hover isn't lost crossing the gap */
+  .ql-dropdown .ql-dropdown-menu::before {
+    content: '';
+    position: absolute;
+    top: -.45rem;
+    left: 0;
+    right: 0;
+    height: .45rem;
+  }
+  .ql-dropdown:hover .ql-dropdown-menu { display: block; }
+  .ql-dropdown .ql-dropdown-menu .ql-dd-header {
+    font-size: .7rem;
+    color: var(--d365-text-secondary, #605E5C);
+    text-transform: uppercase;
+    letter-spacing: .04em;
+    padding: .45rem .85rem .25rem;
+    font-weight: 700;
+  }
+  .ql-dropdown .ql-dropdown-menu a {
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+    padding: .45rem .85rem;
+    font-size: .82rem;
+    color: var(--d365-text, #323130);
+    border: none;
+    border-radius: 0;
+    background: transparent;
+  }
+  .ql-dropdown .ql-dropdown-menu a:hover {
+    background: var(--d365-primary-tint-40, #DEECF9);
+    color: var(--d365-primary, #0078D4);
+  }
+  .ql-dropdown .ql-dropdown-menu hr {
+    margin: .25rem 0;
+    border-color: var(--d365-border, #EDEBE9);
+  }
+</style>
+
+<div class="quick-links">
+    <span class="ql-label">Loans</span>
+
+    <a href="{% url 'loans:loan_dispatch' %}">
+        <i class="bi bi-cash-stack"></i> Dispatch Loan
+    </a>
+    <a href="{% url 'loans:loan_dashboard' %}">
+        <i class="bi bi-list"></i> Loans Register
+    </a>
+    <a href="{% url 'loans:running_loans_dashboard' %}">
+        <i class="bi bi-speedometer2"></i> Running Loans
+    </a>
+    <a href="{% url 'loans:interest_charge' %}">
+        <i class="bi bi-percent"></i> Charge Interest
+    </a>
+    <a href="{% url 'loans:view_guarantors' %}">
+        <i class="bi bi-people"></i> Guarantors
+    </a>
+    <a href="{% url 'loans:view_collaterals' %}">
+        <i class="bi bi-safe2"></i> Collaterals
+    </a>
+
+    <!-- Charges & Limits dropdown -->
+    <div class="ql-dropdown">
+        <button type="button">
+            <i class="bi bi-sliders2"></i> Charges & Limits <i class="bi bi-chevron-down" style="font-size:.65rem; margin-left:.15rem;"></i>
+        </button>
+        <div class="ql-dropdown-menu">
+            <div class="ql-dd-header">Loan Charges</div>
+            <a href="{% url 'loans:loan_charge_list' %}">
+                <i class="bi bi-receipt"></i> Charges List
+            </a>
+            <a href="{% url 'loans:loan_charge_add' %}">
+                <i class="bi bi-plus-circle"></i> Add New Charge
+            </a>
+            <hr>
+            <div class="ql-dd-header">Loan Limits</div>
+            <a href="{% url 'loans:loan_limits_list' %}">
+                <i class="bi bi-bar-chart-steps"></i> Limits Rulebook
+            </a>
+            <a href="{% url 'loans:trigger_loan_limit_graduation' %}">
+                <i class="bi bi-graph-up-arrow"></i> Limit Graduation
+            </a>
+        </div>
+    </div>
+
+    <!-- Bulk Import dropdown -->
+    <div class="ql-dropdown">
+        <button type="button">
+            <i class="bi bi-cloud-arrow-up"></i> Bulk Import <i class="bi bi-chevron-down" style="font-size:.65rem; margin-left:.15rem;"></i>
+        </button>
+        <div class="ql-dropdown-menu">
+            <div class="ql-dd-header">Import from Excel</div>
+            <a href="{% url 'data_imports:upload' 'loan_history' %}">
+                <i class="bi bi-journal-text"></i> Import Loan History
+            </a>
+            <a href="{% url 'data_imports:upload' 'loan_transactions' %}">
+                <i class="bi bi-arrow-left-right"></i> Import Loan Transactions
+            </a>
+            <hr>
+            <div class="ql-dd-header">Loan Security</div>
+            <a href="{% url 'data_imports:upload' 'guarantors' %}">
+                <i class="bi bi-person-check-fill"></i> Import Guarantors
+            </a>
+            <a href="{% url 'data_imports:upload' 'collaterals' %}">
+                <i class="bi bi-shield-lock-fill"></i> Import Collaterals
+            </a>
+            <hr>
+            <a href="{% url 'data_imports:hub' %}">
+                <i class="bi bi-grid"></i> All Import Types
+            </a>
+        </div>
+    </div>
+</div>

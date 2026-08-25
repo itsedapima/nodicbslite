@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% load humanize %}
+
+{% block content %}
+<div class="container mt-5">
+    <h2 class="text-center mb-4">Reconciliation Report for {{ account.account_name }}</h2>
+    <p class="text-center text-muted">From: <strong>{{ start_date }}</strong> To: <strong>{{ end_date }}</strong></p>
+
+    <div class="table-responsive">
+        <table class="table table-bordered table-hover">
+            <thead class="thead-dark">
+                <tr>
+                    <th>Transaction Type</th>
+                    <th>Date</th>
+                    <th>Congregation</th>
+                    <th>Group</th>
+                    <th>Description</th>
+                    <th class="text-right">Amount (KES)</th>
+                </tr>
+            </thead>
+            <tbody>
+
+                {% for transaction in transactions %}
+                <tr>
+                    <td>{{ transaction.transaction_type }}</td>
+                    <td>{{ transaction.date | date:'Y-m-d' }}</td>
+                    <td>{{ transaction.congregation_name}}</td>
+                    <td>{{ transaction.congregation_group_name}}</td>
+                    <td>{{ transaction.description_name }} {{ transaction.parish_account }}</td>
+                    <td class="text-right {% if transaction.transaction_type == 'Expense' %}text-danger{% endif %}">
+                        {% if transaction.transaction_type == 'Expense' %}-{% endif %}
+                        {{ transaction.amount_name|floatformat:2|intcomma }}
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="6" class="text-center text-muted">No transactions found</td>
+                </tr>
+                {% endfor %}
+
+            </tbody>
+            <tfoot class="table-info">
+                <tr>
+                    <th colspan="5" class="text-right">Balance</th>
+                    <th class="text-right">{{ balance|floatformat:2|intcomma }}</th>
+                </tr>
+            </tfoot>
+        </table>
+    </div>
+
+    <div class="text-center mt-4">
+        <a href="{% url 'accounting:reconciliation_report_pdf' account.id start_date end_date %}" target="_blank"
+           class="btn btn-primary">
+            <i class="fas fa-file-pdf"></i> Download PDF
+        </a>
+    </div>
+</div>
+{% endblock %}

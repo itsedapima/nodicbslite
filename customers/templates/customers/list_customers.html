@@ -1,0 +1,242 @@
+{% extends "base.html" %}
+{% load humanize %}
+{% block content %}
+    {% include 'customers/includes/customer_quick_actions.html' %}
+    <div class="container my-5">
+    <div class="card shadow-sm mt-4 border-0">
+        <div class="card-header bg-white border-bottom-0 pt-4 pb-0">
+            <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
+                <div>
+                    <h2 class="h3 mb-1 text-dark font-weight-bold">Member Search & Management</h2>
+                    <p class="text-muted small mb-0">Search records dynamically or explore indexed pages smoothly.</p>
+                </div>
+                <div class="position-relative col-md-5 col-lg-4">
+                    <input type="text" id="searchBox" class="form-control form-control-lg shadow-sm ps-4" 
+                           placeholder="Search name, phone, or ID..." value="{{ query }}">
+                </div>
+            </div>
+        </div>
+
+        <div class="card-body px-0 pt-3">
+            <div class="px-4 d-flex justify-content-between align-items-center mb-3">
+                <h4 id="tableTitle" class="h6 text-uppercase tracking-wider text-muted font-weight-bold mb-0">
+                    Loading Records...
+                </h4>
+                <div id="totalCounter" class="badge bg-light text-dark border px-2.5 py-1.5 font-monospace">0 total</div>
+            </div>
+
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light text-secondary border-top-0">
+                        <tr>
+                            <th scope="col" class="ps-4 py-3 text-uppercase font-size-xs" style="width: 15%;">Customer No</th>
+                            <th scope="col" class="py-3 text-uppercase font-size-xs" style="width: 30%;">Full Name</th>
+                            <th scope="col" class="py-3 text-uppercase font-size-xs" style="width: 20%;">National ID</th>
+                            <th scope="col" class="py-3 text-uppercase font-size-xs" style="width: 15%;">phone</th>
+                            <th scope="col" class="pe-4 py-3 text-uppercase font-size-xs text-end" style="width: 25%;">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="customerTableBody">
+                        {# Skeletons injected instantly via JavaScript fallback loader #}
+                        <tr>
+                            <td colspan="5" class="text-center text-muted py-5">
+                                <div class="spinner-border spinner-border-sm text-primary me-2" role="status"></div>
+                                Initializing environment...
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        {# --- CARD FOOTER PAGINATION TARGET --- #}
+        <div class="card-footer bg-white border-top-0 pb-4 pt-2">
+            <nav aria-label="Customer records directory indexing links">
+                <ul class="pagination justify-content-center mb-0 gap-1" id="paginationWrapper"></ul>
+            </nav>
+        </div>
+    </div>
+</div>
+
+{# --- HIDDEN ACTION PATH GENERATORS --- #}
+<div class="d-none" aria-hidden="true">
+    <span id="profileUrlBase" data-url-base="{% url 'customers:customer_profile' 0 %}"></span>
+    <span id="editUrlBase" data-url-base="{% url 'customers:edit_customer_stepper' 0 %}"></span>
+    <span id="nokUrlBase" data-url-base="{% url 'customers:list_next_of_kin' 0 %}"></span>
+    <span id="fstUrlBase" data-url-base="{% url 'statements:full_statement_pdf' 0 %}"></span>
+    <span id="selfUrl" data-url="{% url 'customers:list_customers' %}"></span>
+</div>
+
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    const searchBox = document.getElementById("searchBox");
+    const tableBody = document.getElementById("customerTableBody");
+    const tableTitle = document.getElementById("tableTitle");
+    const totalCounter = document.getElementById("totalCounter");
+    const paginationWrapper = document.getElementById("paginationWrapper");
+
+    let trackingActivePage = 1;
+
+    // Direct configuration extraction
+    const getBaseUrl = (id) => document.getElementById(id).dataset.urlBase;
+    const profileUrlBase = getBaseUrl("profileUrlBase");
+    const editUrlBase = getBaseUrl("editUrlBase");
+    const nokUrlBase = getBaseUrl("nokUrlBase");
+    const fstUrlBase = getBaseUrl("fstUrlBase");
+    const selfUrl = document.getElementById("selfUrl").dataset.url;
+
+    const getDynamicUrl = (baseUrl, id) => baseUrl.replace('/0/', `/${id}/`);
+
+    function debounce(func, timeout = 350) {
+        let timer;
+        return (...args) => {
+            clearTimeout(timer);
+            timer = setTimeout(() => { func.apply(this, args); }, timeout);
+        };
+    }
+
+    const renderCustomers = (customers) => {
+        tableBody.innerHTML = ''; 
+
+        if (customers.length === 0) {
+            tableBody.innerHTML = `
+                <tr>
+                    <td colspan="5" class="text-center py-5 text-muted">
+                        <i class="bi bi-folder-x display-4 d-block mb-2 text-gray-300"></i>
+                        No matching customer records found inside database context.
+                    </td>
+                </tr>`;
+            return;
+        }
+
+        customers.forEach(customer => {
+            const tr = document.createElement('tr');
+            tr.className = "position-relative transition-all";
+            
+            tr.innerHTML = `
+                <td class="ps-4 font-monospace fw-bold text-secondary">${customer.cust_no || '—'}</td>
+                <td>
+                    <a href="${getDynamicUrl(profileUrlBase, customer.id)}" class="fw-semibold text-decoration-none text-dark hover-primary">
+                        ${customer.full_name}
+                    </a>
+                </td>
+                <td><span class="text-muted">${customer.national_id || '—'}</span></td>
+                <td><span class="text-muted">${customer.phone || '—'}</span></td>
+                <td class="pe-4 text-end">
+                    <div class="btn-group shadow-sm" role="group">
+                        <a href="${getDynamicUrl(editUrlBase, customer.id)}" class="btn btn-sm btn-white border" title="Edit Profile" aria-label="Edit Profile">
+                            <i class="bi bi-pencil-square text-info"></i>
+                        </a>
+                        <a href="${getDynamicUrl(nokUrlBase, customer.id)}" class="btn btn-sm btn-white border" title="Next of Kin Management" aria-label="Next of Kin Management">
+                            <i class="bi bi-people text-warning"></i>
+                        </a>
+                        <a href="${getDynamicUrl(fstUrlBase, customer.id)}" class="btn btn-sm btn-white border" title="Generate PDF Statement" aria-label="Generate PDF Statement">
+                            <i class="bi bi-file-earmark-pdf text-danger"></i>
+                        </a>
+                    </div>
+                </td>
+            `;
+            tableBody.appendChild(tr);
+        });
+    };
+
+    const renderPaginationControls = (meta) => {
+        paginationWrapper.innerHTML = '';
+        if (meta.total_pages <= 1) return;
+
+        // Previous
+        const prevLi = document.createElement('li');
+        prevLi.className = `page-item ${!meta.has_previous ? 'disabled' : ''}`;
+        prevLi.innerHTML = `<button class="page-link shadow-none border-0 rounded" type="button"><i class="bi bi-chevron-left"></i></button>`;
+        if (meta.has_previous) {
+            prevLi.addEventListener('click', () => fetchResults(meta.current_page - 1));
+        }
+        paginationWrapper.appendChild(prevLi);
+
+        // Window limits
+        let startPage = Math.max(1, meta.current_page - 2);
+        let endPage = Math.min(meta.total_pages, meta.current_page + 2);
+
+        for (let i = startPage; i <= endPage; i++) {
+            const numLi = document.createElement('li');
+            numLi.className = `page-item ${meta.current_page === i ? 'active' : ''}`;
+            numLi.innerHTML = `<button class="page-link shadow-none border-0 rounded font-weight-bold" type="button">${i}</button>`;
+            numLi.addEventListener('click', () => fetchResults(i));
+            paginationWrapper.appendChild(numLi);
+        }
+
+        // Next
+        const nextLi = document.createElement('li');
+        nextLi.className = `page-item ${!meta.has_next ? 'disabled' : ''}`;
+        nextLi.innerHTML = `<button class="page-link shadow-none border-0 rounded" type="button"><i class="bi bi-chevron-right"></i></button>`;
+        if (meta.has_next) {
+            nextLi.addEventListener('click', () => fetchResults(meta.current_page + 1));
+        }
+        paginationWrapper.appendChild(nextLi);
+    };
+
+    const fetchResults = (page = 1) => {
+        trackingActivePage = page;
+        const query = searchBox.value.trim();
+
+        if (query.length < 2 && query.length > 0) {
+            tableTitle.textContent = "Refining criteria...";
+            tableBody.innerHTML = '<tr><td colspan="5" class="text-center text-muted py-4">Keep typing (at least 2 characters required)...</td></tr>';
+            paginationWrapper.innerHTML = '';
+            totalCounter.textContent = '0 total';
+            return; 
+        }
+
+        if (query.length === 0) {
+            tableTitle.textContent = "All Registered Members";
+        } else {
+            tableTitle.textContent = `Search Matches for "${query}"`;
+        }
+
+        tableBody.innerHTML = `
+            <tr>
+                <td colspan="5" class="text-center py-5">
+                    <div class="spinner-border text-primary" style="width: 2rem; height: 2rem;" role="status"></div>
+                    <span class="d-block mt-2 text-muted small">Accessing records...</span>
+                </td>
+            </tr>`;
+
+        fetch(`${selfUrl}?q=${encodeURIComponent(query)}&page=${page}&format=json`, {
+            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        }) 
+        .then(response => {
+            if (!response.ok) throw new Error("Network latency/structural error detected.");
+            return response.json();
+        })
+        .then(data => {
+            renderCustomers(data.results);
+            renderPaginationControls(data);
+            totalCounter.textContent = `${data.total_count} record${data.total_count !== 1 ? 's' : ''}`;
+        })
+        .catch(err => {
+            console.error("Critical directory load error:", err);
+            tableBody.innerHTML = '<tr><td colspan="5" class="text-danger text-center py-4"><i class="bi bi-exclamation-triangle-fill me-2"></i>Failed to initialize customer query array.</td></tr>';
+        });
+    };
+
+    const runDebouncedSearch = debounce(() => fetchResults(1), 350);
+
+    // Bootstrap execution entry points
+    fetchResults(1); 
+    searchBox.addEventListener("keyup", runDebouncedSearch);
+    searchBox.addEventListener("change", runDebouncedSearch);
+});
+</script>
+
+<style>
+    /* Clean, modern dashboard adjustments */
+    .tracking-wider { letter-spacing: 0.06em; }
+    .font-size-xs { font-size: 0.75rem; }
+    .btn-white { background: #ffffff; color: #495057; }
+    .btn-white:hover { background: #f8f9fa; }
+    .hover-primary:hover { color: #0d6efd !important; }
+    .table > :not(caption) > * > * { padding: 0.85rem 0.5rem; }
+    .page-link { color: #495057; background-color: #f8f9fa; padding: 0.45rem 0.85rem; }
+    .page-item.active .page-link { background-color: #0d6efd; color: #fff; }
+</style>
+{% endblock %}

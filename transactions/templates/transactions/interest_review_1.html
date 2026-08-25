@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container my-5">
+    {% include 'transactions/includes/transactions_quick_actions.html' %}
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="fw-bold">Review Interest Distribution</h2>
+            <span class="badge bg-secondary">Batch ID: {{ batch.batch_no }}</span>
+        </div>
+        <div class="d-flex gap-2">
+            <form method="POST" action="{% url 'transactions:delete_interest_batch' batch.id %}">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-outline-danger">Discard Draft</button>
+            </form>
+            <form method="POST" action="{% url 'transactions:post_interest_batch' batch.id %}">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-success px-4 shadow-sm">Post to Member Accounts</button>
+            </form>
+        </div>
+    </div>
+
+    <div class="row g-3 mb-4">
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm bg-primary text-white p-3">
+                <small class="opacity-75">Effective Rate</small>
+                <h3 class="fw-bold mb-0">{{ effective_rate }}%</h3>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm p-3">
+                <small class="text-muted">Gross Distribution</small>
+                <h4 class="fw-bold mb-0 text-dark">KES {{ batch.total_gross }}</h4>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm p-3 border-start border-danger border-4">
+                <small class="text-muted">Total Tax/Fees</small>
+                <h4 class="fw-bold mb-0 text-danger">KES {{ batch.total_tax|add:batch.total_fees }}</h4>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm p-3 border-start border-success border-4">
+                <small class="text-muted">Net Payout</small>
+                <h4 class="fw-bold mb-0 text-success">KES {{ batch.total_net_payout }}</h4>
+            </div>
+        </div>
+    </div>
+
+    <div class="card border-0 shadow-sm">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="bg-light">
+                        <tr>
+                            <th class="ps-4">Member</th>
+                            <th class="text-end">Avg Balance</th>
+                            <th class="text-end">Gross Interest</th>
+                            <th class="text-end text-danger">WHT ({{ batch.wht_rate }}%)</th>
+                            <th class="text-end text-danger">Fee</th>
+                            <th class="text-end pe-4">Net Payout</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for detail in batch.details.all %}
+                        <tr>
+                            <td class="ps-4">
+                                <div class="fw-bold">{{ detail.member_name }}</div>
+                                <small class="text-muted">#{{ detail.cust_no }}</small>
+                            </td>
+                            <td class="text-end">{{ detail.weighted_avg_balance }}</td>
+                            <td class="text-end fw-semibold">{{ detail.gross_interest }}</td>
+                            <td class="text-end text-danger">-{{ detail.withholding_tax }}</td>
+                            <td class="text-end text-danger">-{{ detail.processing_fee }}</td>
+                            <td class="text-end pe-4 fw-bold text-success">{{ detail.net_payout }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}

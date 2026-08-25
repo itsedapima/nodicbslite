@@ -1,0 +1,201 @@
+{% extends 'base.html' %}
+{% block content %}
+<style>
+    .batch-row input, .batch-row select { font-size: 0.85rem; padding: 0.2rem 0.4rem; }
+    .name-display { font-size: 0.75rem; color: #666; display: block; height: 1.2rem; overflow: hidden; }
+    .section-header { background: #f8f9fa; padding: 5px 10px; border-radius: 4px; font-weight: bold; margin-bottom: 10px; border-left: 4px solid #0d6efd; }
+</style>
+  {% include 'transactions/includes/transactions_quick_actions.html' %}
+<div class="container-fluid py-3">
+    <form method="post" id="batchForm">
+        {% csrf_token %}
+        
+        <div class="card shadow-sm mb-3">
+            <div class="card-body py-2">
+                <div class="row g-3 align-items-end">
+                    <div class="col-md-2">
+                        <label class="form-label fw-bold small">Transaction Date</label>
+                        {{ form.date }}
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label fw-bold small text-primary">Total Amount Paid</label>
+                        {{ form.amount_paid }}
+                    </div>
+                    <div class="col-md-8">
+                        <label class="form-label fw-bold small">General Description</label>
+                        {{ form.description }}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-lg-6">
+                <div class="section-header text-secondary">Savings & Shares Batch</div>
+                <div id="savings-container" data-prefix="savings">
+                    {{ savings_formset.management_form }}
+                    <table class="table table-sm table-borderless">
+                        <thead>
+                            <tr class="small text-muted">
+                                <th style="width: 25%">Cust No</th>
+                                <th style="width: 40%">Account Type</th>
+                                <th style="width: 25%">Amount</th>
+                                <th style="width: 10%"></th>
+                            </tr>
+                        </thead>
+                        <tbody id="savings-rows">
+                            {% for s_form in savings_formset %}
+                            <tr class="batch-row">
+                                <td>
+                                    {{ s_form.cust_no }}
+                                    <span class="name-display cust-name-preview"></span>
+                                </td>
+                                <td>{{ s_form.account_type }}</td>
+                                <td>{{ s_form.amount }}</td>
+                                <td><button type="button" class="btn btn-sm text-danger remove-row">×</button></td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                    <button type="button" id="addSavings" class="btn btn-sm btn-outline-secondary">+ Add Row</button>
+                </div>
+            </div>
+
+            <div class="col-lg-6">
+                <div class="section-header text-primary">Loan Repayments Batch</div>
+                <div id="loan-container" data-prefix="loan">
+                    {{ loan_formset.management_form }}
+                    <table class="table table-sm table-borderless">
+                        <thead>
+                            <tr class="small text-muted">
+                                <th style="width: 25%">Cust No</th>
+                                <th style="width: 40%">Loan Number</th>
+                                <th style="width: 25%">Amount</th>
+                                <th style="width: 10%"></th>
+                            </tr>
+                        </thead>
+                        <tbody id="loan-rows">
+                            {% for l_form in loan_formset %}
+                            <tr class="batch-row">
+                                <td>
+                                    {{ l_form.cust_no }}
+                                    <span class="name-display cust-name-preview"></span>
+                                </td>
+                                <td>{{ l_form.loan_no }}</td>
+                                <td>{{ l_form.amount }}</td>
+                                <td><button type="button" class="btn btn-sm text-danger remove-row">×</button></td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                    <button type="button" id="addLoan" class="btn btn-sm btn-outline-primary">+ Add Row</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="text-center mt-4 p-3 bg-light border-top">
+            <button type="submit" name="post" class="btn btn-success px-5">Post Batch Transaction</button>
+        </div>
+    </form>
+</div>
+
+<template id="savings-template">
+    <tr class="batch-row">
+        <td>
+            <input type="text" name="savings-__prefix__-cust_no" class="form-control form-control-sm cust-lookup">
+            <span class="name-display cust-name-preview"></span>
+        </td>
+        <td>
+            <select name="savings-__prefix__-account_type" class="form-select form-select-sm">
+                <option value="">---------</option>
+                {% for c in savings_choices %}<option value="{{c.account_type}}">{{c.account_name}}</option>{% endfor %}
+            </select>
+        </td>
+        <td><input type="number" name="savings-__prefix__-amount" class="form-control form-control-sm"></td>
+        <td><button type="button" class="btn btn-sm text-danger remove-row">×</button></td>
+    </tr>
+</template>
+
+<template id="loan-template">
+    <tr class="batch-row">
+        <td>
+            <input type="text" name="loan-__prefix__-cust_no" class="form-control form-control-sm cust-lookup">
+            <span class="name-display cust-name-preview"></span>
+        </td>
+        <td>
+            <select name="loan-__prefix__-loan_no" class="form-select form-select-sm loan-dropdown">
+                <option value="">(Enter Cust No)</option>
+            </select>
+        </td>
+        <td><input type="number" name="loan-__prefix__-amount" class="form-control form-control-sm"></td>
+        <td><button type="button" class="btn btn-sm text-danger remove-row">×</button></td>
+    </tr>
+</template>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    
+    // 1. Generic Formset Adder
+    function addRow(containerId, templateId, prefix) {
+        const tbody = document.getElementById(containerId);
+        const template = document.getElementById(templateId);
+        const totalForms = document.querySelector(`input[name="${prefix}-TOTAL_FORMS"]`);
+        const count = parseInt(totalForms.value);
+        
+        const clone = template.content.cloneNode(true);
+        clone.querySelectorAll('[name]').forEach(el => {
+            el.name = el.name.replace('__prefix__', count);
+            el.id = `id_${el.name}`;
+        });
+        
+        tbody.appendChild(clone);
+        totalForms.value = count + 1;
+    }
+
+    document.getElementById('addSavings').onclick = () => addRow('savings-rows', 'savings-template', 'savings');
+    document.getElementById('addLoan').onclick = () => addRow('loan-rows', 'loan-template', 'loan');
+
+    // 2. Delegate Event for Customer Lookup & Loan Loading
+    document.addEventListener('blur', function(e) {
+        if (e.target.classList.contains('cust-lookup')) {
+            const input = e.target;
+            const row = input.closest('tr');
+            const nameSpan = row.querySelector('.cust-name-preview');
+            const loanSelect = row.querySelector('.loan-dropdown');
+            const custNo = input.value.trim();
+
+            if (!custNo) return;
+
+            // Fetch Name
+            fetch(`/transactions/api/customers/by_cust_no/?cust_no=${custNo}`)
+                .then(r => r.json())
+                .then(data => {
+                    nameSpan.textContent = data.found ? data.full_name : "Not Found";
+                    if (data.found && loanSelect) {
+                        // Fetch Loans for this specific row
+                        fetch(`{% url 'transactions:ajax_get_loans' %}?cust_no=${custNo}`)
+                            .then(r => r.json())
+                            .then(loanData => {
+                                loanSelect.innerHTML = '<option value="">---------</option>';
+                                loanData.loans.forEach(l => {
+                                    loanSelect.add(new Option(l.name, l.id));
+                                });
+                            });
+                    }
+                });
+        }
+    }, true);
+
+    // 3. Row Removal
+    document.addEventListener('click', function(e) {
+        if (e.target.classList.contains('remove-row')) {
+            const row = e.target.closest('tr');
+            const tbody = row.closest('tbody');
+            row.remove();
+            // Re-indexing is optional if you use a robust backend logic, 
+            // but for Django formsets, it's safer to keep TOTAL_FORMS accurate.
+        }
+    });
+});
+</script>
+{% endblock %}

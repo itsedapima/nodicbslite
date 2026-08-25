@@ -1,0 +1,13 @@
+{% extends "admin/change_list.html" %}
+{% load i18n admin_urls static %}
+
+{% block search %}
+    <div style="margin-bottom: 1.5rem;">
+        {% if has_import_guarantors %}
+            <a href="import-guarantors/" class="button" style="background-color: #417690; padding: 8px 16px; border-radius: 4px; color: white; text-decoration: none; font-weight: bold; display: inline-block; margin-right: 10px;">
+                📥 Import Guarantors from Excel
+            </a>
+        {% endif %}
+    </div>
+    {{ block.super }}
+{% endblock %}

@@ -1,0 +1,49 @@
+{% comment %}
+  accounting_quick_actions.html — D365 quick-links toolbar
+  All styles live in app.css — no inline style block needed.
+{% endcomment %}
+
+<div class="quick-links">
+    <span class="ql-label">Accounting</span>
+
+    <a href="{% url 'accounting:sacco_account_list' %}">
+        <i class="bi bi-piggy-bank-fill"></i> Chart of Accounts
+    </a>
+    <a href="{% url 'accounting:ledger_list' %}">
+        <i class="bi bi-book-half"></i> General Ledgers
+    </a>
+    <a href="{% url 'accounting:jv_list' %}">
+        <i class="bi bi-pencil-square"></i> Journals (JVs)
+    </a>
+    <a href="{% url 'accounting:income_expenditure_summary' %}">
+        <i class="bi bi-file-earmark-spreadsheet"></i> Income/Expenses Report
+    </a>
+
+    <span class="ql-divider"></span>
+
+    <div class="ql-dropdown">
+        <button type="button">
+            <i class="bi bi-three-dots"></i> More Actions <i class="bi bi-chevron-down" style="font-size:.6rem;"></i>
+        </button>
+        <div class="ql-dropdown-menu">
+            <div class="ql-dd-header">Transaction Registers</div>
+            <a href="{% url 'accounting:income_list' %}">
+                <i class="bi bi-arrow-up-right-circle-fill"></i> Income Register
+            </a>
+            <a href="{% url 'accounting:expense_list' %}">
+                <i class="bi bi-arrow-down-left-circle-fill"></i> Expense Register
+            </a>
+            <a href="{% url 'accounting:recover_registration_fees' %}">
+                <i class="bi bi-wallet2"></i> Recover Reg-Fees
+            </a>
+            <hr>
+            <div class="ql-dd-header">Reconciliation</div>
+            <a href="{% url 'accounting:mpesa_reconciliation' %}">
+                <i class="bi bi-phone"></i> M-Pesa Recon
+            </a>
+            <a href="{% url 'accounting:view_uploaded_records' %}">
+                <i class="bi bi-database-check"></i> Uploaded Statements
+            </a>
+        </div>
+    </div>
+</div>

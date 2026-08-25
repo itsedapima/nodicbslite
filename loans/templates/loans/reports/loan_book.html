@@ -1,0 +1,27 @@
+{% extends 'reports/_base_report.html' %}
+
+{% block filters %}
+<form method="get" class="filter-form row g-2 align-items-end">
+  <div class="col-md-3">
+    <label class="form-label">Classification</label>
+    <select name="classification" class="form-select form-select-sm">
+      <option value="">All</option>
+      {% for c in classifications %}{% if c %}
+        <option value="{{ c }}" {% if c == classification %}selected{% endif %}>{{ c }}</option>
+      {% endif %}{% endfor %}
+    </select>
+  </div>
+  <div class="col-md-3">
+    <label class="form-label">Product code</label>
+    <select name="product" class="form-select form-select-sm">
+      <option value="">All</option>
+      {% for p in products %}{% if p %}
+        <option value="{{ p }}" {% if p == product %}selected{% endif %}>{{ p }}</option>
+      {% endif %}{% endfor %}
+    </select>
+  </div>
+  <div class="col-md-3 text-end">
+    <button class="btn btn-primary btn-sm w-100"><i class="bi bi-funnel"></i> Apply Filters</button>
+  </div>
+</form>
+{% endblock %}

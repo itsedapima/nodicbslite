@@ -1,0 +1,452 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="container my-5">
+    {% include 'loans/includes/loans_quick_actions.html' %}
+    
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h3 class="mb-0 fw-bold text-dark"><i class="bi bi-file-earmark-spreadsheet text-primary me-2"></i>Commercial Loan Dispatch</h3>
+            <p class="text-muted small mb-0">Complete the underwriting and security parameters to disburse funds.</p>
+        </div>
+    </div>
+
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags }} alert-dismissible fade show shadow-sm" role="alert">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        {% endfor %}
+    {% endif %}
+
+    <form method="post" id="loanDispatchForm" novalidate>
+        {% csrf_token %}
+        
+        <div class="row g-4">
+            <div class="col-lg-7">
+                
+                <div class="card shadow-sm border-0 mb-4">
+                    <div class="card-header bg-white border-bottom py-3">
+                        <h6 class="mb-0 fw-bold"><i class="bi bi-person-check text-success me-2"></i>1. Borrower Identification</h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="position-relative mb-3">
+                            <label class="form-label fw-semibold">Search Member Profile</label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-white"><i class="bi bi-search text-muted"></i></span>
+                                <input type="text" id="customerSearchInput" class="form-control form-control-lg" placeholder="Type member number or name..." autocomplete="off">
+                            </div>
+                            
+                            <input type="hidden" name="cust_no" id="selectedCustomerNo" required>
+                            
+                            <ul id="searchResultsDropdown" class="dropdown-menu w-100 shadow mt-1 style-scroll" style="display: none; max-height: 250px; overflow-y: auto; z-index: 1050;">
+                            </ul>
+                            
+                            <div id="searchFeedback" class="form-text mt-2 text-success d-none fw-semibold">
+                                <i class="bi bi-check-circle-fill me-1"></i> Borrower Locked
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card shadow-sm border-0 mb-4">
+                    <div class="card-header bg-white border-bottom py-3">
+                        <h6 class="mb-0 fw-bold"><i class="bi bi-sliders text-primary me-2"></i>2. Product Configuration</h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">Loan Product Type</label>
+                                {{ form.loan_type }}
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">Principal Amount (Ksh)</label>
+                                <input type="number" id="loanPrincipal" name="principal" class="form-control fw-bold text-primary" step="0.01" placeholder="0.00" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">Interest Rate (%)</label>
+                                <input type="number" name="interest_rate" class="form-control" step="0.01" placeholder="e.g. 1.5" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">Repayment Period (Months)</label>
+                                <input type="number" name="loan_period" class="form-control" min="1" value="1" required>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card shadow-sm border-0 mb-4">
+                    <div class="card-header bg-white border-bottom py-3 d-flex justify-content-between align-items-center">
+                        <h6 class="mb-0 fw-bold"><i class="bi bi-link-45deg text-warning me-2 fs-5"></i>3. Bridging & Loan Offsets</h6>
+                        <button type="button" class="btn btn-sm btn-outline-primary" onclick="addDynamicRow('offsetTemplate', 'offsetsTableBody')">
+                            <i class="bi bi-plus-lg me-1"></i> Add Offset
+                        </button>
+                    </div>
+                    <div class="card-body p-0">
+                        <table class="table table-borderless align-middle mb-0">
+                            <thead class="table-light text-muted small">
+                                <tr>
+                                    <th class="ps-3 w-50">Target Loan ID / Number</th>
+                                    <th class="w-25">Offset Amount</th>
+                                    <th class="text-center w-25">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="offsetsTableBody">
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-5">
+                
+                <div class="card shadow-sm border-0 mb-4 border-top border-danger border-3">
+                    <div class="card-header bg-white border-bottom py-3 d-flex justify-content-between align-items-center">
+                        <h6 class="mb-0 fw-bold"><i class="bi bi-receipt-cutoff text-danger me-2"></i>Disbursement Charges</h6>
+                        <button type="button" class="btn btn-sm btn-outline-danger" onclick="addDynamicRow('chargeTemplate', 'chargesTableBody')">
+                            <i class="bi bi-plus-lg"></i> Add Optional
+                        </button>
+                    </div>
+                    <div class="card-body p-0">
+                        <table class="table table-sm table-borderless align-middle mb-0">
+                            <tbody class="border-bottom bg-light">
+                                {% for m_charge in mandatory_charges %}
+                                <tr>
+                                    <td class="ps-3 w-50">
+                                        <div class="d-flex align-items-center">
+                                            <i class="bi bi-lock-fill text-muted me-2 small"></i>
+                                            <span class="fw-semibold text-dark">{{ m_charge.name }}</span>
+                                            {% if m_charge.charge_type == 'percentage' %}
+                                                <span class="badge bg-secondary ms-2">{{ m_charge.amount }}%</span>
+                                            {% endif %}
+                                        </div>
+                                        <div class="small text-muted ms-4">{{ m_charge.description|default:"" }}</div>
+                                    </td>
+                                    <td class="w-25">
+                                        <input type="text" class="form-control form-control-sm text-end fw-bold bg-white text-danger mandatory-charge-input" 
+                                               data-charge-type="{{ m_charge.charge_type }}" 
+                                               data-charge-value="{{ m_charge.amount }}" 
+                                               value="0.00" readonly tabindex="-1">
+                                    </td>
+                                    <td class="text-center w-25">
+                                        <span class="badge bg-danger-subtle text-danger border border-danger-subtle">Mandatory</span>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                            
+                            <tbody id="chargesTableBody">
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="card shadow-sm border-0 mb-4">
+                    <div class="card-header bg-white border-bottom py-3 d-flex justify-content-between align-items-center">
+                        <h6 class="mb-0 fw-bold"><i class="bi bi-people text-info me-2"></i>Guarantors</h6>
+                        <button type="button" class="btn btn-sm btn-outline-info" onclick="addDynamicRow('guarantorTemplate', 'guarantorsTableBody')">
+                            <i class="bi bi-person-plus"></i>
+                        </button>
+                    </div>
+                    <div class="card-body p-0">
+                        <table class="table table-sm table-borderless align-middle mb-0">
+                            <tbody id="guarantorsTableBody">
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="card shadow-sm border-0 mb-4">
+                    <div class="card-header bg-white border-bottom py-3 d-flex justify-content-between align-items-center">
+                        <h6 class="mb-0 fw-bold"><i class="bi bi-car-front text-secondary me-2"></i>Collateral Assets</h6>
+                        <button type="button" class="btn btn-sm btn-outline-secondary" onclick="addDynamicRow('collateralTemplate', 'collateralsTableBody')">
+                            <i class="bi bi-plus-lg"></i>
+                        </button>
+                    </div>
+                    <div class="card-body p-0">
+                        <table class="table table-sm table-borderless align-middle mb-0">
+                            <tbody id="collateralsTableBody">
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="position-sticky bottom-0 bg-white border-top p-3 z-3 shadow-lg rounded-top d-flex justify-content-between align-items-center mt-4">
+            <div class="text-muted small">
+                <i class="bi bi-shield-check text-success me-1"></i> Transactions are securely wrapped atomically.
+            </div>
+            <div class="gap-2 d-flex">
+                <button type="reset" class="btn btn-light border fw-semibold px-4">Clear Form</button>
+                <button type="submit" class="btn btn-primary fw-bold px-5 shadow-sm">
+                    <i class="bi bi-check-circle me-2"></i> Process & Disburse Loan
+                </button>
+            </div>
+        </div>
+    </form>
+</div>
+
+<template id="chargeTemplate">
+    <tr class="border-bottom">
+        <td class="ps-3 w-50">
+            <select name="charge_profile[]" class="form-select form-select-sm charge-select" required>
+                <option value="" selected disabled>Select Charge...</option>
+                {% for charge in optional_charges %}
+                    <option value="{{ charge.id }}" 
+                            data-type="{{ charge.charge_type }}" 
+                            data-amount="{{ charge.amount }}">
+                        {{ charge.name }} {% if charge.charge_type == 'percentage' %}({{ charge.amount }}%){% endif %}
+                    </option>
+                {% endfor %}
+            </select>
+        </td>
+        <td class="w-25">
+            <input type="number" name="charge_amount[]" class="form-control form-control-sm text-end charge-amount fw-bold optional-charge-input" step="0.01" value="0.00" required>
+        </td>
+        <td class="text-center w-25">
+            <button type="button" class="btn btn-sm btn-light text-danger" onclick="this.closest('tr').remove();"><i class="bi bi-x-lg"></i></button>
+        </td>
+    </tr>
+</template>
+
+<template id="offsetTemplate">
+    <tr class="border-bottom bg-light">
+        <td class="ps-3 w-50">
+            <input type="text" name="offset_loan_ids[]" class="form-control form-control-sm" placeholder="Loan ID/No" required>
+        </td>
+        <td class="w-25">
+            <input type="number" name="offset_amounts[]" class="form-control form-control-sm text-end fw-bold text-warning" step="0.01" placeholder="0.00" required>
+        </td>
+        <td class="text-center w-25">
+            <button type="button" class="btn btn-sm btn-light text-danger" onclick="this.closest('tr').remove()"><i class="bi bi-trash"></i></button>
+        </td>
+    </tr>
+</template>
+
+<template id="guarantorTemplate">
+    <tr class="border-bottom">
+        <td class="ps-3 w-50 position-relative">
+            <input type="text" class="form-control form-control-sm guarantor-search-input" placeholder="Search member..." autocomplete="off" required>
+            <input type="hidden" name="guarantor_cust_no[]" class="guarantor-hidden-id" required>
+            <ul class="dropdown-menu w-100 shadow-sm mt-1 guarantor-dropdown style-scroll" style="display: none; max-height: 200px; overflow-y: auto; z-index: 1050; position: absolute;"></ul>
+        </td>
+        <td class="w-25">
+            <input type="number" name="guarantee_amt[]" class="form-control form-control-sm text-end" step="0.01" placeholder="Amt" required>
+        </td>
+        <td class="text-center w-25">
+            <button type="button" class="btn btn-sm btn-light text-danger" onclick="this.closest('tr').remove()"><i class="bi bi-x-lg"></i></button>
+        </td>
+    </tr>
+</template>
+
+<template id="collateralTemplate">
+    <tr class="border-bottom">
+        <td class="ps-3 w-50">
+            <input type="text" name="collateral_name[]" class="form-control form-control-sm" placeholder="Asset Desc (e.g. Logbook)" required>
+        </td>
+        <td class="w-25">
+            <input type="number" name="collateral_value[]" class="form-control form-control-sm text-end" step="0.01" placeholder="Est. Value" required>
+        </td>
+        <td class="text-center w-25">
+            <button type="button" class="btn btn-sm btn-light text-danger" onclick="this.closest('tr').remove()"><i class="bi bi-x-lg"></i></button>
+        </td>
+    </tr>
+</template>
+
+<script>
+    // 1. Dynamic Row Management
+    function addDynamicRow(templateId, tbodyId) {
+        const template = document.getElementById(templateId);
+        const tbody = document.getElementById(tbodyId);
+        const clone = document.importNode(template.content, true);
+        tbody.appendChild(clone);
+    }
+
+    document.addEventListener("DOMContentLoaded", function () {
+        
+        const principalInput = document.getElementById('loanPrincipal');
+
+        // --- Universal Charge Calculator ---
+        function recalculateAllCharges() {
+            const principalRaw = parseFloat(principalInput.value) || 0;
+            const principalAmt = Math.max(0, principalRaw);
+
+            // Recalculate Mandatory Charges
+            document.querySelectorAll('.mandatory-charge-input').forEach(input => {
+                const cType = input.getAttribute('data-charge-type');
+                const cVal = parseFloat(input.getAttribute('data-charge-value')) || 0;
+                
+                if (cType === 'percentage') {
+                    input.value = (principalAmt * (cVal / 100)).toFixed(2);
+                } else {
+                    input.value = cVal.toFixed(2);
+                }
+            });
+
+            // Recalculate Active Optional Percentage Charges
+            document.querySelectorAll('.charge-select').forEach(select => {
+                const selectedOption = select.options[select.selectedIndex];
+                if (selectedOption && selectedOption.value) {
+                    const cType = selectedOption.getAttribute('data-type');
+                    const cVal = parseFloat(selectedOption.getAttribute('data-amount')) || 0;
+                    const amountInput = select.closest('tr').querySelector('.charge-amount');
+                    
+                    if (cType === 'percentage') {
+                        amountInput.value = (principalAmt * (cVal / 100)).toFixed(2);
+                    }
+                }
+            });
+        }
+
+        // Trigger calculation when Principal changes
+        principalInput.addEventListener('input', recalculateAllCharges);
+
+        // Handle Selection of Optional Charge
+        document.getElementById('chargesTableBody').addEventListener('change', function(e) {
+            if (e.target.classList.contains('charge-select')) {
+                const selectedOption = e.target.options[e.target.selectedIndex];
+                const amountInput = e.target.closest('tr').querySelector('.charge-amount');
+                const cType = selectedOption.getAttribute('data-type');
+                const cVal = parseFloat(selectedOption.getAttribute('data-amount')) || 0;
+                
+                if (selectedOption.value) {
+                    if (cType === 'percentage') {
+                        const principalAmt = parseFloat(principalInput.value) || 0;
+                        amountInput.value = (Math.max(0, principalAmt) * (cVal / 100)).toFixed(2);
+                    } else {
+                        amountInput.value = cVal.toFixed(2);
+                    }
+                }
+            }
+        });
+
+        // Initialize calculations on load
+        recalculateAllCharges();
+
+
+        // 2. MAIN BORROWER Live Search API (UPDATED FOR YOUR API KEYS)
+        const searchInput = document.getElementById('customerSearchInput');
+        const hiddenCustNo = document.getElementById('selectedCustomerNo');
+        const dropdownMenu = document.getElementById('searchResultsDropdown');
+        const searchFeedback = document.getElementById('searchFeedback');
+        let mainDebounceTimer;
+
+        searchInput.addEventListener('input', function() {
+            clearTimeout(mainDebounceTimer);
+            const query = searchInput.value.trim();
+
+            if (query.length < 2) {
+                dropdownMenu.style.display = 'none';
+                return;
+            }
+
+            mainDebounceTimer = setTimeout(() => {
+                fetch(`/customers/customer-search/?q=${encodeURIComponent(query)}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        dropdownMenu.innerHTML = '';
+                        if (!data.results || data.results.length === 0) {
+                            dropdownMenu.innerHTML = '<li><span class="dropdown-item text-muted small">No members found</span></li>';
+                        } else {
+                            data.results.forEach(item => {
+                                const li = document.createElement('li');
+                                // Using your API response keys: cust_no, full_name, national_id
+                                const displayText = `${item.cust_no}-${item.full_name}-${item.national_id}`;
+                                
+                                li.innerHTML = `<button type="button" class="dropdown-item py-2 search-item" data-custno="${item.cust_no}">${displayText}</button>`;
+                                dropdownMenu.appendChild(li);
+                            });
+                        }
+                        dropdownMenu.style.display = 'block';
+                    });
+            }, 300);
+        });
+
+        // Select Main Borrower
+        dropdownMenu.addEventListener('click', function(e) {
+            if (e.target.classList.contains('search-item')) {
+                searchInput.value = e.target.textContent;
+                hiddenCustNo.value = e.target.getAttribute('data-custno');
+                dropdownMenu.style.display = 'none';
+                searchFeedback.classList.remove('d-none');
+                
+                searchInput.classList.remove('border-danger');
+                searchInput.classList.add('border-success', 'bg-light');
+            }
+        });
+
+
+        // 3. GUARANTOR Live Search API (UPDATED FOR YOUR API KEYS)
+        let guarantorDebounceTimer;
+        
+        document.getElementById('guarantorsTableBody').addEventListener('input', function(e) {
+            if (e.target.classList.contains('guarantor-search-input')) {
+                clearTimeout(guarantorDebounceTimer);
+                const query = e.target.value.trim();
+                const containerCell = e.target.closest('td');
+                const dropdown = containerCell.querySelector('.guarantor-dropdown');
+
+                if (query.length < 2) {
+                    dropdown.style.display = 'none';
+                    return;
+                }
+
+                guarantorDebounceTimer = setTimeout(() => {
+                    fetch(`/customers/customer-search/?q=${encodeURIComponent(query)}`)
+                        .then(response => response.json())
+                        .then(data => {
+                            dropdown.innerHTML = '';
+                            if (!data.results || data.results.length === 0) {
+                                dropdown.innerHTML = '<li><span class="dropdown-item text-muted small">No members found</span></li>';
+                            } else {
+                                data.results.forEach(item => {
+                                    const li = document.createElement('li');
+                                    // Using your API response keys: cust_no, full_name, national_id
+                                    const displayText = `${item.cust_no}-${item.full_name}-${item.national_id}`;
+                                    
+                                    li.innerHTML = `<button type="button" class="dropdown-item py-1 small guarantor-search-item" data-custno="${item.cust_no}">${displayText}</button>`;
+                                    dropdown.appendChild(li);
+                                });
+                            }
+                            dropdown.style.display = 'block';
+                        });
+                }, 300);
+            }
+        });
+
+        // Select Guarantor
+        document.getElementById('guarantorsTableBody').addEventListener('click', function(e) {
+            if (e.target.classList.contains('guarantor-search-item')) {
+                const containerCell = e.target.closest('td');
+                const input = containerCell.querySelector('.guarantor-search-input');
+                const hiddenId = containerCell.querySelector('.guarantor-hidden-id');
+                const dropdown = containerCell.querySelector('.guarantor-dropdown');
+
+                input.value = e.target.textContent;
+                hiddenId.value = e.target.getAttribute('data-custno');
+                dropdown.style.display = 'none';
+                
+                input.classList.add('border-success', 'bg-light', 'fw-semibold');
+            }
+        });
+
+
+        // 4. Global Click Listener for dropdowns
+        document.addEventListener('click', function(e) {
+            if (!searchInput.contains(e.target) && !dropdownMenu.contains(e.target)) {
+                dropdownMenu.style.display = 'none';
+            }
+            
+            if (!e.target.classList.contains('guarantor-search-input') && !e.target.classList.contains('guarantor-dropdown')) {
+                document.querySelectorAll('.guarantor-dropdown').forEach(dd => {
+                    dd.style.display = 'none';
+                });
+            }
+        });
+        
+    });
+</script>
+{% endblock %}

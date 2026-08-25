@@ -1,0 +1,193 @@
+{% extends "base.html" %}
+{% block content %}
+{% include 'accounting/includes/accounting_quick_actions.html' %}
+<div class="container my-5">
+
+    
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags }} alert-dismissible fade show shadow-sm border-0 mb-4" role="alert">
+                <i class="fas {% if message.tags == 'success' %}fa-check-circle{% else %}fa-exclamation-circle{% endif %} me-2"></i>
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        {% endfor %}
+    {% endif %}
+
+    <div class="row align-items-center mb-4">
+        <div class="col-md-7">
+            <h2 class="fw-bold text-dark mb-1">
+                <i class="fas fa-hand-holding-usd text-primary me-2"></i>Registration Fee Recovery
+            </h2>
+            <p class="text-muted">Automated collection of membership fees from customer savings deposits.</p>
+        </div>
+        <div class="col-md-5 text-md-end">
+            <a href="{% url 'accounting:reg_fee_config' %}" class="btn btn-white border shadow-sm px-4">
+                <i class="fas fa-cog text-secondary me-2"></i>Fee Settings
+            </a>
+        </div>
+    </div>
+
+    <div class="card shadow-sm border-0 mb-4">
+        <div class="card-body p-4">
+            <div class="row align-items-center">
+                <div class="col-md-3 border-end d-none d-md-block">
+                    <div class="ps-2">
+                        <span class="text-uppercase small fw-bold text-muted d-block">Pending Accounts</span>
+                        <!-- FIX: Accessing paginator.count provides global count instead of current slice length -->
+                        <h3 class="fw-bold mb-0 text-primary">{{ pending.paginator.count }}</h3>
+                    </div>
+                </div>
+                <div class="col-md-5 ps-md-4">
+                    <h5 class="fw-bold mb-1">Process All Eligible Members</h5>
+                    <p class="small text-muted mb-0">The system will only debit accounts with a balance greater than or equal to their required fee.</p>
+                </div>
+                <div class="col-md-4 text-end">
+                    <form method="POST" id="recoveryForm" onsubmit="return confirm('Initiate recovery for all eligible members?')">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-success btn-lg px-4 shadow-sm w-100 w-md-auto">
+                            <i class="fas fa-bolt me-2"></i>Run Mass Recovery
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card shadow-sm border-0">
+        <div class="card-header bg-white py-3 border-bottom">
+            <div class="row align-items-center">
+                <div class="col">
+                    <h6 class="m-0 fw-bold text-secondary text-uppercase small">Pending Registration Queue</h6>
+                </div>
+                <div class="col text-end">
+                    <span class="badge bg-light text-dark border font-monospace">PREVIEW MODE</span>
+                </div>
+            </div>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th class="ps-4">Customer No.</th>
+                        <th>Full Name</th>
+                        <th>Customer Category</th>
+                        <th class="text-center">Current Status</th>
+                        <th class="text-end pe-4">Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for cust in pending %}
+                    <tr>
+                        <td class="ps-4">
+                            <span class="fw-bold text-primary font-monospace">{{ cust.cust_no }}</span>
+                        </td>
+                        <td>
+                            <div class="fw-bold text-dark">{{ cust.full_name }}</div>
+                        </td>
+                        <td>
+                            <span class="badge rounded-pill bg-soft-info text-info border border-info px-3">
+                                {{ cust.get_customer_type_display }}
+                            </span>
+                        </td>
+                        <td class="text-center">
+                            <span class="badge bg-warning-subtle text-warning px-3">
+                                <i class="fas fa-clock me-1"></i>Unpaid
+                            </span>
+                        </td>
+                        <td class="text-end pe-4">
+                            <button class="btn btn-sm btn-outline-secondary opacity-50" disabled>
+                                Auto-process only
+                            </button>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="5" class="text-center py-5">
+                            <div class="py-4">
+                                <i class="fas fa-user-check fa-3x text-light mb-3"></i>
+                                <h5 class="text-muted">Clean Slate!</h5>
+                                <p class="text-muted mb-0">All registered customers have paid their fees.</p>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- NEW ADDITION: PAGINATED FOOTER REGION -->
+        <div class="card-footer bg-white py-3">
+            {% if pending.has_other_pages %}
+                <div class="d-flex flex-column flex-md-row justify-content-between align-items-center gap-3">
+                    <div class="text-muted small order-2 order-md-1">
+                        Showing page <strong>{{ pending.number }}</strong> of <strong>{{ pending.paginator.num_pages }}</strong> (Total {{ pending.paginator.count }} customers)
+                    </div>
+                    
+                    <nav aria-label="Table Navigation" class="order-1 order-md-2">
+                        <ul class="pagination pagination-sm mb-0">
+                            
+                            <!-- Arrow Left Controls -->
+                            {% if pending.has_previous %}
+                                <li class="page-item">
+                                    <a class="page-link shadow-none" href="?page={{ pending.previous_page_number }}" aria-label="Previous">
+                                        <i class="fas fa-angle-left"></i>
+                                    </a>
+                                </li>
+                            {% else %}
+                                <li class="page-item disabled">
+                                    <span class="page-link text-muted"><i class="fas fa-angle-left"></i></span>
+                                </li>
+                            {% endif %}
+
+                            <!-- Numerical Dynamic Matrix Windows -->
+                            {% for num in pending.paginator.page_range %}
+                                {% if pending.number == num %}
+                                    <li class="page-item active" aria-current="page">
+                                        <span class="page-link font-monospace fw-bold shadow-none">{{ num }}</span>
+                                    </li>
+                                {% elif num > pending.number|add:'-3' and num < pending.number|add:'3' %}
+                                    <li class="page-item">
+                                        <a class="page-link font-monospace shadow-none" href="?page={{ num }}">{{ num }}</a>
+                                    </li>
+                                {% endif %}
+                            {% endfor %}
+
+                            <!-- Arrow Right Controls -->
+                            {% if pending.has_next %}
+                                <li class="page-item">
+                                    <a class="page-link shadow-none" href="?page={{ pending.next_page_number }}" aria-label="Next">
+                                        <i class="bi-angle-right "></i>
+                                    </a>
+                                </li>
+                            {% else %}
+                                <li class="page-item disabled">
+                                    <span class="page-link text-muted"><i class="bi bi-angle-right"></i></span>
+                                </li>
+                            {% endif %}
+                            
+                        </ul>
+                    </nav>
+                </div>
+            {% else %}
+                <div class="text-center text-muted small">
+                    Showing all {{ pending.paginator.count }} queue records on a single page view.
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<style>
+    /* Professional touches */
+    .bg-soft-info { background-color: rgba(13, 202, 240, 0.1); }
+    .table thead th { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; color: #6c757d; }
+    .card { border-radius: 12px; }
+    .btn { border-radius: 8px; transition: all 0.2s; }
+    .btn-success:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(25, 135, 84, 0.2); }
+    
+    /* Clean custom design pagination extensions */
+    .pagination .page-link { color: #495057; border: 1px solid #dee2e6; margin: 0 2px; border-radius: 4px !important; }
+    .pagination .page-item.active .page-link { background-color: #0d6efd; border-color: #0d6efd; color: #fff; }
+</style>
+{% endblock %}

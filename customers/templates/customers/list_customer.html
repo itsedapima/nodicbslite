@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block content %}
+{% include 'more_menu_customers.html' %}
+<div class="container mt-20">
+<h2>Customers Management</h2>
+<a href="{% url 'customers:add_customer_stepper' %}" class="btn btn-primary">Add Customer</a>
+<a href="{% url 'customers:search_customer' %}" class="btn btn-secondary">Search</a>
+<table class="table table-striped mt-3">
+    <thead>
+        <tr>
+            <th>Cust No</th>
+            <th>Full Name</th>
+            <th>National ID</th>
+            <th>Mobile</th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for c in customers %}
+        <tr>
+            <td>{{ c.cust_no }}</td>
+            <td>{{ c.full_name }}</td>
+            <td>{{ c.national_id }}</td>
+            <td>{{ c.mobile }}</td>
+            <td>
+                <a href="{% url 'customers:edit_customer' c.id %}" class="btn btn-sm btn-info">Edit</a>
+                <a href="{% url 'customers:list_next_of_kin' c.id %}" class="btn btn-sm btn-warning">Next of Kin</a>
+            </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="5">No customers found.</td></tr>
+        {% endfor %}
+    </tbody>
+</table>
+</div>
+{% endblock %}

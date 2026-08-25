@@ -1,0 +1,55 @@
+{% extends 'base.html' %}
+{% block content %}
+{% include 'loans/includes/loans_quick_actions.html' %}
+
+<div class="container-fluid px-4 py-4">
+    <!-- Messages / Alerts Section -->
+    {% if messages %}
+    <div class="row justify-content-center mb-4">
+        <div class="col-md-8 col-lg-6">
+            {% for message in messages %}
+                <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert" style="border-radius: .4rem; box-shadow: var(--d365-shadow-2);">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Central Control Card -->
+    <div class="row justify-content-center">
+        <div class="col-md-8 col-lg-6">
+            <div class="card" style="background: var(--d365-surface); border: 1px solid var(--d365-border); border-radius: .5rem; box-shadow: var(--d365-shadow-2);">
+                <div class="card-body p-4 text-center">
+                    <div class="mb-3" style="color: var(--d365-primary);">
+                        <i class="bi bi-cpu-fill" style="font-size: 2.5rem;"></i>
+                    </div>
+
+                    <h3 class="card-title fw-bold mb-3" style="color: var(--d365-text);">Mobile Loan Limit Engine</h3>
+
+                    <p class="card-text mb-4" style="color: var(--d365-text-secondary);">
+                        Click below to run the Polars calculation engine. This will aggregate all customer transactions and generate a new batch of limits in <code>LoanLimitGraduation</code>.
+                    </p>
+
+                    <form method="POST" id="engineForm">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-lg w-100 py-3" id="submitBtn" style="background: var(--d365-primary); color: #fff; border: 1px solid var(--d365-primary); border-radius: .4rem; font-weight: 600; box-shadow: var(--d365-shadow-2);">
+                            Run Limit Graduation
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Simple UI enhancement to prevent double-submissions and show loading state
+    document.getElementById('engineForm').addEventListener('submit', function() {
+        const btn = document.getElementById('submitBtn');
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span> Processing Limits...';
+    });
+</script>
+{% endblock %}

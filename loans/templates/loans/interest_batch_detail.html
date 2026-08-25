@@ -1,0 +1,161 @@
+{% extends "base.html" %}
+{% load humanize %}
+
+{% block content %}
+{% include 'loans/includes/loans_quick_actions.html' %}
+
+<div style="background: linear-gradient(135deg, #0E2B4D 0%, #1a4170 100%); padding: 2rem 0;">
+    <div class="container">
+        <div class="row align-items-center">
+            <div class="col-md-6">
+                <a href="{% url 'loans:interest_batch_list' %}" class="text-decoration-none d-inline-flex align-items-center mb-1" style="color: rgba(255,255,255,.7); font-size: .85rem;">
+                    <i class="bi bi-arrow-left me-1"></i> Back to Archive Logs
+                </a>
+                <h1 class="mb-0 d-flex align-items-center" style="color: #fff; font-size: 1.6rem; font-weight: 700;">
+                    <i class="bi bi-receipt me-2" style="color: #fff;"></i>Loan Interest Batch
+                    <span class="font-monospace ms-2" style="background: rgba(255,255,255,.15); color: #fff; padding: .15rem .6rem; border-radius: .25rem; font-size: 1rem;">#{{ batch.id }}</span>
+                </h1>
+            </div>
+            <div class="col-md-6 text-md-end mt-3 mt-md-0">
+                {% if batch.status == 'draft' %}
+                    <form action="{% url 'loans:interest_charge' %}" method="POST" class="d-inline">
+                        {% csrf_token %}
+                        <input type="hidden" name="batch_id" value="{{ batch.id }}">
+                        <input type="hidden" name="action" value="post">
+                        <input type="hidden" name="loan_type" value="{{ batch.loan_type }}">
+                        <input type="hidden" name="date" value="{{ batch.target_date|date:'Y-m-d' }}">
+                        <input type="hidden" name="interest_rate" value="{{ batch.interest_rate }}">
+
+                        <button type="submit" class="btn px-4 py-2 fw-semibold" style="background: var(--d365-success); color: #fff; border: none; border-radius: .375rem; box-shadow: var(--d365-shadow-2);" onclick="return confirm('Commit calculations to General Ledger rows permanently?');">
+                            <i class="bi bi-shield-check me-1"></i> Post to Ledger
+                        </button>
+                    </form>
+                {% else %}
+                    <div class="d-inline-flex align-items-center px-3 py-2 fw-semibold" style="background: rgba(16,124,16,.12); color: var(--d365-success); border: 1px solid rgba(16,124,16,.25); border-radius: .375rem; font-size: .85rem;">
+                        <i class="bi bi-lock-fill me-2"></i> Posted Summary
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="container" style="margin-top: -1rem; padding-bottom: 3rem;">
+
+    <!-- KPI Cards Row -->
+    <div class="row g-3 mb-4">
+        <div class="col-xl-3 col-sm-6">
+            <div class="d-flex align-items-center justify-content-between p-3" style="background: var(--d365-surface); border: 1px solid var(--d365-border); border-radius: .5rem; box-shadow: var(--d365-shadow-2);">
+                <div>
+                    <span class="text-uppercase font-monospace d-block" style="font-size: 0.75rem; letter-spacing: 0.5px; color: var(--d365-text-secondary); margin-bottom: .25rem;">Loan Product</span>
+                    <span class="h5 mb-0 fw-bold" style="color: var(--d365-text);">{{ batch.loan_type|title }}</span>
+                </div>
+                <div style="background: var(--d365-primary-tint-40); color: var(--d365-primary); padding: .5rem; border-radius: .375rem;"><i class="bi bi-tags-fill fs-5 d-block"></i></div>
+            </div>
+        </div>
+        <div class="col-xl-3 col-sm-6">
+            <div class="d-flex align-items-center justify-content-between p-3" style="background: var(--d365-surface); border: 1px solid var(--d365-border); border-radius: .5rem; box-shadow: var(--d365-shadow-2);">
+                <div>
+                    <span class="text-uppercase font-monospace d-block" style="font-size: 0.75rem; letter-spacing: 0.5px; color: var(--d365-text-secondary); margin-bottom: .25rem;">Target Period</span>
+                    <span class="h5 mb-0 fw-bold" style="color: var(--d365-text);">{{ batch.target_date|date:"F Y" }}</span>
+                </div>
+                <div style="background: var(--d365-primary-tint-40); color: var(--d365-primary); padding: .5rem; border-radius: .375rem;"><i class="bi bi-calendar-event-fill fs-5 d-block"></i></div>
+            </div>
+        </div>
+        <div class="col-xl-3 col-sm-6">
+            <div class="d-flex align-items-center justify-content-between p-3" style="background: var(--d365-surface); border: 1px solid var(--d365-border); border-radius: .5rem; box-shadow: var(--d365-shadow-2);">
+                <div>
+                    <span class="text-uppercase font-monospace d-block" style="font-size: 0.75rem; letter-spacing: 0.5px; color: var(--d365-text-secondary); margin-bottom: .25rem;">Interest Rate</span>
+                    <span class="h5 mb-0 fw-bold" style="color: var(--d365-text);">{{ batch.interest_rate }}% <span class="fs-6 fw-normal" style="color: var(--d365-text-secondary);">({{ batch.calc_method_used|title }})</span></span>
+                </div>
+                <div style="background: #FFF4CE; color: var(--d365-warning); padding: .5rem; border-radius: .375rem;"><i class="bi bi-percent fs-5 d-block"></i></div>
+            </div>
+        </div>
+        <div class="col-xl-3 col-sm-6">
+            <div class="d-flex align-items-center justify-content-between p-3" style="background: var(--d365-surface); border: 1px solid var(--d365-border); border-radius: .5rem; box-shadow: var(--d365-shadow-2);">
+                <div>
+                    <span class="text-uppercase font-monospace d-block" style="font-size: 0.75rem; letter-spacing: 0.5px; color: var(--d365-text-secondary); margin-bottom: .25rem;">Total Yield Allocation</span>
+                    <span class="h5 mb-0 fw-bold" style="color: var(--d365-success);">KES {{ batch.total_interest|floatformat:2|intcomma }}</span>
+                </div>
+                <div style="background: rgba(16,124,16,.12); color: var(--d365-success); padding: .5rem; border-radius: .375rem;"><i class="bi bi-wallet2 fs-5 d-block"></i></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Data Table Section -->
+    <div style="background: var(--d365-surface); border: 1px solid var(--d365-border); border-radius: .5rem; box-shadow: var(--d365-shadow-2); overflow: hidden;">
+        <div class="d-flex justify-content-between align-items-center" style="background: var(--d365-surface-alt); border-bottom: 2px solid var(--d365-border); padding: .75rem 1rem;">
+            <h6 class="mb-0 fw-bold text-uppercase font-monospace" style="font-size: .8rem; letter-spacing: .04em; color: var(--d365-text-secondary);">
+                <i class="bi bi-list-nested me-1"></i> Affected Customer Accounts Ledger Listings
+            </h6>
+            <span style="display: inline-block; background: var(--d365-surface-alt); color: var(--d365-text-secondary); padding: .15rem .5rem; border-radius: .25rem; font-size: .8rem; font-weight: 600; border: 1px solid var(--d365-border);">{{ page_obj.paginator.count }} Items</span>
+        </div>
+
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0" style="font-size: 0.9rem;">
+                <thead>
+                    <tr style="background: var(--d365-surface-alt); border-bottom: 2px solid var(--d365-border);">
+                        <th scope="col" class="ps-4" style="font-size: .75rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--d365-text-secondary); padding: .6rem .5rem;">Member No</th>
+                        <th scope="col" style="font-size: .75rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--d365-text-secondary); padding: .6rem .5rem;">Loan Reference</th>
+                        <th scope="col" style="font-size: .75rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--d365-text-secondary); padding: .6rem .5rem;">Full Name</th>
+                        <th scope="col" class="text-end" style="font-size: .75rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--d365-text-secondary); padding: .6rem .5rem;">Principal Baseline</th>
+                        <th scope="col" class="text-end" style="font-size: .75rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--d365-text-secondary); padding: .6rem .5rem;">Outstanding Balance</th>
+                        <th scope="col" class="pe-4 text-end" style="font-size: .75rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--d365-text-secondary); padding: .6rem .5rem;">Accrued Interest</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in page_obj %}
+                        <tr>
+                            <td class="ps-4 font-monospace" style="color: var(--d365-text-secondary);"><code style="background: var(--d365-surface-alt); padding: .2rem .4rem; border-radius: .25rem;">{{ item.cust_no }}</code></td>
+                            <td><span class="fw-semibold" style="color: var(--d365-text);">{{ item.loan_no }}</span></td>
+                            <td class="fw-medium" style="color: var(--d365-text-secondary);">{{ item.customer_name }}</td>
+                            <td class="text-end font-monospace" style="color: var(--d365-text-secondary);">{{ item.approved_amount|floatformat:2|intcomma }}</td>
+                            <td class="text-end fw-medium font-monospace" style="color: var(--d365-text);">{{ item.outstanding_balance|floatformat:2|intcomma }}</td>
+                            <td class="pe-4 text-end font-monospace fw-bold" style="color: var(--d365-danger);">{{ item.calculated_interest|floatformat:2|intcomma }}</td>
+                        </tr>
+                    {% empty %}
+                        <tr>
+                            <td colspan="6" class="text-center py-5" style="color: var(--d365-text-secondary);">
+                                <i class="bi bi-inbox display-6 d-block mb-2" style="color: var(--d365-text-disabled);"></i>
+                                No item entries matched or found inside this computation tracking segment.
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Pagination -->
+        {% if page_obj.has_other_pages %}
+            <div class="d-flex flex-column flex-sm-row justify-content-between align-items-center gap-3" style="padding: .75rem 1rem; background: var(--d365-surface-alt); border-top: 1px solid var(--d365-border);">
+                <div style="color: var(--d365-text-secondary); font-size: .85rem;">
+                    Showing entries <span class="fw-semibold" style="color: var(--d365-text);">{{ page_obj.start_index }}</span> to <span class="fw-semibold" style="color: var(--d365-text);">{{ page_obj.end_index }}</span> of {{ page_obj.paginator.count }} items
+                </div>
+                <nav aria-label="Table dataset pagination context control navigation row">
+                    <ul class="pagination pagination-sm mb-0">
+                        {% if page_obj.has_previous %}
+                            <li class="page-item"><a class="page-link" href="?page=1" style="color: var(--d365-primary); border-color: var(--d365-border);"><i class="bi bi-chevron-double-left"></i></a></li>
+                            <li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}" style="color: var(--d365-primary); border-color: var(--d365-border);">Previous</a></li>
+                        {% endif %}
+
+                        <li class="page-item active" aria-current="page">
+                            <span class="page-link font-monospace fw-semibold" style="background: var(--d365-primary); border-color: var(--d365-primary); color: #fff;">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+                        </li>
+
+                        {% if page_obj.has_next %}
+                            <li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}" style="color: var(--d365-primary); border-color: var(--d365-border);">Next</a></li>
+                            <li class="page-item"><a class="page-link" href="?page={{ page_obj.paginator.num_pages }}" style="color: var(--d365-primary); border-color: var(--d365-border);"><i class="bi bi-chevron-double-right"></i></a></li>
+                        {% endif %}
+                    </ul>
+                </nav>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<style>
+    .table-hover tbody tr:hover { background: var(--d365-primary-tint-40) !important; }
+    .table-responsive { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    .table > :not(caption) > * > * { padding: 0.75rem 0.5rem; }
+</style>
+{% endblock %}

@@ -1,0 +1,328 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="page-shell">
+    {% include 'administration/includes/administration_quick_actions.html' %}
+
+    <div class="page-head mb-3">
+        <div>
+            <h2>{{ title }}</h2>
+            <p class="page-sub">
+                {% if is_edit %}
+                    Modify the template, placeholders, and activation status
+                {% else %}
+                    Define a new personalized SMS template for reminders or marketing
+                {% endif %}
+            </p>
+        </div>
+        <a href="{% url 'sms:frequent_notifications' %}" class="btn btn-outline-secondary btn-sm">
+            <i class="bi bi-arrow-left me-1"></i> Back to List
+        </a>
+    </div>
+
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-{% if message.tags %}{{ message.tags }}{% else %}info{% endif %} alert-dismissible fade show">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        {% endfor %}
+    {% endif %}
+
+    {% if form.non_field_errors %}
+        <div class="alert alert-danger">{{ form.non_field_errors }}</div>
+    {% endif %}
+
+    <form method="post" novalidate>
+        {% csrf_token %}
+
+        <div class="row">
+            <!-- Left: Form fields -->
+            <div class="col-lg-7">
+                <div class="card mb-3">
+                    <div class="card-header"><h6 class="mb-0">Template Details</h6></div>
+                    <div class="card-body">
+                        <!-- Name -->
+                        <div class="mb-3">
+                            <label for="id_name" class="fw-600">Template Name</label>
+                            <input type="text" name="name" id="id_name"
+                                   class="form-control {% if form.name.errors %}is-invalid{% endif %}"
+                                   placeholder="e.g. Monthly Savings Deposit Reminder"
+                                   value="{{ form.name.value|default:'' }}">
+                            {% if form.name.errors %}
+                                <div class="invalid-feedback">{{ form.name.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+
+                        <!-- Category -->
+                        <div class="mb-3">
+                            <label for="id_category" class="fw-600">Category</label>
+                            <select name="category" id="id_category"
+                                    class="form-control {% if form.category.errors %}is-invalid{% endif %}">
+                                <option value="">— Select category —</option>
+                                {% for val, label in form.fields.category.choices %}
+                                    {% if val %}
+                                    <option value="{{ val }}" {% if form.category.value == val %}selected{% endif %}>
+                                        {{ label }}
+                                    </option>
+                                    {% endif %}
+                                {% endfor %}
+                            </select>
+                            {% if form.category.errors %}
+                                <div class="invalid-feedback">{{ form.category.errors.0 }}</div>
+                            {% endif %}
+                            <small class="helptext text-muted">
+                                Determines which members receive the SMS and which placeholders are filled automatically.
+                            </small>
+                        </div>
+
+                        <!-- Message Template -->
+                        <div class="mb-3">
+                            <label for="id_message_template" class="fw-600">Message Template</label>
+                            <textarea name="message_template" id="id_message_template"
+                                      class="form-control {% if form.message_template.errors %}is-invalid{% endif %}"
+                                      rows="5"
+                                      placeholder="Dear {first_name}, to deposit to your Savings account, use M-Pesa Paybill {paybill}, Account {account_no}. Thank you - {sacco_name}">{{ form.message_template.value|default:'' }}</textarea>
+                            {% if form.message_template.errors %}
+                                <div class="invalid-feedback">{{ form.message_template.errors.0 }}</div>
+                            {% endif %}
+                            <div class="d-flex justify-content-between mt-1">
+                                <small class="helptext text-muted">
+                                    Use placeholders like <code>{first_name}</code>, <code>{paybill}</code>, <code>{account_no}</code>
+                                </small>
+                                <small class="text-muted"><span id="char-count">0</span> / 480 chars</small>
+                            </div>
+                        </div>
+
+                        <!-- Balance Filter (shown for marketing categories) -->
+                        <div id="balance-filter-section" class="mb-3" style="display: none;">
+                            <div class="border rounded p-3" style="background: #f8f9fa;">
+                                <label class="fw-600 d-block mb-2">
+                                    <i class="bi bi-funnel me-1"></i> Balance Filter
+                                    <small class="text-muted fw-normal">(optional targeting)</small>
+                                </label>
+                                <div id="balance-filter-hint" class="text-muted small mb-2"></div>
+                                <div class="row g-2">
+                                    <div class="col-6">
+                                        <label for="id_balance_filter_min" class="form-label small">Min Amount (KES)</label>
+                                        <input type="number" name="balance_filter_min" id="id_balance_filter_min"
+                                               class="form-control {% if form.balance_filter_min.errors %}is-invalid{% endif %}"
+                                               placeholder="e.g. 5000" step="0.01"
+                                               value="{{ form.balance_filter_min.value|default:'' }}">
+                                        {% if form.balance_filter_min.errors %}
+                                            <div class="invalid-feedback">{{ form.balance_filter_min.errors.0 }}</div>
+                                        {% endif %}
+                                    </div>
+                                    <div class="col-6">
+                                        <label for="id_balance_filter_max" class="form-label small">Max Amount (KES)</label>
+                                        <input type="number" name="balance_filter_max" id="id_balance_filter_max"
+                                               class="form-control {% if form.balance_filter_max.errors %}is-invalid{% endif %}"
+                                               placeholder="e.g. 100000" step="0.01"
+                                               value="{{ form.balance_filter_max.value|default:'' }}">
+                                        {% if form.balance_filter_max.errors %}
+                                            <div class="invalid-feedback">{{ form.balance_filter_max.errors.0 }}</div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Active toggle -->
+                        <div class="form-check mb-3">
+                            <input type="checkbox" name="is_active" id="id_is_active"
+                                   class="form-check-input"
+                                   {% if form.is_active.value %}checked{% endif %}>
+                            <label for="id_is_active" class="form-check-label fw-600">
+                                Active — this template can be scheduled or run manually
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="d-flex gap-2">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-check-lg me-1"></i>
+                        {% if is_edit %}Save Changes{% else %}Create Template{% endif %}
+                    </button>
+                    <a href="{% url 'sms:frequent_notifications' %}" class="btn btn-outline-secondary">Cancel</a>
+                </div>
+            </div>
+
+            <!-- Right: Live preview + placeholder reference -->
+            <div class="col-lg-5">
+                <!-- Live Preview -->
+                <div class="card mb-3" style="border-left: 3px solid var(--d365-primary);">
+                    <div class="card-header">
+                        <h6 class="mb-0"><i class="bi bi-phone me-1"></i> Live Preview</h6>
+                    </div>
+                    <div class="card-body">
+                        <small class="text-muted d-block mb-2">Sample: member "John", cust_no "00123"</small>
+                        <div id="live-preview" class="border rounded p-3 bg-light"
+                             style="white-space: pre-wrap; font-size: 13px; min-height: 80px;">
+                            —
+                        </div>
+                        <div class="text-end mt-1">
+                            <small class="text-muted"><span id="preview-chars">0</span> characters</small>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Placeholder quick-insert -->
+                <div class="card" style="border: 1px dashed var(--d365-border-strong);">
+                    <div class="card-header">
+                        <h6 class="mb-0"><i class="bi bi-braces me-1"></i> Insert Placeholder</h6>
+                    </div>
+                    <div class="card-body">
+                        <p class="text-muted small mb-2">Click to insert at cursor position:</p>
+                        <div class="d-flex flex-wrap gap-1">
+                            <button type="button" class="btn btn-outline-secondary btn-sm ph-btn" data-ph="{first_name}">{first_name}</button>
+                            <button type="button" class="btn btn-outline-secondary btn-sm ph-btn" data-ph="{cust_no}">{cust_no}</button>
+                            <button type="button" class="btn btn-outline-secondary btn-sm ph-btn" data-ph="{paybill}">{paybill}</button>
+                            <button type="button" class="btn btn-outline-secondary btn-sm ph-btn" data-ph="{sacco_name}">{sacco_name}</button>
+                            <button type="button" class="btn btn-outline-secondary btn-sm ph-btn" data-ph="{account_no}">{account_no}</button>
+                            <button type="button" class="btn btn-outline-secondary btn-sm ph-btn" data-ph="{loan_no}">{loan_no}</button>
+                            <button type="button" class="btn btn-outline-secondary btn-sm ph-btn" data-ph="{loan_name}">{loan_name}</button>
+                            <button type="button" class="btn btn-outline-secondary btn-sm ph-btn" data-ph="{loan_offer}">{loan_offer}</button>
+                            <button type="button" class="btn btn-outline-secondary btn-sm ph-btn" data-ph="{offers_list}">{offers_list}</button>
+                            <button type="button" class="btn btn-outline-secondary btn-sm ph-btn" data-ph="{loan_balance}">{loan_balance}</button>
+                            <button type="button" class="btn btn-outline-secondary btn-sm ph-btn" data-ph="{arrears}">{arrears}</button>
+                            <button type="button" class="btn btn-outline-secondary btn-sm ph-btn" data-ph="{installment}">{installment}</button>
+                            <button type="button" class="btn btn-outline-secondary btn-sm ph-btn" data-ph="{eligible_amount}">{eligible_amount}</button>
+                            <button type="button" class="btn btn-outline-secondary btn-sm ph-btn" data-ph="{min_balance}">{min_balance}</button>
+                            <button type="button" class="btn btn-outline-secondary btn-sm ph-btn" data-ph="{balance}">{balance}</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Category audience guide -->
+                <div class="card mt-3">
+                    <div class="card-header">
+                        <h6 class="mb-0"><i class="bi bi-people me-1"></i> Audience by Category</h6>
+                    </div>
+                    <div class="card-body" style="font-size: 12px;">
+                        <div id="audience-guide">
+                            <p class="text-muted">Select a category to see who receives this SMS.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
+
+<script>
+(function() {
+    const textarea = document.getElementById('id_message_template');
+    const preview = document.getElementById('live-preview');
+    const charCount = document.getElementById('char-count');
+    const previewChars = document.getElementById('preview-chars');
+    const categorySelect = document.getElementById('id_category');
+    const audienceGuide = document.getElementById('audience-guide');
+
+    const sampleCtx = {
+        first_name: 'John',
+        cust_no: '00123',
+        paybill: '000000',
+        sacco_name: 'SACCO',
+        account_no: '00123EL',
+        loan_no: 'LN000045',
+        loan_name: 'Emergency Loan',
+        loan_offer: 'Emergency Loan',
+        offers_list: 'Emergency Loan up to KES 150,000 and Development Loan up to KES 90,000',
+        loan_balance: '45,000.00',
+        arrears: '5,200.00',
+        installment: '4,500.00',
+        eligible_amount: '150,000.00',
+        min_balance: '10,000.00',
+        balance: '25,000.00',
+    };
+
+    const audienceMap = {
+        'savings_deposit_howto': '<strong>All active members</strong> with a phone number. Reminds them how to deposit via M-Pesa Paybill to their savings account.',
+        'share_capital_howto': '<strong>All active members</strong> with a phone number. Reminds them how to pay share capital via M-Pesa Paybill.',
+        'loan_repayment_howto': '<strong>Members with active loans only.</strong> One SMS per active loan with specific loan number and payment account.',
+        'loan_arrears': '<strong>Members with loans in arrears only.</strong> One SMS per defaulted loan showing arrears amount and payment instructions.',
+        'loan_eligibility': '<strong>Members with a pre-qualified loan offer.</strong> Pitches the best product from their offer pool that they don\'t already hold and have no arrears blocking. Non-mobile offers below KES 50,000 are automatically suppressed. Use <code>{loan_offer}</code> and <code>{eligible_amount}</code> for the top offer, or <code>{offers_list}</code> to name up to 2 offers in one SMS.',
+        'fixed_deposit_marketing': '<strong>Active members</strong> filtered by savings deposit balance range (use Balance Filter below). Encourages saving into their Fixed Deposit account. Use <code>{account_no}</code> for FD account and <code>{balance}</code> for current savings balance.',
+        'share_capital_marketing': '<strong>Active members whose Share Capital balance is below the minimum.</strong> If no Balance Filter min is set, uses the product\'s configured min_balance. Use <code>{min_balance}</code> to show the required amount and <code>{balance}</code> for their current SC balance.',
+        'dormant_reactivation': '<strong>Dormant members only.</strong> Encourages deposit to reactivate their account.',
+        'happy_birthday': '<strong>Active members whose birthday is today.</strong> Sent daily by scheduler.',
+        'happy_holiday': '<strong>All active members.</strong> Seasonal or holiday greetings.',
+        'mobile_loan_eligibility': '<em>Deprecated.</em> Use <strong>Loan Eligibility</strong> instead — it pitches the best offer from the pool regardless of product type.',
+        'normal_loan_eligibility': '<em>Deprecated.</em> Use <strong>Loan Eligibility</strong> instead — it pitches the best offer from the pool regardless of product type.',
+    };
+
+    // Categories that show the balance filter section
+    const balanceFilterCategories = ['fixed_deposit_marketing', 'share_capital_marketing'];
+    const balanceHints = {
+        'fixed_deposit_marketing': 'Filter by <strong>savings deposit balance</strong>. e.g. Min 5,000 to target members with at least KES 5,000 in savings.',
+        'share_capital_marketing': 'Filter by <strong>share capital balance threshold</strong>. Min = required minimum (overrides product setting). Leave blank to use product\'s configured min_balance.',
+    };
+    const balanceFilterSection = document.getElementById('balance-filter-section');
+    const balanceFilterHint = document.getElementById('balance-filter-hint');
+
+    function renderPreview() {
+        let msg = textarea.value || '';
+        for (const [k, v] of Object.entries(sampleCtx)) {
+            msg = msg.replaceAll('{' + k + '}', v);
+        }
+        preview.textContent = msg || '—';
+        charCount.textContent = textarea.value.length;
+        previewChars.textContent = msg.length;
+
+        // Color warning if over 160 (1 SMS) or 480 (3 SMS)
+        const len = textarea.value.length;
+        charCount.style.color = len > 480 ? 'var(--d365-danger)' : len > 160 ? 'var(--d365-warning)' : '';
+    }
+
+    function updateAudience() {
+        const cat = categorySelect.value;
+        const desc = audienceMap[cat];
+        audienceGuide.innerHTML = desc
+            ? `<p>${desc}</p>`
+            : '<p class="text-muted">Select a category to see who receives this SMS.</p>';
+
+        // Show/hide balance filter section
+        if (balanceFilterCategories.includes(cat)) {
+            balanceFilterSection.style.display = '';
+            balanceFilterHint.innerHTML = balanceHints[cat] || '';
+        } else {
+            balanceFilterSection.style.display = 'none';
+        }
+
+        // Update preview account_no based on category
+        if (cat === 'fixed_deposit_marketing') {
+            sampleCtx.account_no = '00123FD';
+        } else if (cat === 'share_capital_marketing' || cat === 'share_capital_howto') {
+            sampleCtx.account_no = '00123SC';
+        } else if (cat === 'savings_deposit_howto' || cat === 'dormant_reactivation') {
+            sampleCtx.account_no = '00123DEP';
+        } else {
+            sampleCtx.account_no = '00123EL';
+        }
+        renderPreview();
+    }
+
+    textarea.addEventListener('input', renderPreview);
+    categorySelect.addEventListener('change', updateAudience);
+
+    // Placeholder insert buttons
+    document.querySelectorAll('.ph-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const ph = this.dataset.ph;
+            const start = textarea.selectionStart;
+            const end = textarea.selectionEnd;
+            const val = textarea.value;
+            textarea.value = val.substring(0, start) + ph + val.substring(end);
+            textarea.selectionStart = textarea.selectionEnd = start + ph.length;
+            textarea.focus();
+            renderPreview();
+        });
+    });
+
+    // Init
+    renderPreview();
+    updateAudience();
+})();
+</script>
+{% endblock %}

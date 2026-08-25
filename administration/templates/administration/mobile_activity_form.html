@@ -1,0 +1,212 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block content %}
+{% include 'administration/includes/administration_quick_actions.html' %}
+<div class="container py-4" style="max-width: 750px;">
+  <div class="mb-4">
+    <a href="{% url 'administration:mobile_activity_list' %}" class="text-decoration-none">
+      <i class="bi bi-arrow-left"></i> Back to Mobile Activities
+    </a>
+  </div>
+
+  {% if messages %}
+    {% for message in messages %}
+      <div class="alert alert-{{ message.tags|default:'info' }} alert-dismissible fade show">
+        {{ message }}
+        <button class="btn-close" data-bs-dismiss="alert"></button>
+      </div>
+    {% endfor %}
+  {% endif %}
+
+  <!-- Onboarding warning -->
+  {% if not_onboarded_warning %}
+  <div class="alert alert-warning d-flex align-items-center" role="alert">
+    <i class="bi bi-exclamation-triangle-fill me-2 fs-5"></i>
+    <div>
+      <strong>Customer not onboarded.</strong> This member has no linked app account (no username or device ID).
+      Please ensure they activate their mobile app first before enabling withdrawals.
+    </div>
+  </div>
+  {% endif %}
+
+  <div class="card shadow-sm">
+    <div class="card-header bg-white border-bottom">
+      <h5 class="mb-0"><i class="bi bi-phone-fill text-primary"></i> {{ title }}</h5>
+    </div>
+    <div class="card-body">
+
+      {% if not is_edit %}
+      <!-- AJAX Customer Search -->
+      <div class="mb-4 p-3 bg-light rounded border">
+        <label class="form-label fw-semibold"><i class="bi bi-search"></i> Search Customer</label>
+        <input type="text" id="customerSearch" class="form-control"
+               placeholder="Type member no, national ID, or name..." autocomplete="off">
+        <small class="text-muted">Min 2 characters. Results appear below.</small>
+        <div id="searchResults" class="mt-2"></div>
+      </div>
+      {% endif %}
+
+      <form method="post" novalidate id="activityForm">
+        {% csrf_token %}
+
+        <!-- Customer details -->
+        <h6 class="text-muted mb-3 border-bottom pb-2">Customer Details</h6>
+
+        <div class="row">
+          <div class="col-md-6 mb-3">
+            <label for="{{ form.cust_no.id_for_label }}" class="form-label fw-semibold">Member No *</label>
+            {{ form.cust_no }}
+            {% if form.cust_no.errors %}<div class="text-danger small">{{ form.cust_no.errors.0 }}</div>{% endif %}
+          </div>
+          <div class="col-md-6 mb-3">
+            <label for="{{ form.full_name.id_for_label }}" class="form-label fw-semibold">Full Name</label>
+            {{ form.full_name }}
+          </div>
+        </div>
+
+        <div class="row">
+          <div class="col-md-6 mb-3">
+            <label for="{{ form.phone.id_for_label }}" class="form-label fw-semibold">Phone</label>
+            {{ form.phone }}
+            <small class="form-text text-muted">Updates Customer record if changed</small>
+          </div>
+          <div class="col-md-6 mb-3">
+            <label for="{{ form.national_id.id_for_label }}" class="form-label fw-semibold">National ID</label>
+            {{ form.national_id }}
+            <small class="form-text text-muted">Updates Customer record if changed</small>
+          </div>
+        </div>
+
+        <div class="row">
+          <div class="col-md-6 mb-3">
+            <label for="{{ form.username.id_for_label }}" class="form-label fw-semibold">App Username</label>
+            {{ form.username }}
+            <div id="onboardingStatus"></div>
+          </div>
+          <div class="col-md-6 mb-3">
+            <label for="{{ form.device_id.id_for_label }}" class="form-label fw-semibold">Device ID</label>
+            {{ form.device_id }}
+          </div>
+        </div>
+
+        <!-- Authorization toggles -->
+        <h6 class="text-muted mb-3 border-bottom pb-2 mt-4">Authorization</h6>
+
+        <div class="mb-3 form-check form-switch">
+          {{ form.authorize_withdrawal }}
+          <label for="{{ form.authorize_withdrawal.id_for_label }}" class="form-check-label fw-semibold">
+            Authorize Withdrawals &amp; Loan Disbursements
+          </label>
+          <div class="form-text">
+            When enabled, this customer can perform B2C withdrawals and mobile loan disbursements.
+            An SMS and email notification will be sent to the customer.
+          </div>
+        </div>
+
+        <div class="mb-4 form-check form-switch">
+          {{ form.deny_all }}
+          <label for="{{ form.deny_all.id_for_label }}" class="form-check-label fw-semibold text-danger">
+            Deny All (Temporary Block)
+          </label>
+          <div class="form-text">
+            Overrides the above setting. Use for temporary suspension of this customer's mobile activities.
+          </div>
+        </div>
+
+        <div class="d-flex gap-2">
+          <button type="submit" class="btn btn-primary">
+            <i class="bi bi-check-lg"></i> {% if is_edit %}Save Changes{% else %}Create &amp; Save{% endif %}
+          </button>
+          <a href="{% url 'administration:mobile_activity_list' %}" class="btn btn-outline-secondary">Cancel</a>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script>
+(function() {
+  const searchInput = document.getElementById('customerSearch');
+  if (!searchInput) return;
+
+  const resultsDiv = document.getElementById('searchResults');
+  let debounceTimer;
+
+  searchInput.addEventListener('input', function() {
+    clearTimeout(debounceTimer);
+    const q = this.value.trim();
+    if (q.length < 2) { resultsDiv.innerHTML = ''; return; }
+
+    debounceTimer = setTimeout(function() {
+      fetch("{% url 'administration:mobile_activity_search' %}?q=" + encodeURIComponent(q))
+        .then(r => r.json())
+        .then(data => {
+          if (!data.results || data.results.length === 0) {
+            resultsDiv.innerHTML = '<div class="text-muted small py-2">No customers found.</div>';
+            return;
+          }
+          let html = '<div class="list-group">';
+          data.results.forEach(function(c) {
+            const onboardBadge = c.is_onboarded
+              ? '<span class="badge bg-success ms-2">Onboarded</span>'
+              : '<span class="badge bg-warning text-dark ms-2">Not Onboarded</span>';
+            const existsBadge = c.already_exists
+              ? '<span class="badge bg-info ms-2">Already Added</span>'
+              : '';
+            const disabled = c.already_exists ? 'opacity: 0.6;' : 'cursor: pointer;';
+
+            html += '<a href="#" class="list-group-item list-group-item-action py-2" style="' + disabled + '"'
+              + ' data-cust=\'' + JSON.stringify(c).replace(/'/g, "&#39;") + '\''
+              + (c.already_exists ? '' : ' onclick="fillForm(this); return false;"')
+              + '>'
+              + '<div class="d-flex justify-content-between align-items-center">'
+              + '<div>'
+              + '<strong>' + c.cust_no + '</strong> — ' + c.full_name
+              + onboardBadge + existsBadge
+              + '</div>'
+              + '<small class="text-muted">' + (c.phone || '') + '</small>'
+              + '</div>'
+              + '<small class="text-muted">ID: ' + (c.national_id || '—') + '</small>'
+              + '</a>';
+          });
+          html += '</div>';
+          resultsDiv.innerHTML = html;
+        })
+        .catch(function() {
+          resultsDiv.innerHTML = '<div class="text-danger small">Search failed.</div>';
+        });
+    }, 300);
+  });
+
+  window.fillForm = function(el) {
+    const c = JSON.parse(el.getAttribute('data-cust'));
+
+    // Fill form fields
+    const setVal = function(id, val) {
+      const el = document.getElementById(id);
+      if (el) el.value = val || '';
+    };
+    setVal('id_cust_no', c.cust_no);
+    setVal('id_full_name', c.full_name);
+    setVal('id_phone', c.phone);
+    setVal('id_national_id', c.national_id);
+    setVal('id_username', c.username);
+    setVal('id_device_id', c.device_id);
+
+    // Show onboarding status
+    const statusDiv = document.getElementById('onboardingStatus');
+    if (statusDiv) {
+      if (c.is_onboarded) {
+        statusDiv.innerHTML = '<small class="text-success"><i class="bi bi-check-circle-fill"></i> Customer is onboarded on mobile app</small>';
+      } else {
+        statusDiv.innerHTML = '<small class="text-warning"><i class="bi bi-exclamation-triangle-fill"></i> <strong>Not onboarded.</strong> Ensure customer activates their app first.</small>';
+      }
+    }
+
+    // Clear search
+    resultsDiv.innerHTML = '<div class="alert alert-success py-1 px-2 small mb-0"><i class="bi bi-check-lg"></i> Loaded: <strong>' + c.cust_no + '</strong> — ' + c.full_name + '</div>';
+    searchInput.value = '';
+  };
+})();
+</script>
+{% endblock %}

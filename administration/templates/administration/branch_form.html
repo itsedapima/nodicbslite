@@ -1,0 +1,29 @@
+{% extends 'base.html' %}
+{% block content %}
+  {% include 'administration/includes/administration_quick_actions.html' %}
+
+<div class="container my-5 ">
+
+    <h2 class="text-2xl font-bold mb-4">{{ title }}</h2>
+
+    <div class="bg-white shadow-md rounded-lg p-6">
+        <form method="POST" class="mx-auto px-4 max-w-2xl">
+            {% csrf_token %}
+            
+            {{ form.as_p }}
+
+            <div class="mt-6 flex gap-2 border-t pt-4">
+                <button type="submit" class="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded shadow text-sm font-medium">
+                    Save Changes
+                </button>
+                <a href="{% if branch %}{% url 'administration:branch_detail' branch.pk %}{% else %}{% url 'administration:branch_list' %}{% endif %}" 
+                   class="px-4 py-2 bg-gray-400 hover:bg-gray-500 text-white rounded shadow text-sm font-medium">
+                    Cancel
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+  </div>
+</div>
+{% endblock %}

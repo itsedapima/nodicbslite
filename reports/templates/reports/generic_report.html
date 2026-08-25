@@ -1,0 +1,179 @@
+{% extends 'base.html' %}
+{% load humanize %}
+{% block title %}{{ report_title }} | Reports{% endblock %}
+
+{% block extra_css %}
+<style>
+.reports-hero {
+  background: linear-gradient(135deg, #0E2B4D 0%, #1a4170 100%);
+  color: #fff; padding: 1.5rem; border-radius: .75rem; margin-bottom: 1.25rem;
+}
+.reports-hero h1 { font-size: 1.4rem; font-weight: 700; margin: 0 0 .15rem; color: #fff; }
+.reports-hero p  { margin: 0; opacity: .85; font-size: .85rem; color: #fff; }
+.reports-hero i  { color: #fff; }
+
+.filter-bar {
+  display: flex; flex-wrap: wrap; align-items: center; gap: .5rem;
+  margin-bottom: 1.25rem; padding: .75rem 1rem;
+  background: var(--d365-surface, #fff); border: 1px solid var(--d365-border, #EDEBE9);
+  border-radius: .5rem;
+}
+.filter-bar .form-control, .filter-bar .form-select {
+  font-size: .85rem; border: 1px solid var(--d365-border-strong, #D2D0CE); border-radius: .4rem;
+}
+.filter-bar .form-control:focus, .filter-bar .form-select:focus {
+  border-color: var(--d365-primary, #0078D4);
+  box-shadow: 0 0 0 2px var(--d365-primary-tint-40, #DEECF9);
+}
+
+.btn-d365 { font-size: .82rem; padding: .35rem .85rem; border-radius: .4rem; font-weight: 600; transition: all .15s ease; }
+.btn-d365-primary { background: var(--d365-primary, #0078D4); color: #fff; border: 1px solid var(--d365-primary, #0078D4); }
+.btn-d365-primary:hover { background: var(--d365-primary-hover, #106EBE); color: #fff; }
+.btn-d365-outline { background: var(--d365-surface, #fff); color: var(--d365-text, #323130); border: 1px solid var(--d365-border-strong, #D2D0CE); }
+.btn-d365-outline:hover { background: var(--d365-primary-tint-40, #DEECF9); color: var(--d365-primary, #0078D4); }
+
+.data-card {
+  background: var(--d365-surface, #fff); border: 1px solid var(--d365-border, #EDEBE9);
+  border-radius: .5rem; box-shadow: 0 1px 3px rgba(0,0,0,.06); overflow: hidden;
+}
+.data-card .table thead { background: var(--d365-surface-alt, #FAF9F8); }
+.data-card .table thead th {
+  font-size: .75rem; font-weight: 700; text-transform: uppercase;
+  letter-spacing: .04em; color: var(--d365-text-secondary, #605E5C);
+  border-bottom: 2px solid var(--d365-border, #EDEBE9); padding: .65rem .75rem;
+  white-space: nowrap;
+}
+.data-card .table tbody td {
+  font-size: .84rem; color: var(--d365-text, #323130);
+  padding: .55rem .75rem; border-bottom: 1px solid var(--d365-border, #EDEBE9);
+}
+.data-card .table tbody tr:hover { background: var(--d365-primary-tint-40, #DEECF9); }
+
+.summary-card {
+  background: #f6f9fd; border: 1px solid #e3e6ec; border-radius: .5rem;
+  padding: 1rem; margin-top: 1rem;
+}
+.summary-card .summary-row { display: flex; justify-content: space-between; padding: .25rem 0; font-size: .88rem; }
+.summary-card .summary-row .label { font-weight: 600; color: #0E2B4D; }
+.summary-card .summary-row .value { font-weight: 700; color: #323130; }
+
+.d365-pagination .page-link {
+  font-size: .82rem; color: var(--d365-text, #323130);
+  border-color: var(--d365-border, #EDEBE9); padding: .35rem .7rem;
+}
+.d365-pagination .page-item.active .page-link {
+  background: var(--d365-primary, #0078D4); border-color: var(--d365-primary, #0078D4); color: #fff;
+}
+
+.export-bar { display: flex; gap: .5rem; align-items: center; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="reports-hero">
+  <div class="d-flex justify-content-between align-items-start flex-wrap gap-2">
+    <div>
+      <h1><i class="bi bi-file-earmark-bar-graph me-2"></i>{{ report_title }}</h1>
+      <p>{{ report_subtitle }}</p>
+    </div>
+    <div class="export-bar">
+      <a href="?{{ base_query }}&format=excel" class="btn btn-d365 btn-d365-outline">
+        <i class="bi bi-file-earmark-excel me-1"></i>Excel
+      </a>
+      <a href="?{{ base_query }}&format=pdf" class="btn btn-d365 btn-d365-outline">
+        <i class="bi bi-file-earmark-pdf me-1"></i>PDF
+      </a>
+      <a href="{% url 'reports:reports_dashboard' %}" class="btn btn-d365 btn-d365-outline">
+        <i class="bi bi-arrow-left me-1"></i>Back
+      </a>
+    </div>
+  </div>
+</div>
+
+{% block report_filters %}
+{% endblock %}
+
+<div class="d-flex justify-content-between align-items-center mb-2">
+  <span class="text-muted" style="font-size:.82rem;">
+    Showing {{ rows|length }} of {{ all_rows_count }} records
+  </span>
+  <input type="text" id="liveSearch" class="form-control" style="max-width:300px;font-size:.85rem;" placeholder="Search this page...">
+</div>
+
+<div class="data-card">
+  <div class="table-responsive">
+    <table class="table table-hover mb-0" id="dataTable">
+      <thead>
+        <tr>
+          {% for h in headers %}
+          <th{% if forloop.counter0 in numeric_columns %} class="text-end"{% endif %}>{{ h }}</th>
+          {% endfor %}
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in rows %}
+        <tr>
+          {% for cell in row %}
+          <td{% if forloop.counter0 in numeric_columns %} class="text-end fw-medium"{% endif %}>
+            {% if cell == "" or cell is None %}-{% else %}{{ cell }}{% endif %}
+          </td>
+          {% endfor %}
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="{{ headers|length }}" class="text-center text-muted py-4">No records found.</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% if summary %}
+<div class="summary-card">
+  <h6 class="fw-bold mb-2" style="font-size:.85rem;color:#0E2B4D;text-transform:uppercase;letter-spacing:.04em;">Summary</h6>
+  {% for label, value in summary %}
+  <div class="summary-row">
+    <span class="label">{{ label }}</span>
+    <span class="value">{{ value }}</span>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+
+{% if is_paginated %}
+<nav aria-label="Pagination" class="mt-4">
+  <ul class="pagination d365-pagination justify-content-center">
+    {% if page_obj.has_previous %}
+      <li class="page-item">
+        <a class="page-link" href="?{{ base_query }}&page=1">First</a>
+      </li>
+      <li class="page-item">
+        <a class="page-link" href="?{{ base_query }}&page={{ page_obj.previous_page_number }}">&lsaquo;</a>
+      </li>
+    {% endif %}
+    <li class="page-item active">
+      <span class="page-link">{{ page_obj.number }}</span>
+    </li>
+    {% if page_obj.has_next %}
+      <li class="page-item">
+        <a class="page-link" href="?{{ base_query }}&page={{ page_obj.next_page_number }}">&rsaquo;</a>
+      </li>
+      <li class="page-item">
+        <a class="page-link" href="?{{ base_query }}&page={{ paginator.num_pages }}">Last</a>
+      </li>
+    {% endif %}
+  </ul>
+  <p class="text-center text-muted small">Page {{ page_obj.number }} of {{ paginator.num_pages }}</p>
+</nav>
+{% endif %}
+
+<script>
+document.getElementById('liveSearch').addEventListener('input', function() {
+  const q = this.value.toLowerCase();
+  document.querySelectorAll('#dataTable tbody tr').forEach(function(row) {
+    row.style.display = row.textContent.toLowerCase().includes(q) ? '' : 'none';
+  });
+});
+</script>
+{% endblock %}

@@ -1,0 +1,118 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block content %}
+{% include 'administration/includes/administration_quick_actions.html' %}
+<div class="container py-4">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+      <h2 class="mb-0"><i class="bi bi-megaphone-fill text-primary"></i> Promotions &amp; Updates</h2>
+      <small class="text-muted">Manage ads shown in the customer mobile app dashboard</small>
+    </div>
+    <a href="{% url 'administration:promotion_create' %}" class="btn btn-primary">
+      <i class="bi bi-plus-lg"></i> Add Promotion
+    </a>
+  </div>
+
+  {% if messages %}
+    {% for message in messages %}
+      <div class="alert alert-{{ message.tags|default:'info' }} alert-dismissible fade show">
+        {{ message }}
+        <button class="btn-close" data-bs-dismiss="alert"></button>
+      </div>
+    {% endfor %}
+  {% endif %}
+
+  <div class="card border-0 shadow-sm">
+    <div class="card-header bg-white d-flex align-items-center justify-content-between">
+      <h6 class="mb-0"><i class="bi bi-megaphone me-2"></i>Promotions</h6>
+      <input type="text" id="liveSearch" class="form-control form-control-sm" style="max-width:260px" placeholder="Search...">
+    </div>
+    <div class="card-body p-0">
+      <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0" id="dataTable">
+          <thead>
+            <tr>
+              <th style="width: 110px;">Image</th>
+              <th>Title</th>
+              <th>Type</th>
+              <th>Schedule</th>
+              <th class="text-center">Order</th>
+              <th class="text-center">Active</th>
+              <th class="text-end">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for promo in promotions %}
+            <tr>
+              <td>
+                {% if promo.image %}
+                  <img src="{{ promo.image.url }}" alt="{{ promo.title }}" style="height:50px;width:90px;object-fit:cover;border-radius:6px;">
+                {% else %}
+                  <div class="bg-light text-muted d-flex align-items-center justify-content-center" style="height:50px;width:90px;border-radius:6px;">
+                    <i class="bi bi-image"></i>
+                  </div>
+                {% endif %}
+              </td>
+              <td>
+                <div class="fw-semibold">{{ promo.title }}</div>
+                {% if promo.subtitle %}<small class="text-muted">{{ promo.subtitle }}</small>{% endif %}
+              </td>
+              <td>
+                <span class="badge bg-secondary">{{ promo.get_promo_type_display }}</span>
+              </td>
+              <td>
+                {% if promo.start_date or promo.end_date %}
+                  <small>
+                    {% if promo.start_date %}From {{ promo.start_date|date:"d M Y" }}{% endif %}
+                    {% if promo.end_date %}<br>To {{ promo.end_date|date:"d M Y" }}{% endif %}
+                  </small>
+                {% else %}
+                  <small class="text-muted">Always</small>
+                {% endif %}
+              </td>
+              <td class="text-center">{{ promo.display_order }}</td>
+              <td class="text-center">
+                <form method="post" action="{% url 'administration:promotion_toggle' promo.pk %}" class="d-inline">
+                  {% csrf_token %}
+                  <button type="submit" class="btn btn-sm {% if promo.is_active %}btn-success{% else %}btn-outline-secondary{% endif %}">
+                    {% if promo.is_active %}<i class="bi bi-check-lg"></i> ON{% else %}<i class="bi bi-x-lg"></i> OFF{% endif %}
+                  </button>
+                </form>
+              </td>
+              <td class="text-end">
+                <a href="{% url 'administration:promotion_update' promo.pk %}" class="btn btn-sm btn-outline-primary">
+                  <i class="bi bi-pencil"></i>
+                </a>
+                <form method="post" action="{% url 'administration:promotion_delete' promo.pk %}" class="d-inline"
+                      onsubmit="return confirm('Delete this promotion?');">
+                  {% csrf_token %}
+                  <button type="submit" class="btn btn-sm btn-outline-danger">
+                    <i class="bi bi-trash"></i>
+                  </button>
+                </form>
+              </td>
+            </tr>
+            {% empty %}
+            <tr>
+              <td colspan="7" class="text-center text-muted py-4">
+                <i class="bi bi-megaphone display-6 d-block mb-2"></i>
+                No promotions yet. Click <strong>Add Promotion</strong> to create one.
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+document.getElementById('liveSearch').addEventListener('input', function() {
+    const q = this.value.toLowerCase();
+    document.querySelectorAll('#dataTable tbody tr').forEach(function(row) {
+        row.style.display = row.textContent.toLowerCase().includes(q) ? '' : 'none';
+    });
+});
+</script>
+{% endblock %}

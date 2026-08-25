@@ -1,0 +1,508 @@
+{% extends 'base.html' %}
+{% block content %}
+{% include 'loans/includes/loans_quick_actions.html' %}
+<div class="container-fluid px-4 py-4">
+
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h3 style="color: var(--d365-text); font-weight: 700;"><i class="bi bi-people-fill" style="color: var(--d365-primary);"></i> Manage Guarantors</h3>
+        <a href="{% url 'loans:loan_dashboard' %}" class="btn" style="background: var(--d365-surface); color: var(--d365-text); border: 1px solid var(--d365-border-strong); border-radius: .4rem; font-weight: 600;">
+            <i class="bi bi-arrow-left"></i> Back to Dashboard
+        </a>
+    </div>
+
+    {# Django messages #}
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert" style="border-radius: .4rem;">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        {% endfor %}
+    {% endif %}
+
+    <div class="row">
+        {# ── LEFT COLUMN: Loan Info & Existing Guarantors ────────────────── #}
+        <div class="col-md-5 mb-4">
+            <div class="card mb-4" style="background: var(--d365-surface); border: 1px solid var(--d365-border); border-radius: .5rem; box-shadow: var(--d365-shadow-2);">
+                <div class="card-header" style="background: var(--d365-surface-alt); border-bottom: 2px solid var(--d365-border); font-size: .8rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--d365-text-secondary);">
+                    Loan Context
+                </div>
+                <div class="card-body">
+                    <table class="table table-sm table-borderless">
+                        <tr><td style="color: var(--d365-text-secondary);">Borrower:</td>
+                            <td class="fw-bold">{{ loan.customer.full_name }}</td></tr>
+                        <tr><td style="color: var(--d365-text-secondary);">Cust No:</td>
+                            <td>{{ loan.customer.cust_no }}</td></tr>
+                        <tr><td style="color: var(--d365-text-secondary);">Loan Type:</td>
+                            <td><span class="badge" style="background: var(--d365-primary-tint-40); color: var(--d365-primary);">{{ loan.get_loan_type_display }}</span></td></tr>
+                        <tr><td style="color: var(--d365-text-secondary);">Principal:</td>
+                            <td class="fw-bold">{{ loan.principal|floatformat:2 }}</td></tr>
+                        <tr><td style="color: var(--d365-text-secondary);">Loan Date:</td>
+                            <td>{{ loan.loan_date }}</td></tr>
+                    </table>
+                </div>
+            </div>
+
+            <div class="card" style="background: var(--d365-surface); border: 1px solid var(--d365-border); border-radius: .5rem; box-shadow: var(--d365-shadow-2);">
+                <div class="card-header d-flex justify-content-between align-items-center" style="background: var(--d365-surface-alt); border-bottom: 2px solid var(--d365-border); font-size: .8rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--d365-text-secondary);">
+                    <span>Existing Guarantors</span>
+                    <span class="badge" style="background: var(--d365-primary-tint-40); color: var(--d365-primary);">{{ guarantors|length }}</span>
+                </div>
+                <div class="card-body p-0">
+                    {% if guarantors %}
+                    <table class="table table-sm table-striped mb-0">
+                        <thead style="background: var(--d365-surface-alt);">
+                            <tr>
+                                <th style="font-size: .75rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--d365-text-secondary);">Cust No</th>
+                                <th style="font-size: .75rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--d365-text-secondary);">Name</th>
+                                <th class="text-end" style="font-size: .75rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--d365-text-secondary);">Amount</th>
+                                <th class="text-center" style="width:120px; font-size: .75rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--d365-text-secondary);">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        {% for g in guarantors %}
+                            <tr id="guarantor-row-{{ g.pk }}">
+                                <td>{{ g.guarantor_cust.cust_no }}</td>
+                                <td>{{ g.guarantor_cust.full_name }}</td>
+                                <td class="text-end font-monospace">
+                                    <span id="g-amt-display-{{ g.pk }}">{{ g.amount|floatformat:2 }}</span>
+                                    <input type="number" id="g-amt-input-{{ g.pk }}"
+                                           class="form-control form-control-sm text-end font-monospace d-none"
+                                           value="{{ g.amount|floatformat:2 }}" step="0.01" min="0.01"
+                                           style="max-width:120px; display:inline-block;">
+                                </td>
+                                <td class="text-center">
+                                    {# Normal mode: Edit + Delete #}
+                                    <span id="g-actions-{{ g.pk }}">
+                                        <button type="button" class="btn btn-sm py-0 px-1 me-1 g-edit-btn"
+                                                style="background: transparent; color: var(--d365-primary); border: 1px solid var(--d365-primary); border-radius: .3rem;"
+                                                data-gid="{{ g.pk }}" title="Edit amount">
+                                            <i class="bi bi-pencil-square"></i>
+                                        </button>
+                                        <button type="button" class="btn btn-sm py-0 px-1 g-delete-btn"
+                                                style="background: transparent; color: var(--d365-danger); border: 1px solid var(--d365-danger); border-radius: .3rem;"
+                                                data-gid="{{ g.pk }}" data-name="{{ g.guarantor_cust.full_name }}" title="Remove guarantor">
+                                            <i class="bi bi-x-lg"></i>
+                                        </button>
+                                    </span>
+                                    {# Edit mode: Save + Cancel #}
+                                    <span id="g-editing-{{ g.pk }}" class="d-none">
+                                        <button type="button" class="btn btn-sm py-0 px-1 me-1 g-save-btn"
+                                                style="background: var(--d365-success); color: #fff; border: 1px solid var(--d365-success); border-radius: .3rem;"
+                                                data-gid="{{ g.pk }}" title="Save">
+                                            <i class="bi bi-check-lg"></i>
+                                        </button>
+                                        <button type="button" class="btn btn-sm py-0 px-1 g-cancel-btn"
+                                                style="background: var(--d365-surface); color: var(--d365-text); border: 1px solid var(--d365-border-strong); border-radius: .3rem;"
+                                                data-gid="{{ g.pk }}" title="Cancel">
+                                            <i class="bi bi-arrow-counterclockwise"></i>
+                                        </button>
+                                    </span>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+                    {% else %}
+                    <div class="p-3 small" style="color: var(--d365-text-secondary);">No guarantors added yet.</div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        {# ── RIGHT COLUMN: Add form + LIVE METRICS PANEL ─────────────────── #}
+        <div class="col-md-7">
+            <div class="card" style="background: var(--d365-surface); border: 1px solid var(--d365-border); border-radius: .5rem; box-shadow: var(--d365-shadow-2);">
+                <div class="card-header" style="background: var(--d365-surface-alt); border-bottom: 2px solid var(--d365-border); font-size: .8rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--d365-text-secondary);">
+                    Add New Guarantor
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-info py-2 small" style="border-radius: .4rem;">
+                        <i class="bi bi-info-circle"></i>
+                        Guarantee capacity is derived per savings product using the
+                        product's <strong>guarantee_multiplier</strong>. Commitments
+                        against <em>open</em> loans (RunningLoanStat) count against
+                        the ceiling; cleared loans free it up automatically.
+                    </div>
+
+                    <form method="post" id="add-guarantor-form">
+                        {% csrf_token %}
+
+                        <div class="mb-3 position-relative">
+                            <label class="form-label" style="font-weight: 600; font-size: .82rem; color: var(--d365-text);">Search Guarantor</label>
+                            <div class="input-group">
+                                <span class="input-group-text" style="background: var(--d365-surface-alt); border: 1px solid var(--d365-border);"><i class="bi bi-search" style="color: var(--d365-text-secondary);"></i></span>
+                                <input type="text" id="guarantor_search_input"
+                                       class="form-control" autocomplete="off"
+                                       placeholder="Type member no or name to search...">
+                            </div>
+                            <input type="hidden" name="guarantor_no" id="id_guarantor_no">
+                            <ul id="guarantor_search_dropdown"
+                                class="dropdown-menu w-100 shadow mt-1"
+                                style="display:none; max-height:220px; overflow-y:auto; z-index:1050; position:absolute;">
+                            </ul>
+                            <small id="guarantor_status" class="form-text" style="color: var(--d365-text-secondary);"></small>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label" style="font-weight: 600; font-size: .82rem; color: var(--d365-text);">Guarantor Name (Verification)</label>
+                            <input type="text" id="guarantor_name_display"
+                                   class="form-control" style="background: var(--d365-surface-alt);" readonly
+                                   placeholder="Search above to auto-fill...">
+                        </div>
+
+                        {# LIVE METRICS PANEL — populated by JS #}
+                        <div id="live-metrics-panel" class="d-none mb-3">
+                            <div class="card" style="border: 1px solid var(--d365-border); border-radius: .5rem;">
+                                <div class="card-header py-2 d-flex justify-content-between align-items-center" style="background: var(--d365-surface-alt); border-bottom: 1px solid var(--d365-border);">
+                                    <span class="fw-bold small text-uppercase" style="color: var(--d365-text-secondary); letter-spacing: .04em;">
+                                        <i class="bi bi-graph-up-arrow"></i> Live Guarantor Capacity
+                                    </span>
+                                    <span id="metrics-verdict" class="badge bg-secondary">…</span>
+                                </div>
+                                <div class="card-body p-2">
+                                    <div class="row g-2 mb-2">
+                                        <div class="col-6 col-md-3 text-center border-end">
+                                            <div class="small text-uppercase" style="color: var(--d365-text-secondary); font-size: .7rem;">Deposits</div>
+                                            <div class="fw-bold font-monospace" id="m-balance">—</div>
+                                        </div>
+                                        <div class="col-6 col-md-3 text-center border-end">
+                                            <div class="small text-uppercase" style="color: var(--d365-text-secondary); font-size: .7rem;">Ceiling</div>
+                                            <div class="fw-bold font-monospace" id="m-ceiling">—</div>
+                                        </div>
+                                        <div class="col-6 col-md-3 text-center border-end">
+                                            <div class="small text-uppercase" style="color: var(--d365-text-secondary); font-size: .7rem;">Committed</div>
+                                            <div class="fw-bold font-monospace" style="color: var(--d365-danger);" id="m-committed">—</div>
+                                        </div>
+                                        <div class="col-6 col-md-3 text-center">
+                                            <div class="small text-uppercase" style="color: var(--d365-text-secondary); font-size: .7rem;">Remaining</div>
+                                            <div class="fw-bold font-monospace" style="color: var(--d365-success);" id="m-remaining">—</div>
+                                        </div>
+                                    </div>
+                                    <table class="table table-sm table-bordered mb-0" id="m-detail">
+                                        <thead style="background: var(--d365-surface-alt);">
+                                            <tr>
+                                                <th style="font-size: .75rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--d365-text-secondary);">Product</th>
+                                                <th class="text-end" style="font-size: .75rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--d365-text-secondary);">Balance</th>
+                                                <th class="text-end" style="font-size: .75rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--d365-text-secondary);">×</th>
+                                                <th class="text-end" style="font-size: .75rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--d365-text-secondary);">Capacity</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="m-detail-body">
+                                            <tr><td colspan="4" class="text-center small py-2" style="color: var(--d365-text-secondary);">
+                                                No positive product balances.
+                                            </td></tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label" style="font-weight: 600; font-size: .82rem; color: var(--d365-text);">Amount to Guarantee</label>
+                            {{ form.amount }}
+                            <div class="form-text" style="color: var(--d365-text-secondary);">
+                                Must fit within the guarantor's remaining headroom shown above.
+                                Officer will be blocked at submit if it exceeds.
+                            </div>
+                        </div>
+
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-lg" id="submit-btn" style="background: var(--d365-primary); color: #fff; border: 1px solid var(--d365-primary); border-radius: .4rem; font-weight: 600;">
+                                <i class="bi bi-person-check"></i> Add Guarantor
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+(function () {
+    const searchInput  = document.getElementById('guarantor_search_input');
+    const hiddenCustNo = document.getElementById('id_guarantor_no');
+    const dropdown     = document.getElementById('guarantor_search_dropdown');
+    const amtInput     = document.getElementById('id_amount');
+    const nameDisp     = document.getElementById('guarantor_name_display');
+    const status       = document.getElementById('guarantor_status');
+    const panel        = document.getElementById('live-metrics-panel');
+    const submitBtn    = document.getElementById('submit-btn');
+    const metricsUrl   = "{% url 'loans:api_guarantor_metrics' %}";
+    const excludeLoan  = "{{ loan.id }}";
+
+    if (amtInput) amtInput.classList.add('form-control');
+
+    let currentMetrics = null;
+    let debounceTimer  = null;
+
+    function fmt(n) {
+        return (Number(n) || 0).toLocaleString(undefined,
+            {minimumFractionDigits: 2, maximumFractionDigits: 2});
+    }
+
+    /* ── Live search dropdown (debounced keyup) ──────────────────────── */
+    if (searchInput && dropdown) {
+        searchInput.addEventListener('input', function () {
+            clearTimeout(debounceTimer);
+            const q = searchInput.value.trim();
+            if (q.length < 2) { dropdown.style.display = 'none'; return; }
+
+            debounceTimer = setTimeout(() => {
+                fetch('/customers/customer-search/?q=' + encodeURIComponent(q))
+                    .then(r => r.json())
+                    .then(data => {
+                        dropdown.innerHTML = '';
+                        if (!data.results || !data.results.length) {
+                            dropdown.innerHTML = '<li><span class="dropdown-item text-muted small">No members found</span></li>';
+                        } else {
+                            data.results.forEach(item => {
+                                const li = document.createElement('li');
+                                li.innerHTML = '<button type="button" class="dropdown-item py-2 g-search-item" ' +
+                                    'data-custno="' + item.cust_no + '" data-name="' + item.full_name + '">' +
+                                    item.cust_no + ' — ' + item.full_name + ' — ' + item.national_id + '</button>';
+                                dropdown.appendChild(li);
+                            });
+                        }
+                        dropdown.style.display = 'block';
+                    });
+            }, 250);
+        });
+
+        dropdown.addEventListener('click', function (e) {
+            const btn = e.target.closest('.g-search-item');
+            if (!btn) return;
+            const custNo = btn.getAttribute('data-custno');
+            const name   = btn.getAttribute('data-name');
+            searchInput.value    = custNo + ' — ' + name;
+            hiddenCustNo.value   = custNo;
+            dropdown.style.display = 'none';
+            searchInput.classList.add('border-success', 'bg-light', 'fw-semibold');
+            fetchMetrics(custNo);
+        });
+
+        document.addEventListener('click', function (e) {
+            if (!searchInput.contains(e.target) && !dropdown.contains(e.target))
+                dropdown.style.display = 'none';
+        });
+    }
+
+    /* ── Metrics rendering ────────────────────────────────────────────── */
+    function renderMetrics(data) {
+        currentMetrics = data;
+        panel.classList.remove('d-none');
+        document.getElementById('m-balance').textContent   = fmt(data.total_balance);
+        document.getElementById('m-ceiling').textContent   = fmt(data.guarantee_ceiling);
+        document.getElementById('m-committed').textContent = fmt(data.committed);
+        document.getElementById('m-remaining').textContent = fmt(data.remaining);
+
+        const verdict = document.getElementById('metrics-verdict');
+        if (data.remaining > 0) {
+            verdict.textContent = 'CAPACITY OK · ' + fmt(data.remaining) + ' free';
+            verdict.className = 'badge bg-success';
+        } else {
+            verdict.textContent = 'NO CAPACITY';
+            verdict.className = 'badge bg-danger';
+        }
+
+        const body = document.getElementById('m-detail-body');
+        body.innerHTML = '';
+        if (data.per_product && data.per_product.length) {
+            data.per_product.forEach(function (p) {
+                const tr = document.createElement('tr');
+                tr.innerHTML =
+                    '<td>' + p.label + '</td>' +
+                    '<td class="text-end font-monospace">' + fmt(p.balance) + '</td>' +
+                    '<td class="text-end">×' + p.multiplier + '</td>' +
+                    '<td class="text-end font-monospace fw-bold">' + fmt(p.capacity) + '</td>';
+                body.appendChild(tr);
+            });
+        } else {
+            body.innerHTML = '<tr><td colspan="4" class="text-center text-muted small py-2">' +
+                             'No positive product balances.</td></tr>';
+        }
+    }
+
+    function clientSideAmountCheck() {
+        if (!currentMetrics || !amtInput) return true;
+        const amt = parseFloat(amtInput.value || '0');
+        if (!amt || amt <= 0) return true;
+        if (amt > currentMetrics.remaining) {
+            submitBtn.disabled = true;
+            submitBtn.style.background = 'transparent';
+            submitBtn.style.color = 'var(--d365-danger)';
+            submitBtn.style.border = '1px solid var(--d365-danger)';
+            submitBtn.innerHTML = '<i class="bi bi-x-circle"></i> Exceeds remaining headroom (' +
+                                  fmt(currentMetrics.remaining) + ')';
+            return false;
+        } else {
+            submitBtn.disabled = false;
+            submitBtn.style.background = 'var(--d365-primary)';
+            submitBtn.style.color = '#fff';
+            submitBtn.style.border = '1px solid var(--d365-primary)';
+            submitBtn.innerHTML = '<i class="bi bi-person-check"></i> Add Guarantor';
+            return true;
+        }
+    }
+
+    function fetchMetrics(custNo) {
+        if (!custNo) return;
+        status.innerHTML = '<span class="text-warning"><span class="spinner-border spinner-border-sm me-1"></span> Loading metrics…</span>';
+        fetch(metricsUrl + '?cust_no=' + encodeURIComponent(custNo) +
+              '&exclude_loan=' + encodeURIComponent(excludeLoan))
+            .then(r => r.json())
+            .then(data => {
+                if (data.found) {
+                    nameDisp.value = data.full_name;
+                    nameDisp.classList.remove('text-danger');
+                    nameDisp.classList.add('text-success', 'fw-bold');
+
+                    // Block non-active members (Dormant, Deceased, Exited)
+                    if (data.is_active_member === false) {
+                        status.innerHTML = '<span class="text-danger">' +
+                            '<i class="bi bi-x-circle"></i> Member status: <strong>' +
+                            data.customer_status + '</strong> — cannot guarantee</span>';
+                        panel.classList.add('d-none');
+                        submitBtn.disabled = true;
+                        submitBtn.style.background = 'transparent';
+                        submitBtn.style.color = 'var(--d365-danger)';
+                        submitBtn.style.border = '1px solid var(--d365-danger)';
+                        submitBtn.innerHTML = '<i class="bi bi-x-circle"></i> Ineligible (' +
+                            data.customer_status + ')';
+                        return;
+                    }
+
+                    // Block defaulters with > 3 months arrears
+                    if (data.is_defaulter === true) {
+                        status.innerHTML = '<span class="text-danger">' +
+                            '<i class="bi bi-exclamation-triangle"></i> <strong>Cannot guarantee</strong> — ' +
+                            data.defaulter_detail + '</span>';
+                        panel.classList.add('d-none');
+                        submitBtn.disabled = true;
+                        submitBtn.style.background = 'transparent';
+                        submitBtn.style.color = 'var(--d365-danger)';
+                        submitBtn.style.border = '1px solid var(--d365-danger)';
+                        submitBtn.innerHTML = '<i class="bi bi-x-circle"></i> Defaulter — Not Allowed';
+                        return;
+                    }
+
+                    status.innerHTML = '<span class="text-success">' +
+                        '<i class="bi bi-check-circle"></i> Guarantor found' +
+                        (data.customer_status ? ' · <span class="badge bg-success">' +
+                        data.customer_status + '</span>' : '') + '</span>';
+                    renderMetrics(data);
+                    clientSideAmountCheck();
+                } else {
+                    nameDisp.value = 'Customer not found';
+                    nameDisp.classList.add('text-danger');
+                    status.innerHTML = '<span class="text-danger">' +
+                        '<i class="bi bi-x-circle"></i> Invalid customer number</span>';
+                    panel.classList.add('d-none');
+                }
+            })
+            .catch(err => {
+                console.error(err);
+                status.innerText = 'Error searching.';
+            });
+    }
+
+    if (amtInput) {
+        amtInput.addEventListener('input', clientSideAmountCheck);
+    }
+
+    /* ── Inline Edit / Delete for existing guarantors ─────────────────── */
+    const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+
+    // Edit button → toggle to input mode
+    document.querySelectorAll('.g-edit-btn').forEach(btn => {
+        btn.addEventListener('click', function () {
+            const gid = this.getAttribute('data-gid');
+            document.getElementById('g-amt-display-' + gid).classList.add('d-none');
+            document.getElementById('g-amt-input-' + gid).classList.remove('d-none');
+            document.getElementById('g-actions-' + gid).classList.add('d-none');
+            document.getElementById('g-editing-' + gid).classList.remove('d-none');
+            document.getElementById('g-amt-input-' + gid).focus();
+        });
+    });
+
+    // Cancel button → revert to display mode
+    document.querySelectorAll('.g-cancel-btn').forEach(btn => {
+        btn.addEventListener('click', function () {
+            const gid = this.getAttribute('data-gid');
+            const display = document.getElementById('g-amt-display-' + gid);
+            const input   = document.getElementById('g-amt-input-' + gid);
+            input.value = display.textContent.trim();
+            input.classList.add('d-none');
+            display.classList.remove('d-none');
+            document.getElementById('g-editing-' + gid).classList.add('d-none');
+            document.getElementById('g-actions-' + gid).classList.remove('d-none');
+        });
+    });
+
+    // Save button → AJAX PATCH to update amount
+    document.querySelectorAll('.g-save-btn').forEach(btn => {
+        btn.addEventListener('click', function () {
+            const gid    = this.getAttribute('data-gid');
+            const input  = document.getElementById('g-amt-input-' + gid);
+            const newAmt = parseFloat(input.value);
+            if (!newAmt || newAmt <= 0) { alert('Enter a valid amount.'); return; }
+
+            this.disabled = true;
+            this.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
+
+            fetch('/loans/api/guarantor/' + gid + '/update/', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json', 'X-CSRFToken': csrfToken},
+                body: JSON.stringify({amount: newAmt})
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.status === 'ok') {
+                    const display = document.getElementById('g-amt-display-' + gid);
+                    display.textContent = parseFloat(data.new_amount).toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2});
+                    input.classList.add('d-none');
+                    display.classList.remove('d-none');
+                    document.getElementById('g-editing-' + gid).classList.add('d-none');
+                    document.getElementById('g-actions-' + gid).classList.remove('d-none');
+                } else {
+                    alert(data.error || 'Failed to update.');
+                }
+            })
+            .catch(() => alert('Network error.'))
+            .finally(() => {
+                this.disabled = false;
+                this.innerHTML = '<i class="bi bi-check-lg"></i>';
+            });
+        });
+    });
+
+    // Delete button → confirm then AJAX DELETE
+    document.querySelectorAll('.g-delete-btn').forEach(btn => {
+        btn.addEventListener('click', function () {
+            const gid  = this.getAttribute('data-gid');
+            const name = this.getAttribute('data-name');
+            if (!confirm('Remove guarantor ' + name + ' from this loan?')) return;
+
+            this.disabled = true;
+            fetch('/loans/api/guarantor/' + gid + '/delete/', {
+                method: 'POST',
+                headers: {'X-CSRFToken': csrfToken}
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.status === 'ok') {
+                    const row = document.getElementById('guarantor-row-' + gid);
+                    if (row) row.remove();
+                } else {
+                    alert(data.error || 'Failed to remove.');
+                    this.disabled = false;
+                }
+            })
+            .catch(() => { alert('Network error.'); this.disabled = false; });
+        });
+    });
+
+})();
+</script>
+{% endblock %}

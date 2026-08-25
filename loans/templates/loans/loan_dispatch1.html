@@ -1,0 +1,202 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container my-5">
+  {% include 'loans/includes/loans_quick_actions.html' %}
+    <div class="card shadow">
+        <div class="card-header ">
+            <h4 class="mb-0">New Loan Dispatch</h4>
+        </div>
+        <div class="card-body">
+            <form method="post" id="loanForm">
+                {% csrf_token %}
+                
+                <!-- Customer & Basic Loan Info -->
+                <div class="row mb-3">
+                    <div class="col-md-3">
+                        <label class="form-label">Customer Number</label>
+                        {{ form.cust_no }} <!-- Ensure widget has class 'form-control' and id 'id_cust_no' -->
+                        <small id="cust_status" class="text-muted"></small>
+                    </div>
+                    <div class="col-md-5">
+                        <label class="form-label">Full Name</label>
+                        <input type="text" id="full_name_display" class="form-control bg-light" readonly>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Loan Type</label>
+                        {{ form.loan_type }}
+                    </div>
+                </div>
+
+                <div class="row mb-3">
+                    <div class="col-md-3">
+                        <label class="form-label">Loan Date</label>
+                        {{ form.loan_date }}
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Period (Months)</label>
+                        {{ form.loan_period }}
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Principal Amount</label>
+                        {{ form.principal }}
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Monthly Installment</label>
+                        {{ form.installment }}
+                    </div>
+                </div>
+
+                <hr>
+                
+                <!-- Standard Charges -->
+                <h5 class="text-muted">Deductions</h5>
+                <div class="row mb-3">
+                    <div class="col-md-4">
+                        <label class="form-label">Processing Fee</label>
+                        {{ form.processing_fee }}
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Insurance Fee</label>
+                        {{ form.insurance_fee }}
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Other Charges</label>
+                        {{ form.other_charges }}
+                    </div>
+                </div>
+
+                <!-- Dynamic Offsets Section -->
+                <div class="card bg-light mb-3 border-0">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <h5 class="mb-0">Loan Offsets / Bridging</h5>
+                            <button type="button" class="btn btn-sm btn-dark" onclick="addOffsetRow()">
+                                <i class="bi bi-plus"></i> Add Offset
+                            </button>
+                        </div>
+                        
+                        <table class="table table-bordered bg-white" id="offsetTable">
+                            <thead>
+                                <tr>
+                                    <th style="width: 50%;">Account Type</th>
+                                    <th style="width: 40%;">Amount to Offset</th>
+                                    <th style="width: 10%;">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="offsetBody">
+                                <!-- Rows added via JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Net Disbursed Calculation -->
+                <div class="alert alert-info d-flex justify-content-between align-items-center">
+                    <span class="h5 mb-0">Net Disbursed:</span>
+                    <span class="h3 mb-0 fw-bold" id="net_disbursed_display">0.00</span>
+                    <!-- Hidden input to submit the calculated net if needed, though backend should recalc -->
+                    <input type="hidden" name="net_disbursed" id="id_net_disbursed">
+                </div>
+
+                <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                    <a href="{% url 'loans:loan_dashboard' %}" class="btn btn-secondary me-md-2">Cancel</a>
+                    <button type="submit" class="btn btn-success px-5">Post Loan</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    // --- 1. Dynamic Rows Logic ---
+    function addOffsetRow() {
+        const tbody = document.getElementById('offsetBody');
+        const rowCount = tbody.rows.length;
+        
+        if (rowCount >= 5) {
+            alert("Maximum 5 offsets allowed.");
+            return;
+        }
+
+        const row = document.createElement('tr');
+        row.innerHTML = `
+            <td>
+                <select name="offset_accounts[]" class="form-select" onchange="calculateNet()">
+                    <option value="normal_loan">Normal Loan</option>
+                    <option value="emergency_loan">Emergency Loan</option>
+                    <option value="mobile_loan">Mobile Loan</option>
+                    <option value="savings">Savings</option>
+                    <option value="share_capital">Share Capital</option>
+                </select>
+            </td>
+            <td>
+                <input type="number" name="offset_amounts[]" class="form-control offset-amt" step="0.01" placeholder="0.00" oninput="calculateNet()">
+            </td>
+            <td>
+                <button type="button" class="btn btn-danger btn-sm" onclick="removeRow(this)">X</button>
+            </td>
+        `;
+        tbody.appendChild(row);
+    }
+
+    function removeRow(btn) {
+        btn.closest('tr').remove();
+        calculateNet();
+    }
+
+    // --- 2. Calculation Logic ---
+    // Listen to all main inputs
+    const mainInputs = ['id_principal', 'id_processing_fee', 'id_insurance_fee', 'id_other_charges'];
+    mainInputs.forEach(id => {
+        const el = document.getElementById(id);
+        if(el) el.addEventListener('input', calculateNet);
+    });
+
+    function calculateNet() {
+        // Get standard values
+        const principal = parseFloat(document.getElementById('id_principal').value) || 0;
+        const proc = parseFloat(document.getElementById('id_processing_fee').value) || 0;
+        const ins = parseFloat(document.getElementById('id_insurance_fee').value) || 0;
+        const other = parseFloat(document.getElementById('id_other_charges').value) || 0;
+
+        // Sum dynamic offsets
+        let totalOffsets = 0;
+        document.querySelectorAll('.offset-amt').forEach(input => {
+            totalOffsets += parseFloat(input.value) || 0;
+        });
+
+        const totalDeductions = proc + ins + other + totalOffsets;
+        const net = principal - totalDeductions;
+
+        const display = document.getElementById('net_disbursed_display');
+        display.innerText = net.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+        
+        if (net < 0) {
+            display.classList.add('text-danger');
+        } else {
+            display.classList.remove('text-danger');
+        }
+    }
+
+    // --- 3. Customer Search Logic ---
+    document.getElementById('id_cust_no').addEventListener('blur', function() {
+        const custNo = this.value;
+        if(custNo) {
+            fetch(`{% url 'loans:search_customer_api' %}?cust_no=${custNo}`)
+                .then(res => res.json())
+                .then(data => {
+                    const nameField = document.getElementById('full_name_display');
+                    const status = document.getElementById('cust_status');
+                    if(data.found) {
+                        nameField.value = data.full_name;
+                        status.innerHTML = '<span class="text-success"><i class="bi bi-check"></i> Verified</span>';
+                    } else {
+                        nameField.value = "";
+                        status.innerHTML = '<span class="text-danger">Customer not found</span>';
+                    }
+                });
+        }
+    });
+</script>
+{% endblock %}

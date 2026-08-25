@@ -1,0 +1,62 @@
+{% extends 'base.html' %}
+{% block title %}Database Backups — NODi Lite{% endblock %}
+{% block content %}
+<div class="page-shell">
+    <div class="app-toolbar">
+        <div class="app-toolbar-body">
+            <h1 class="toolbar-title">
+                <span class="toolbar-badge"><i class="bi bi-database"></i></span>
+                Database Backups
+            </h1>
+            <div class="toolbar-actions">
+                <form method="post" action="{% url 'administration:backup_run' %}" class="d-inline">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-play-fill me-1"></i> Run Backup
+                    </button>
+                </form>
+                <a href="{% url 'administration:backup_config' %}" class="btn btn-outline-secondary">
+                    <i class="bi bi-gear me-1"></i> Configure
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="grid-scroll">
+        <table class="grid-table">
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Filename</th>
+                    <th>Size</th>
+                    <th>Status</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for backup in backups %}
+                <tr>
+                    <td>{{ backup.created_at|date:"d M Y H:i" }}</td>
+                    <td>{{ backup.file_name|default:"-" }}</td>
+                    <td>{{ backup.file_size|filesizeformat|default:"-" }}</td>
+                    <td>
+                        {% if backup.status == 'success' %}<span class="badge bg-success">Success</span>
+                        {% elif backup.status == 'running' %}<span class="badge bg-info">Running</span>
+                        {% else %}<span class="badge bg-danger">Failed</span>{% endif %}
+                    </td>
+                    <td>
+                        {% if backup.status == 'success' and backup.file_name %}
+                        <a href="{% url 'administration:backup_download' backup.pk %}" class="btn btn-sm btn-outline-primary" data-download>
+                            <i class="bi bi-download"></i>
+                        </a>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="5" class="text-center text-muted py-4">No backup records.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

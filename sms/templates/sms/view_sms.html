@@ -1,0 +1,193 @@
+{% extends 'base.html' %}
+{%load humanize%}
+{% block content %}
+<div class="page-shell">
+    {% include 'administration/includes/administration_quick_actions.html' %}
+    
+    <!-- Page header -->
+    <div class="page-head">
+        <div>
+            <h2>SMS Logs</h2>
+            <p class="page-sub">Search, filter, and browse all SMS records ({{ page_obj.paginator.count|intcomma }} total)</p>
+        </div>
+    </div>
+
+    <!-- Search + Filter controls -->
+    <div class="card mb-3">
+        <div class="card-body">
+            <form method="GET" class="d-flex flex-column gap-3">
+                <!-- Search box -->
+                <div class="d-flex gap-2">
+                    <input type="text" name="q" value="{{ search_query }}" 
+                           class="form-control form-control-sm" 
+                           placeholder="Search by phone number or message content...">
+                    <button type="submit" class="btn btn-primary btn-sm">
+                        <i class="bi bi-search me-1"></i> Search
+                    </button>
+                    {% if search_query %}
+                    <a href="{% url 'sms:view_sms' %}" class="btn btn-outline-secondary btn-sm">Clear</a>
+                    {% endif %}
+                </div>
+
+                <!-- Status filter buttons -->
+                <div class="d-flex align-items-center flex-wrap gap-2">
+                    <span class="text-secondary fw-600" style="font-size:.8125rem;">FILTER BY STATUS:</span>
+                    <div class="btn-group btn-group-sm" role="group">
+                        <a href="{% url 'sms:view_sms' %}{% if search_query %}?q={{ search_query }}{% endif %}" 
+                           class="btn {% if not current_status %}btn-primary{% else %}btn-outline-secondary{% endif %}">
+                            All
+                        </a>
+                        <a href="{% url 'sms:view_sms' %}?status=sent{% if search_query %}&q={{ search_query }}{% endif %}" 
+                           class="btn {% if current_status == 'sent' %}btn-success{% else %}btn-outline-secondary{% endif %}">
+                            ✓ Sent
+                        </a>
+                        <a href="{% url 'sms:view_sms' %}?status=pending{% if search_query %}&q={{ search_query }}{% endif %}" 
+                           class="btn {% if current_status == 'pending' %}btn-warning{% else %}btn-outline-secondary{% endif %}">
+                            ⧖ Pending
+                        </a>
+                        <a href="{% url 'sms:view_sms' %}?status=failed{% if search_query %}&q={{ search_query }}{% endif %}" 
+                           class="btn {% if current_status == 'failed' %}btn-danger{% else %}btn-outline-secondary{% endif %}">
+                            ✕ Failed
+                        </a>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Results info -->
+    {% if search_query or current_status %}
+    <div class="alert alert-info alert-dismissible fade show" role="alert">
+        <i class="bi bi-info-circle me-2"></i>
+        Showing results
+        {% if search_query %}for "<strong>{{ search_query }}</strong>"{% endif %}
+        {% if current_status %}with status "<strong>{{ current_status|title }}</strong>"{% endif %}
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+    {% endif %}
+
+    <!-- SMS logs table -->
+    <div class="card">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead>
+                    <tr>
+                        <th>Phone</th>
+                        <th style="width: 40%;">Message</th>
+                        <th>Status</th>
+                        <th>Error</th>
+                        <th>Sent</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for log in sms_logs %}
+                    <tr>
+                        <td class="fw-semibold font-monospace">{{ log.phone }}</td>
+                        <td style="word-break: break-word;">
+                            {% if search_query %}
+                                {{ log.message }}
+                            {% else %}
+                                {{ log.message|truncatewords:100 }}
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if log.status == 'sent' %}
+                                <span class="badge rounded-pill" style="background: var(--d365-success-bg); color: var(--d365-success);">✓ Sent</span>
+                            {% elif log.status == 'pending' %}
+                                <span class="badge rounded-pill" style="background: var(--d365-warning-bg); color: #C19C00;">⧖ Pending</span>
+                            {% elif log.status == 'failed' %}
+                                <span class="badge rounded-pill" style="background: var(--d365-danger-bg); color: var(--d365-danger);">✕ Failed</span>
+                            {% else %}
+                                <span class="badge rounded-pill bg-secondary">{{ log.status }}</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if log.error_message %}
+                                <small style="color: var(--d365-danger); font-size: .75rem;">{{ log.error_message|truncatewords:3 }}</small>
+                            {% else %}
+                                <span class="text-muted small">—</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-secondary" style="font-size: .8125rem; white-space: nowrap;">{{ log.created_at|date:"d M, H:i" }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="5" class="text-center text-secondary py-5">
+                            <i class="bi bi-inbox" style="font-size: 2rem; opacity: .5;"></i>
+                            <p class="mt-2 mb-0">No SMS records found.</p>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Pagination -->
+    {% if page_obj.paginator.num_pages > 1 %}
+    <nav aria-label="SMS log pages" class="d-flex justify-content-between align-items-center flex-wrap gap-2 mt-3">
+        <div class="text-secondary" style="font-size: .8125rem;">
+            Showing <strong>{{ page_obj.start_index }}</strong>–<strong>{{ page_obj.end_index }}</strong>
+            of <strong>{{ page_obj.paginator.count|intcomma }}</strong> records
+        </div>
+
+        <ul class="pagination pagination-sm mb-0">
+            <!-- Previous -->
+            {% if page_obj.has_previous %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if current_status %}&status={{ current_status }}{% endif %}{% if search_query %}&q={{ search_query }}{% endif %}">
+                        ‹ Prev
+                    </a>
+                </li>
+            {% else %}
+                <li class="page-item disabled">
+                    <span class="page-link">‹ Prev</span>
+                </li>
+            {% endif %}
+
+            <!-- First + ellipsis -->
+            {% if show_first %}
+                <li class="page-item">
+                    <a class="page-link" href="?page=1{% if current_status %}&status={{ current_status }}{% endif %}{% if search_query %}&q={{ search_query }}{% endif %}">1</a>
+                </li>
+                <li class="page-item disabled"><span class="page-link">…</span></li>
+            {% endif %}
+
+            <!-- Window pages -->
+            {% for num in page_range %}
+                {% if num == page_obj.number %}
+                    <li class="page-item active" aria-current="page">
+                        <span class="page-link">{{ num }}</span>
+                    </li>
+                {% else %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ num }}{% if current_status %}&status={{ current_status }}{% endif %}{% if search_query %}&q={{ search_query }}{% endif %}">{{ num }}</a>
+                    </li>
+                {% endif %}
+            {% endfor %}
+
+            <!-- Ellipsis + last -->
+            {% if show_last %}
+                <li class="page-item disabled"><span class="page-link">…</span></li>
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% if current_status %}&status={{ current_status }}{% endif %}{% if search_query %}&q={{ search_query }}{% endif %}">{{ page_obj.paginator.num_pages }}</a>
+                </li>
+            {% endif %}
+
+            <!-- Next -->
+            {% if page_obj.has_next %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if current_status %}&status={{ current_status }}{% endif %}{% if search_query %}&q={{ search_query }}{% endif %}">
+                        Next ›
+                    </a>
+                </li>
+            {% else %}
+                <li class="page-item disabled">
+                    <span class="page-link">Next ›</span>
+                </li>
+            {% endif %}
+        </ul>
+    </nav>
+    {% endif %}
+</div>
+{% endblock %}

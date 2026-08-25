@@ -1,0 +1,11 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container mx-auto mt-20">
+    <h2 class="text-2xl font-bold mb-4"> Edit Automated report</h2>
+<form method="post" enctype="multipart/form-data">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <button type="submit" class="btn btn-success">Save</button>
+    <a href="{% url 'accounting:automated_reports_list' %}" class="btn btn-secondary">Cancel</a>
+</form>
+{% endblock %}

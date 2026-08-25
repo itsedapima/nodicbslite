@@ -1,0 +1,188 @@
+{% extends 'base.html' %}
+{% block content %}
+{% include 'loans/includes/loans_quick_actions.html' %}
+
+<div style="background: linear-gradient(135deg, #0E2B4D 0%, #1a4170 100%); padding: 2rem 0;">
+    <div class="container">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <h1 class="mb-1" style="color: #fff; font-size: 1.6rem; font-weight: 700;">
+                    <i class="bi bi-file-earmark-ruled me-2" style="color: #fff;"></i>Loan Summary: {{ loan.loan_no }}
+                </h1>
+                <p class="mb-0" style="color: #fff; opacity: .8;">Borrower facility overview and security details</p>
+            </div>
+            <div>
+                <a href="{% url 'loans:restructure' pk=loan.id %}" class="btn me-1" style="background: transparent; border: 1.5px solid var(--d365-border-strong); color: #fff; font-weight: 600;">
+                    <i class="bi bi-sliders me-1"></i> Restructure
+                </a>
+                <a href="{% url 'loans:guarantor_offload' pk=loan.id %}" class="btn me-1" style="background: transparent; border: 1.5px solid var(--d365-danger); color: var(--d365-danger); font-weight: 600;">
+                    <i class="bi bi-shield-alert me-1"></i> Offload to Guarantors
+                </a>
+                <a href="{% url 'loans:loan_amortization_schedule' pk=loan.id %}" class="btn" style="background: var(--d365-primary); color: #fff; border: none; font-weight: 600;">
+                    <i class="bi bi-calendar3 me-1"></i> Loan Schedule
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="container" style="margin-top: -1rem; padding-bottom: 3rem;">
+
+    {% if loan.is_restructured %}
+    <div class="d-flex align-items-center mb-4 p-3" style="background: #FFF4CE; border: 1px solid var(--d365-warning); border-radius: .5rem;" role="alert">
+        <i class="bi bi-exclamation-triangle-fill fs-4 me-3" style="color: var(--d365-warning);"></i>
+        <div>
+            <strong style="color: var(--d365-text);">Restructured Account:</strong> This loan facility terms were modified on
+            <span style="display: inline-block; background: var(--d365-text); color: #fff; padding: .15rem .5rem; border-radius: .25rem; font-size: .8rem;">{{ loan.restructured_at|date:"Y-m-d H:i" }}</span>.
+            A modification fee of <strong>KES {{ loan.restructure_fee|floatformat:2 }}</strong> was assessed.
+        </div>
+    </div>
+    {% endif %}
+
+    <div class="row">
+        <div class="col-md-4">
+            <div style="background: var(--d365-surface); border: 1px solid var(--d365-border); border-radius: .5rem; box-shadow: var(--d365-shadow-2); margin-bottom: 1.5rem;">
+                <div style="background: var(--d365-surface-alt); border-bottom: 2px solid var(--d365-border); padding: .75rem 1rem; font-size: .8rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--d365-text-secondary); border-radius: .5rem .5rem 0 0;">
+                    Borrower Information
+                </div>
+                <div style="padding: 1rem;">
+                    <h5 style="color: var(--d365-text); margin-bottom: .25rem;">{{ loan.customer.full_name }}</h5>
+                    <p style="color: var(--d365-text-secondary); margin-bottom: .75rem;">Member No: {{ loan.customer.cust_no }}</p>
+                    <hr style="border-color: var(--d365-border);">
+                    <div class="d-flex justify-content-between mb-2">
+                        <span style="color: var(--d365-text-secondary);">Current Principal:</span> <strong style="color: var(--d365-text);">{{ loan.principal|floatformat:2 }}</strong>
+                    </div>
+                    <div class="d-flex justify-content-between mb-2">
+                        <span style="color: var(--d365-text-secondary);">Installment:</span> <strong style="color: var(--d365-text);">KES {{ loan.installment|floatformat:2 }}/mo</strong>
+                    </div>
+                    <div class="d-flex justify-content-between mb-2">
+                        <span style="color: var(--d365-text-secondary);">Type:</span>
+                        <span style="display: inline-block; background: var(--d365-primary-tint-40); color: var(--d365-primary); padding: .15rem .5rem; border-radius: .25rem; font-size: .8rem; font-weight: 600;">{{ loan.get_loan_type_display }}</span>
+                    </div>
+                    <div class="d-flex justify-content-between mb-2">
+                        <span style="color: var(--d365-text-secondary);">Loan Date:</span> <strong style="color: var(--d365-text);">{{ loan.loan_date|date:"d M Y" }}</strong>
+                    </div>
+                    <div class="d-flex justify-content-between">
+                        <span style="color: var(--d365-text-secondary);">Loan Period:</span> <strong style="color: var(--d365-text);">{{ loan.loan_period }} Months</strong>
+                    </div>
+                </div>
+            </div>
+
+            <div style="background: var(--d365-surface); border: 1px solid var(--d365-border); border-radius: .5rem; box-shadow: var(--d365-shadow-2); margin-bottom: 1.5rem;">
+                <div style="background: var(--d365-surface-alt); border-bottom: 2px solid var(--d365-border); padding: .75rem 1rem; font-size: .8rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--d365-text-secondary); border-radius: .5rem .5rem 0 0;">
+                    Security Coverage
+                </div>
+                <div style="padding: 1rem; text-align: center;">
+                    <h3 class="{% if total_security >= loan.principal %}text-success{% else %}text-danger{% endif %}">
+                        {{ total_security|floatformat:2 }}
+                    </h3>
+                    <small style="color: var(--d365-text-secondary);">Total Value of Guarantors + Collateral</small>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-8">
+            <div style="background: var(--d365-surface); border: 1px solid var(--d365-border); border-radius: .5rem; box-shadow: var(--d365-shadow-2);">
+                <div style="padding: 1rem;">
+                    <ul class="nav nav-tabs" id="loanTab" role="tablist" style="border-bottom-color: var(--d365-border);">
+                        <li class="nav-item">
+                            <a class="nav-link active" data-bs-toggle="tab" href="#guarantors" style="color: var(--d365-primary); font-weight: 600;">Guarantors</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" data-bs-toggle="tab" href="#collaterals" style="color: var(--d365-text-secondary);">Collaterals</a>
+                        </li>
+
+                        {% if loan.is_restructured %}
+                        <li class="nav-item">
+                            <a class="nav-link fw-bold" data-bs-toggle="tab" href="#restructure-history" style="color: var(--d365-warning);">
+                                <i class="bi bi-clock-history me-1"></i> Original Terms Log
+                            </a>
+                        </li>
+                        {% endif %}
+                    </ul>
+
+                    <div class="tab-content p-3">
+                        <div class="tab-pane fade show active" id="guarantors">
+                            <table class="table table-sm table-hover mb-0">
+                                <thead>
+                                    <tr style="background: var(--d365-surface-alt); border-bottom: 2px solid var(--d365-border);">
+                                        <th style="font-size: .75rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--d365-text-secondary); padding: .6rem .5rem;">Name</th>
+                                        <th style="font-size: .75rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--d365-text-secondary); padding: .6rem .5rem;">Amount</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for g in guarantors %}
+                                    <tr>
+                                        <td style="color: var(--d365-text);">{{ g.guarantor_cust.full_name }}</td>
+                                        <td style="color: var(--d365-text);">{{ g.amount|floatformat:2 }}</td>
+                                    </tr>
+                                    {% empty %}
+                                    <tr><td colspan="2" class="text-center" style="color: var(--d365-text-secondary);">No guarantors attached.</td></tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <div class="tab-pane fade" id="collaterals">
+                            <table class="table table-sm table-hover mb-0">
+                                <thead>
+                                    <tr style="background: var(--d365-surface-alt); border-bottom: 2px solid var(--d365-border);">
+                                        <th style="font-size: .75rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--d365-text-secondary); padding: .6rem .5rem;">Type</th>
+                                        <th style="font-size: .75rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--d365-text-secondary); padding: .6rem .5rem;">Identifier</th>
+                                        <th style="font-size: .75rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--d365-text-secondary); padding: .6rem .5rem;">Value</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for c in collaterals %}
+                                    <tr>
+                                        <td style="color: var(--d365-text);">{{ c.get_collateral_type_display }}</td>
+                                        <td style="color: var(--d365-text);">{{ c.registration_no|default:c.title_deed_no }}</td>
+                                        <td style="color: var(--d365-text);">{{ c.market_value|floatformat:2 }}</td>
+                                    </tr>
+                                    {% empty %}
+                                    <tr><td colspan="3" class="text-center" style="color: var(--d365-text-secondary);">No collaterals attached.</td></tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+
+                        {% if loan.is_restructured %}
+                        <div class="tab-pane fade" id="restructure-history">
+                            <div style="background: var(--d365-surface-alt); padding: 1rem; border-radius: .5rem; margin-bottom: 1rem; border: 1px solid var(--d365-border);">
+                                <h6 style="color: var(--d365-text-secondary); border-bottom: 1px solid var(--d365-border); padding-bottom: .5rem;"><i class="bi bi-info-circle me-2"></i>Snapshot at Restructure Event</h6>
+
+                                {% if loan.original_loan_summary %}
+                                    <div class="row pt-2">
+                                        <div class="col-sm-6 mb-2">
+                                            <small style="color: var(--d365-text-secondary); display: block;">Original Account Code</small>
+                                            <span class="font-monospace fw-bold" style="color: var(--d365-text);">{{ loan.loan_no }}</span>
+                                        </div>
+                                        <div class="col-sm-6 mb-2">
+                                            <small style="color: var(--d365-text-secondary); display: block;">Base Terms Execution Balance</small>
+                                            <span class="fw-bold" style="color: var(--d365-text);">Review textual summary text details below</span>
+                                        </div>
+                                    </div>
+                                    <hr style="border-color: var(--d365-border); margin: .5rem 0;">
+                                    <div class="mt-2">
+                                        <small style="color: var(--d365-text-secondary); display: block; margin-bottom: .25rem;">System Technical Audit Log JSON Payload:</small>
+                                        <pre class="font-monospace" style="background: #1E1E1E; color: #D4D4D4; padding: 1rem; border-radius: .5rem; font-size: .8rem; max-height: 200px; overflow-y: auto;">{{ loan.original_loan_summary }}</pre>
+                                    </div>
+                                {% else %}
+                                    <p class="mb-0 small" style="color: var(--d365-text-secondary);">No legacy structural logging metadata preserved for this record line item.</p>
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .nav-tabs .nav-link.active { color: var(--d365-primary) !important; border-color: var(--d365-border) var(--d365-border) #fff !important; font-weight: 600; }
+    .nav-tabs .nav-link:not(.active):hover { color: var(--d365-primary-hover) !important; border-color: transparent; }
+    .table-hover tbody tr:hover { background: var(--d365-primary-tint-40) !important; }
+</style>
+{% endblock %}

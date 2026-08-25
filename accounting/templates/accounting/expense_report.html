@@ -1,0 +1,48 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container mx-auto mt-20">
+    <h2 class="mb-4 text-center">All Expenses Report</h2>
+
+    <form method="GET" class="row g-3 mb-4">
+        <div class="col-md-4">
+            <label for="start_date" class="form-label">Start Date:</label>
+            <input type="date" class="form-control" name="start_date" value="{{ start_date }}">
+        </div>
+        <div class="col-md-4">
+            <label for="end_date" class="form-label">End Date:</label>
+            <input type="date" class="form-control" name="end_date" value="{{ end_date }}">
+        </div>
+        <div class="col-md-4 d-flex align-items-end">
+          <p>  <button type="submit" class="btn btn-primary me-2">Filter</button>
+            <a href="?start_date={{ start_date |date:'Y-m-d' }}&end_date={{ end_date|date:'Y-m-d' }}&export=pdf" class="btn btn-danger">Download PDF</a>
+            <a href="?start_date={{ start_date |date:'Y-m-d' }}&end_date={{ end_date |date:'Y-m-d'}}&export=excel" class="btn btn-success">Download Excel</a>
+            </p>
+        </div>
+    </form>
+
+    <div class="table-responsive">
+        <table class="table table-bordered table-striped">
+            <thead class="table-dark">
+                <tr>
+                    <th>Date</th>
+                    <th>Account</th>
+                    <th>Description</th>
+                    <th>Amount (KES)</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for expense in expenses %}
+                <tr>
+                    <td>{{ expense.expense_date|date:"M d, Y" }}</td>
+                    <td>{{ expense.parish_account }}</td>
+                    <td>{{ expense.description }}</td>
+                    <td class="text-end">{{ expense.amount|floatformat:2 }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <h3 class="text-end mt-4">Total Expenses: <span class="fw-bold text-danger">KES {{ total_expenses|floatformat:2 }}</span></h3>
+</div>
+{% endblock %}

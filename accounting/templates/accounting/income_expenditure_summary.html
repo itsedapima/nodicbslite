@@ -1,0 +1,93 @@
+{% extends 'base.html' %}
+{% block content %}
+{% include 'accounting/includes/accounting_quick_actions.html' %}
+{% load humanize %}
+
+<div class="container my-5">
+  
+    <h2 class="text-2xl font-bold mb-4">Income & Expenditure Summary</h2>
+    <p>Enter dates to filter Report, Leave blank to fetch all</p>
+
+    <!-- Filter Form -->
+    <form method="GET" class="mb-6">
+        <label>Start Date:</label>
+        <input type="date" name="start_date" value="{{ start_date }}" class="border p-2 rounded">
+        <label>End Date:</label>
+        <input type="date" name="end_date" value="{{ end_date }}" class="border p-2 rounded">
+        <button type="submit" name="filter" value="true" class="bg-green-500 text-white px-4 py-2 rounded">Filter</button>
+    </form>
+
+    <!-- Income Summary -->
+    <h3 class="mt-6 text-lg font-bold">Income Summary</h3>
+    <table class="table-auto w-full border-collapse border border-gray-300">
+        <thead>
+            <tr class="bg-gray-200">
+                <th class="border px-4 py-2">Account Code</th>
+                <th class="border px-4 py-2">Account Name</th>
+                <th class="border px-4 py-2">Total Amount (KES)</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for income in income_summary %}
+            <tr>
+                <td class="border px-4 py-2">{{ income.sacco_account__account_code }}</td>
+                <td class="border px-4 py-2">{{ income.sacco_account__account_name }}</td>
+                <td class="border px-4 py-2 text-right">{{ income.total_amount|floatformat:2|intcomma }}</td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="3" class="text-center py-2">No income records found.</td>
+            </tr>
+            {% endfor %}
+            <tr class="font-bold bg-gray-100">
+                <td colspan="2" class="border px-4 py-2">TOTAL</td>
+                <td class="border px-4 py-2 text-right">{{ total_income|floatformat:2|intcomma }}</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <!-- Expense Summary -->
+    <h3 class="mt-6 text-lg font-bold">Expense Summary</h3>
+    <table class="table-auto w-full border-collapse border border-gray-300">
+        <thead>
+            <tr class="bg-gray-200">
+                <th class="border px-4 py-2">Account Code</th>
+                <th class="border px-4 py-2">Account Name</th>
+                <th class="border px-4 py-2">Total Amount (KES)</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for expense in expense_summary %}
+            <tr>
+                <td class="border px-4 py-2">{{ expense.sacco_account__account_code }}</td>
+                <td class="border px-4 py-2">{{ expense.sacco_account__account_name }}</td>
+                <td class="border px-4 py-2 text-right">{{ expense.total_amount|floatformat:2|intcomma }}</td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="3" class="text-center py-2">No expense records found.</td>
+            </tr>
+            {% endfor %}
+            <tr class="font-bold bg-gray-100">
+                <td colspan="2" class="border px-4 py-2">TOTAL</td>
+                <td class="border px-4 py-2 text-right">{{ total_expense|floatformat:2|intcomma }}</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <!-- Net Balance -->
+    <h3 class="mt-6 text-lg font-bold">
+        Net Balance: 
+        <span class="{% if net_balance >= 0 %}text-green-600{% else %}text-red-600{% endif %}">
+            {{ net_balance|floatformat:2|intcomma }} KES
+        </span>
+    </h3>
+
+    <!-- Export Buttons -->
+    <div class="mt-6 flex space-x-4">
+        <a href="{% url 'accounting:download_income_expenditure_summary_excel' %}" class="bg-blue-500 text-white px-4 py-2 rounded">Download Excel</a>
+        <a href="{% url 'accounting:download_income_expenditure_summary_pdf' %}" class="bg-red-500 text-white px-4 py-2 rounded">Download PDF</a>
+    </div>
+</div>
+
+{% endblock %}

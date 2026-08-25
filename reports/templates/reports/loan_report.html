@@ -1,0 +1,83 @@
+{% extends 'base.html' %}
+{% block title %}Loan Report — NODi Lite{% endblock %}
+{% block content %}
+<div class="page-shell">
+    <div class="page-head">
+        <div><h2><i class="bi bi-bank me-2"></i>Loan Report</h2></div>
+        <a href="{% url 'reports:index' %}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left me-1"></i> Reports</a>
+    </div>
+
+    <form method="get" class="filter-bar">
+        <select name="status" class="form-select" onchange="this.form.submit()">
+            <option value="">All Status</option>
+            <option value="pending" {% if status_filter == 'pending' %}selected{% endif %}>Pending</option>
+            <option value="approved" {% if status_filter == 'approved' %}selected{% endif %}>Approved</option>
+            <option value="disbursed" {% if status_filter == 'disbursed' %}selected{% endif %}>Disbursed</option>
+            <option value="repaid" {% if status_filter == 'repaid' %}selected{% endif %}>Repaid</option>
+            <option value="defaulted" {% if status_filter == 'defaulted' %}selected{% endif %}>Defaulted</option>
+        </select>
+    </form>
+
+    {% if summary %}
+    <div class="row g-3 mb-3">
+        <div class="col-md-3">
+            <div class="stat-card p-3">
+                <div class="kpi-label">Total Loans</div>
+                <div class="kpi-value">{{ summary.total_loans|default:"0" }}</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stat-card p-3">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="icon-shape tone-primary"><i class="bi bi-cash"></i></div>
+                    <div><div class="kpi-label">Total Disbursed</div><div class="kpi-value">{{ summary.total_disbursed|floatformat:2|default:"0.00" }}</div></div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stat-card p-3">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="icon-shape tone-success"><i class="bi bi-arrow-repeat"></i></div>
+                    <div><div class="kpi-label">Total Repaid</div><div class="kpi-value">{{ summary.total_repaid|floatformat:2|default:"0.00" }}</div></div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stat-card p-3">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="icon-shape tone-danger"><i class="bi bi-exclamation-circle"></i></div>
+                    <div><div class="kpi-label">Outstanding</div><div class="kpi-value">{{ summary.total_outstanding|floatformat:2|default:"0.00" }}</div></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <div class="grid-scroll">
+        <table class="grid-table">
+            <thead><tr><th>Member</th><th>Product</th><th class="num">Amount</th><th class="num">Repaid</th><th class="num">Balance</th><th>Status</th><th>Date</th></tr></thead>
+            <tbody>
+                {% for loan in loans %}
+                <tr>
+                    <td>{{ loan.member.first_name }} {{ loan.member.last_name }}</td>
+                    <td>{{ loan.product.name }}</td>
+                    <td class="num">{{ loan.amount|floatformat:2 }}</td>
+                    <td class="num">{{ loan.total_repaid|floatformat:2|default:"0.00" }}</td>
+                    <td class="num">{{ loan.outstanding_balance|floatformat:2|default:"0.00" }}</td>
+                    <td>
+                        {% if loan.status == 'pending' %}<span class="badge bg-warning">Pending</span>
+                        {% elif loan.status == 'approved' %}<span class="badge bg-info">Approved</span>
+                        {% elif loan.status == 'disbursed' %}<span class="badge bg-primary">Disbursed</span>
+                        {% elif loan.status == 'repaid' %}<span class="badge bg-success">Repaid</span>
+                        {% else %}<span class="badge bg-danger">Defaulted</span>{% endif %}
+                    </td>
+                    <td>{{ loan.application_date|date:"d M Y" }}</td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="7" class="text-center text-muted py-4">No loan records.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

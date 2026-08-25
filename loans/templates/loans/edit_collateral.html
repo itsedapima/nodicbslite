@@ -1,0 +1,26 @@
+{% extends 'base.html' %}
+{% load crispy_forms_tags %}
+{% block content %}
+{% include 'loans/includes/loans_quick_actions.html' %}
+<div class="container-fluid px-4 py-4">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card" style="background: var(--d365-surface); border: 1px solid var(--d365-border); border-radius: .5rem; box-shadow: var(--d365-shadow-2);">
+                <div class="card-header" style="background: var(--d365-surface-alt); border-bottom: 2px solid var(--d365-border); font-size: .8rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--d365-text-secondary);">
+                    Edit Collateral: {{ collateral.get_collateral_type_display }}
+                </div>
+                <div class="card-body">
+                    <form method="POST">
+                        {% csrf_token %}
+                        {{ form|crispy }}
+                        <div class="mt-4 d-flex gap-2">
+                            <button type="submit" class="btn" style="background: var(--d365-primary); color: #fff; border: 1px solid var(--d365-primary); border-radius: .4rem; font-weight: 600;">Update Asset</button>
+                            <a href="{% url 'loans:view_collaterals' %}" class="btn" style="background: var(--d365-surface); color: var(--d365-text); border: 1px solid var(--d365-border-strong); border-radius: .4rem; font-weight: 600;">Cancel</a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

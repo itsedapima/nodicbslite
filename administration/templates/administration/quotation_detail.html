@@ -1,0 +1,53 @@
+{% extends 'base.html' %}
+{% block title %}Quotation Detail — NODi Lite{% endblock %}
+{% block content %}
+<div class="page-shell">
+    <div class="page-head">
+        <div>
+            <h2><i class="bi bi-file-earmark-text me-2"></i>Quotation Detail</h2>
+            <p class="page-sub">
+                {% if quotation.status == 'draft' %}<span class="badge bg-secondary">Draft</span>
+                {% elif quotation.status == 'submitted' %}<span class="badge bg-info">Submitted</span>
+                {% elif quotation.status == 'approved' %}<span class="badge bg-success">Approved</span>
+                {% elif quotation.status == 'rejected' %}<span class="badge bg-danger">Rejected</span>
+                {% else %}<span class="badge bg-warning">{{ quotation.status }}</span>{% endif %}
+            </p>
+        </div>
+        <a href="{% url 'administration:quotation_list' %}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left me-1"></i> Back
+        </a>
+    </div>
+
+    <div class="card">
+        <table class="detail-table">
+            <tr><th>Vendor</th><td>{{ quotation.vendor|default:"-" }}</td></tr>
+            <tr><th>Description</th><td>{{ quotation.description|default:"-" }}</td></tr>
+            <tr><th>Amount</th><td>{{ quotation.amount|floatformat:2 }}</td></tr>
+            <tr><th>Status</th><td>
+                {% if quotation.status == 'draft' %}<span class="badge bg-secondary">Draft</span>
+                {% elif quotation.status == 'submitted' %}<span class="badge bg-info">Submitted</span>
+                {% elif quotation.status == 'approved' %}<span class="badge bg-success">Approved</span>
+                {% elif quotation.status == 'rejected' %}<span class="badge bg-danger">Rejected</span>
+                {% else %}<span class="badge bg-warning">{{ quotation.status }}</span>{% endif %}
+            </td></tr>
+            <tr><th>Date Created</th><td>{{ quotation.created_at|date:"d M Y H:i" }}</td></tr>
+            <tr><th>Last Updated</th><td>{{ quotation.updated_at|date:"d M Y H:i"|default:"-" }}</td></tr>
+        </table>
+    </div>
+
+    {% if quotation.status == 'submitted' or quotation.status == 'pending' %}
+    <div class="d-flex gap-2 mt-3">
+        <form method="post" action="{% url 'administration:quotation_status' quotation.pk %}">
+            {% csrf_token %}
+            <input type="hidden" name="status" value="approved">
+            <button type="submit" class="btn btn-success"><i class="bi bi-check-lg me-1"></i> Approve</button>
+        </form>
+        <form method="post" action="{% url 'administration:quotation_status' quotation.pk %}">
+            {% csrf_token %}
+            <input type="hidden" name="status" value="rejected">
+            <button type="submit" class="btn btn-danger"><i class="bi bi-x-lg me-1"></i> Reject</button>
+        </form>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

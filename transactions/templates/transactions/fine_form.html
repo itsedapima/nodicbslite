@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+
+{% block title %}Record Fine - NODi Lite{% endblock %}
+
+{% block content %}
+<div class="d365-page-head">
+    <a href="{% url 'transactions:fine_list' %}" class="d365-btn d365-btn-back">
+        <i class="fluent-icon">arrow_left</i> Back to Fines
+    </a>
+    <h1>Record Fine</h1>
+</div>
+
+{% if errors %}
+<div class="d365-alert d365-alert-danger">
+    <ul>
+        {% for error in errors %}
+        <li>{{ error }}</li>
+        {% endfor %}
+    </ul>
+</div>
+{% endif %}
+
+<div class="d365-card">
+    <form method="post" class="d365-form">
+        {% csrf_token %}
+
+        <div class="d365-form-group">
+            <label class="d365-label" for="member">Member <span class="d365-required">*</span></label>
+            <input type="text" id="member" name="member" class="d365-input" placeholder="Member number or search..." value="{{ request.POST.member }}" required>
+        </div>
+
+        <div class="d365-form-group">
+            <label class="d365-label" for="reason">Reason <span class="d365-required">*</span></label>
+            <input type="text" id="reason" name="reason" class="d365-input" placeholder="Reason for fine" value="{{ request.POST.reason }}" required>
+        </div>
+
+        <div class="d365-form-group">
+            <label class="d365-label" for="amount">Amount <span class="d365-required">*</span></label>
+            <input type="number" id="amount" name="amount" class="d365-input" step="0.01" min="0" value="{{ request.POST.amount }}" required>
+        </div>
+
+        <div class="d365-form-group">
+            <label class="d365-label" for="date">Date <span class="d365-required">*</span></label>
+            <input type="date" id="date" name="date" class="d365-input" value="{{ request.POST.date }}" required>
+        </div>
+
+        <div class="d365-form-actions">
+            <button type="submit" class="d365-btn d365-btn-primary">Record Fine</button>
+            <a href="{% url 'transactions:fine_list' %}" class="d365-btn d365-btn-secondary">Cancel</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

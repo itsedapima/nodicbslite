@@ -1,0 +1,278 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block title %}Loans Register | NODi CBS{% endblock %}
+
+{% block extra_css %}
+<style>
+  .page-hero {
+    background: linear-gradient(135deg, #0E2B4D 0%, #1a4170 100%);
+    color: #fff;
+    padding: 1.5rem 1.5rem;
+    border-radius: .75rem;
+    margin-bottom: 1.25rem;
+  }
+  .page-hero h1 { font-size: 1.4rem; font-weight: 700; margin: 0 0 .15rem; color: #fff; }
+  .page-hero p  { margin: 0; opacity: .85; font-size: .85rem; color: #fff; }
+  .page-hero i   { color: #fff; }
+
+  .filter-bar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: .5rem;
+    margin-bottom: 1.25rem;
+  }
+  .filter-bar .form-control {
+    max-width: 360px;
+    font-size: .85rem;
+    border: 1px solid var(--d365-border-strong, #D2D0CE);
+    border-radius: .4rem;
+  }
+  .filter-bar .form-control:focus {
+    border-color: var(--d365-primary, #0078D4);
+    box-shadow: 0 0 0 2px var(--d365-primary-tint-40, #DEECF9);
+  }
+  .btn-d365 {
+    font-size: .82rem;
+    padding: .35rem .85rem;
+    border-radius: .4rem;
+    font-weight: 600;
+    transition: all .15s ease;
+  }
+  .btn-d365-primary {
+    background: var(--d365-primary, #0078D4);
+    color: #fff;
+    border: 1px solid var(--d365-primary, #0078D4);
+  }
+  .btn-d365-primary:hover {
+    background: var(--d365-primary-hover, #106EBE);
+    border-color: var(--d365-primary-hover, #106EBE);
+    color: #fff;
+  }
+  .btn-d365-outline {
+    background: var(--d365-surface, #fff);
+    color: var(--d365-text, #323130);
+    border: 1px solid var(--d365-border-strong, #D2D0CE);
+  }
+  .btn-d365-outline:hover {
+    background: var(--d365-primary-tint-40, #DEECF9);
+    color: var(--d365-primary, #0078D4);
+    border-color: var(--d365-primary, #0078D4);
+  }
+
+  .data-card {
+    background: var(--d365-surface, #fff);
+    border: 1px solid var(--d365-border, #EDEBE9);
+    border-radius: .5rem;
+    box-shadow: var(--d365-shadow-2);
+    overflow: hidden;
+  }
+  .data-card .table thead {
+    background: var(--d365-surface-alt, #FAF9F8);
+  }
+  .data-card .table thead th {
+    font-size: .75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+    color: var(--d365-text-secondary, #605E5C);
+    border-bottom: 2px solid var(--d365-border, #EDEBE9);
+    padding: .65rem .75rem;
+  }
+  .data-card .table tbody td {
+    font-size: .84rem;
+    color: var(--d365-text, #323130);
+    padding: .6rem .75rem;
+    border-bottom: 1px solid var(--d365-border, #EDEBE9);
+  }
+  .data-card .table tbody tr:hover {
+    background: var(--d365-primary-tint-40, #DEECF9);
+  }
+
+  /* Action icon buttons */
+  .action-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    border-radius: .3rem;
+    border: 1px solid var(--d365-border, #EDEBE9);
+    background: var(--d365-surface, #fff);
+    color: var(--d365-text-secondary, #605E5C);
+    font-size: .82rem;
+    transition: all .12s ease;
+    text-decoration: none;
+  }
+  .action-icon:hover {
+    background: var(--d365-primary-tint-40, #DEECF9);
+    color: var(--d365-primary, #0078D4);
+    border-color: var(--d365-primary-tint-30, #C7E0F4);
+  }
+
+  .d365-pagination .page-link {
+    font-size: .82rem;
+    color: var(--d365-text, #323130);
+    border-color: var(--d365-border, #EDEBE9);
+    padding: .35rem .7rem;
+  }
+  .d365-pagination .page-item.active .page-link {
+    background: var(--d365-primary, #0078D4);
+    border-color: var(--d365-primary, #0078D4);
+    color: #fff;
+  }
+  .d365-pagination .page-item.disabled .page-link {
+    color: var(--d365-text-disabled, #A19F9D);
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+{% include 'loans/includes/loans_quick_actions.html' %}
+
+<!-- Page hero -->
+<div class="page-hero">
+    <h1><i class="bi bi-cash-stack me-2"></i>Loans Register</h1>
+    <p>
+        {% if query %}
+            Search results for "<strong>{{ query }}</strong>" — {{ page_obj.paginator.count }} total results
+        {% else %}
+            Recent loan dispatches and management.
+        {% endif %}
+    </p>
+</div>
+
+{% if messages %}
+    {% for m in messages %}
+        <div class="alert alert-{{ m.tags }} alert-dismissible fade show mb-3" role="alert" style="border-radius:.4rem;">
+            {{ m }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    {% endfor %}
+{% endif %}
+
+<!-- Filter bar -->
+<div class="filter-bar">
+    <form method="GET" class="d-flex align-items-center gap-2">
+        <div class="input-group" style="max-width:360px;">
+            <span class="input-group-text" style="background:var(--d365-surface-alt);border-color:var(--d365-border-strong);"><i class="bi bi-search" style="font-size:.85rem;color:var(--d365-text-secondary);"></i></span>
+            <input type="text" name="q" class="form-control live-search-input" placeholder="Loan No, Name, or Member No..." value="{{ query }}" autocomplete="off" style="border-left:0;">
+        </div>
+        <button class="btn btn-d365 btn-d365-primary" type="submit">Search</button>
+        {% if query %}
+            <a href="{% url 'loans:loan_dashboard' %}" class="btn btn-d365 btn-d365-outline">Clear</a>
+        {% endif %}
+    </form>
+</div>
+
+<!-- Data table card -->
+<div class="data-card" id="liveResults">
+    {% if query %}
+    <div class="px-3 pt-3 pb-0">
+        <small style="color:var(--d365-text-secondary);">
+            Showing page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
+            ({{ page_obj.paginator.count }} total results)
+        </small>
+    </div>
+    {% endif %}
+
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+            <thead>
+                <tr>
+                    <th class="ps-3">Loan No</th>
+                    <th>Member No</th>
+                    <th>Member Name</th>
+                    <th>Date</th>
+                    <th class="text-end">Principal</th>
+                    <th class="text-end">Installment</th>
+                    <th class="text-center pe-3">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for loan in page_obj %}
+                <tr>
+                    <td class="ps-3 font-monospace fw-semibold" style="color:var(--d365-primary);">{{ loan.loan_no|default:loan.id }}</td>
+                    <td class="fw-bold">{{ loan.customer.cust_no }}</td>
+                    <td>{{ loan.customer.full_name }}</td>
+                    <td style="color:var(--d365-text-secondary);">{{ loan.loan_date|date:"Y-m-d" }}</td>
+                    <td class="text-end fw-bold font-monospace">{{ loan.principal|floatformat:2|intcomma }}</td>
+                    <td class="text-end font-monospace" style="color:var(--d365-text-secondary);">{{ loan.installment|floatformat:2|intcomma }}</td>
+                    <td class="text-center pe-3">
+                        <div class="d-inline-flex gap-1">
+                            <a href="{% url 'loans:view_appraisal' loan.id %}" target="_blank" class="action-icon" title="Appraisal">
+                                <i class="bi bi-file-earmark-text"></i>
+                            </a>
+                            <a href="{% url 'loans:edit_loan_dispatch' loan.id %}" class="action-icon" title="Edit Loan">
+                                <i class="bi bi-pencil-square"></i>
+                            </a>
+                            <a href="{% url 'loans:add_guarantor' loan.id %}" class="action-icon" title="Add Guarantor">
+                                <i class="bi bi-person-plus"></i>
+                            </a>
+                            <a href="{% url 'loans:add_collateral' loan.id %}" class="action-icon" title="Add Collateral">
+                                <i class="bi bi-shield-plus"></i>
+                            </a>
+                            <a href="{% url 'loans:view_loan_details' loan.id %}" class="action-icon" title="View Details">
+                                <i class="bi bi-eye"></i>
+                            </a>
+                        </div>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="7" class="text-center py-5" style="color:var(--d365-text-disabled);">
+                        <i class="bi bi-inbox d-block mb-2" style="font-size:1.75rem;"></i>
+                        No loan records found matching your criteria.
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    {% if page_obj.has_other_pages %}
+    <div style="background:var(--d365-surface-alt);border-top:1px solid var(--d365-border);padding:.65rem 1rem;">
+        <nav aria-label="Table pagination">
+            <ul class="pagination d365-pagination justify-content-center mb-0">
+                {% if page_obj.has_previous %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if query %}&q={{ query }}{% endif %}">
+                            <i class="bi bi-chevron-left" style="font-size:.7rem;"></i> Prev
+                        </a>
+                    </li>
+                {% else %}
+                    <li class="page-item disabled">
+                        <span class="page-link"><i class="bi bi-chevron-left" style="font-size:.7rem;"></i> Prev</span>
+                    </li>
+                {% endif %}
+
+                {% for num in page_obj.paginator.page_range %}
+                    {% if page_obj.number == num %}
+                        <li class="page-item active"><span class="page-link">{{ num }}</span></li>
+                    {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ num }}{% if query %}&q={{ query }}{% endif %}">{{ num }}</a>
+                        </li>
+                    {% endif %}
+                {% endfor %}
+
+                {% if page_obj.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if query %}&q={{ query }}{% endif %}">
+                            Next <i class="bi bi-chevron-right" style="font-size:.7rem;"></i>
+                        </a>
+                    </li>
+                {% else %}
+                    <li class="page-item disabled">
+                        <span class="page-link">Next <i class="bi bi-chevron-right" style="font-size:.7rem;"></i></span>
+                    </li>
+                {% endif %}
+            </ul>
+        </nav>
+    </div>
+    {% endif %}
+</div>
+
+{% include 'loans/includes/live_search.html' %}
+{% endblock %}

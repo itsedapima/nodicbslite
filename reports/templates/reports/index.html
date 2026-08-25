@@ -1,0 +1,75 @@
+{% extends 'base.html' %}
+{% block title %}Reports — NODi Lite{% endblock %}
+{% block content %}
+<div class="page-shell">
+    <div class="page-head">
+        <div>
+            <h2><i class="bi bi-bar-chart-line me-2"></i>Reports Dashboard</h2>
+            <p class="page-sub">Generate and view financial and operational reports</p>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <div class="col-md-4">
+            <div class="card h-100">
+                <div class="card-body p-4 text-center d-flex flex-column">
+                    <div class="icon-shape tone-success mb-3 mx-auto"><i class="bi bi-graph-up-arrow"></i></div>
+                    <h5>Income Statement</h5>
+                    <p class="text-muted small flex-grow-1">Revenue breakdown by category and period</p>
+                    <a href="{% url 'reports:income_statement' %}" class="btn btn-outline-primary mt-2"><i class="bi bi-eye me-1"></i> View</a>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card h-100">
+                <div class="card-body p-4 text-center d-flex flex-column">
+                    <div class="icon-shape tone-danger mb-3 mx-auto"><i class="bi bi-graph-down-arrow"></i></div>
+                    <h5>Expenditure Statement</h5>
+                    <p class="text-muted small flex-grow-1">Expense breakdown by category and period</p>
+                    <a href="{% url 'reports:expenditure_statement' %}" class="btn btn-outline-primary mt-2"><i class="bi bi-eye me-1"></i> View</a>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card h-100">
+                <div class="card-body p-4 text-center d-flex flex-column">
+                    <div class="icon-shape tone-primary mb-3 mx-auto"><i class="bi bi-journal-text"></i></div>
+                    <h5>Cashbook Statement</h5>
+                    <p class="text-muted small flex-grow-1">Receipts, payments and running balances</p>
+                    <a href="{% url 'reports:cashbook_statement' %}" class="btn btn-outline-primary mt-2"><i class="bi bi-eye me-1"></i> View</a>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card h-100">
+                <div class="card-body p-4 text-center d-flex flex-column">
+                    <div class="icon-shape tone-warning mb-3 mx-auto"><i class="bi bi-bank"></i></div>
+                    <h5>Loan Report</h5>
+                    <p class="text-muted small flex-grow-1">Loan portfolio, disbursements and repayments</p>
+                    <a href="{% url 'reports:loan_report' %}" class="btn btn-outline-primary mt-2"><i class="bi bi-eye me-1"></i> View</a>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card h-100">
+                <div class="card-body p-4 text-center d-flex flex-column">
+                    <div class="icon-shape tone-info mb-3 mx-auto"><i class="bi bi-people"></i></div>
+                    <h5>Member List</h5>
+                    <p class="text-muted small flex-grow-1">Complete member directory and contact details</p>
+                    <a href="{% url 'reports:member_list' %}" class="btn btn-outline-primary mt-2"><i class="bi bi-eye me-1"></i> View</a>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card h-100">
+                <div class="card-body p-4 text-center d-flex flex-column">
+                    <div class="icon-shape tone-secondary mb-3 mx-auto"><i class="bi bi-list-task"></i></div>
+                    <h5>Scheduled Tasks</h5>
+                    <p class="text-muted small flex-grow-1">Background and scheduled task status</p>
+                    <a href="{% url 'reports:tasks' %}" class="btn btn-outline-primary mt-2"><i class="bi bi-eye me-1"></i> View</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

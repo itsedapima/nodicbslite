@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="robots" content="noindex, nofollow">
+    <title>{{ brand_name|default:"NODi CBS" }}</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: #111827;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+        .login-box {
+            background: #1f2937;
+            border-radius: 10px;
+            box-shadow: 0 4px 24px rgba(0,0,0,.4);
+            padding: 2.5rem 2rem;
+            width: 100%;
+            max-width: 380px;
+        }
+        .brand {
+            text-align: center;
+            margin-bottom: .75rem;
+        }
+        .brand h1 {
+            font-size: 1.75rem;
+            font-weight: 700;
+            color: #f9fafb;
+            letter-spacing: .05em;
+        }
+        .brand .company {
+            font-size: .8rem;
+            font-weight: 400;
+            color: #9ca3af;
+            margin-top: .35rem;
+        }
+        .subtitle {
+            font-size: .85rem;
+            color: #9ca3af;
+            text-align: center;
+            margin-bottom: 1.5rem;
+        }
+        .form-group { margin-bottom: 1rem; }
+        .form-group label {
+            display: block;
+            font-size: .85rem;
+            font-weight: 500;
+            color: #9ca3af;
+            margin-bottom: .3rem;
+        }
+        .form-group input {
+            width: 100%;
+            padding: .65rem .75rem;
+            background: #374151;
+            border: 1px solid #4b5563;
+            border-radius: 6px;
+            font-size: 1.4rem;
+            letter-spacing: .5rem;
+            text-align: center;
+            color: #f9fafb;
+            outline: none;
+            transition: border-color .15s;
+        }
+        .form-group input:focus { border-color: #3b82f6; }
+        .form-group input::placeholder { color: #6b7280; }
+        .btn {
+            width: 100%;
+            padding: .7rem;
+            background: #3b82f6;
+            color: #fff;
+            border: none;
+            border-radius: 6px;
+            font-size: .95rem;
+            font-weight: 500;
+            cursor: pointer;
+            margin-top: .5rem;
+            transition: background .15s;
+        }
+        .btn:hover { background: #2563eb; }
+        .messages {
+            list-style: none;
+            margin-bottom: 1rem;
+        }
+        .messages li {
+            padding: .5rem .75rem;
+            border-radius: 4px;
+            font-size: .85rem;
+            background: rgba(239,68,68,.15);
+            color: #fca5a5;
+            border: 1px solid rgba(239,68,68,.3);
+        }
+    </style>
+</head>
+<body>
+    <div class="login-box">
+        <div class="brand">
+            <h1>{{ brand_name|default:"NODi CBS" }}</h1>
+            {% if company_name %}<p class="company">{{ company_name }}</p>{% endif %}
+        </div>
+        <p class="subtitle">
+            A 6-digit code was sent to {{ masked_phone|default:"your phone" }}
+        </p>
+        {% if messages %}
+        <ul class="messages">
+            {% for msg in messages %}<li>{{ msg }}</li>{% endfor %}
+        </ul>
+        {% endif %}
+        <form method="post">
+            {% csrf_token %}
+            <div class="form-group">
+                <label for="otp">Enter code</label>
+                <input type="text" name="otp" id="otp" maxlength="6"
+                       pattern="[0-9]{6}" inputmode="numeric"
+                       autocomplete="one-time-code" required autofocus>
+            </div>
+            <button type="submit" class="btn">Verify</button>
+        </form>
+    </div>
+</body>
+</html>

@@ -1,0 +1,248 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Notification Management{% endblock %}
+{% block content %}
+{% include 'administration/includes/administration_quick_actions.html' %}
+<style>
+  .stat-card {
+    border: 1px solid var(--d365-border);
+    border-radius: .5rem;
+    padding: 1.25rem;
+    background: var(--d365-surface);
+    text-align: center;
+  }
+  .stat-card .stat-value {
+    font-size: 1.75rem;
+    font-weight: 700;
+    line-height: 1;
+  }
+  .stat-card .stat-label {
+    font-size: .8125rem;
+    color: var(--d365-text-secondary);
+    margin-top: .375rem;
+  }
+  .action-card {
+    border: 1px solid var(--d365-border);
+    border-radius: .5rem;
+    padding: 1.25rem 1.5rem;
+    background: var(--d365-surface);
+    display: flex;
+    align-items: flex-start;
+    gap: 1rem;
+  }
+  .action-card + .action-card { margin-top: .75rem; }
+  .action-icon {
+    width: 2.5rem; height: 2.5rem; flex-shrink: 0;
+    border-radius: .5rem;
+    display: inline-flex; align-items: center; justify-content: center;
+    font-size: 1.125rem;
+  }
+  .action-body { flex: 1 1 0; }
+  .action-body .action-title { font-weight: 600; font-size: .9375rem; }
+  .action-body .action-desc {
+    font-size: .8125rem; color: var(--d365-text-secondary); margin-top: .125rem;
+  }
+  .action-footer {
+    margin-top: .75rem;
+    display: flex; align-items: center; gap: .75rem;
+  }
+  .override-badge {
+    display: inline-flex; align-items: center; gap: .375rem;
+    padding: .25rem .75rem;
+    border-radius: 1rem;
+    font-size: .8125rem; font-weight: 600;
+  }
+  .override-badge.none       { background: var(--d365-surface-alt, #f3f2f1); color: var(--d365-text-secondary); }
+  .override-badge.enabled    { background: #d1e7dd; color: #0f5132; }
+  .override-badge.disabled   { background: #f8d7da; color: #842029; }
+  .override-badge.mixed      { background: #fff3cd; color: #664d03; }
+</style>
+
+<div class="container my-4">
+  <div class="row justify-content-center">
+    <div class="col-lg-10 col-xl-9">
+
+      <h1 class="fs-3 fw-bold mb-1">Notification Management</h1>
+      <p class="text-secondary mb-4" style="font-size:.875rem;">
+        Manage notification delivery for all active customers from one place.
+      </p>
+
+      <!-- ── Messages ── -->
+      {% if messages %}
+      {% for msg in messages %}
+      <div class="alert alert-{{ msg.tags }} alert-dismissible fade show" role="alert">
+        {{ msg }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+      </div>
+      {% endfor %}
+      {% endif %}
+
+      <!-- ══════════════════════════════════════════════════════════ -->
+      <!-- CURRENT STATUS                                            -->
+      <!-- ══════════════════════════════════════════════════════════ -->
+      <div class="d-flex align-items-center gap-2 mb-3">
+        <h5 class="fw-bold mb-0">Current status</h5>
+        {% if override_status == "none" %}
+          <span class="override-badge none"><i class="bi bi-dash-circle"></i> No override active</span>
+        {% elif override_status == "all_enabled" %}
+          <span class="override-badge enabled"><i class="bi bi-bell-fill"></i> Temporary override: all enabled</span>
+        {% elif override_status == "all_disabled" %}
+          <span class="override-badge disabled"><i class="bi bi-bell-slash-fill"></i> Temporary override: all disabled</span>
+        {% else %}
+          <span class="override-badge mixed"><i class="bi bi-exclamation-triangle-fill"></i> Mixed state</span>
+        {% endif %}
+      </div>
+
+      <!-- ── Stats row ── -->
+      <div class="row g-3 mb-4">
+        <div class="col-6 col-md-3">
+          <div class="stat-card">
+            <div class="stat-value">{{ stats.total }}</div>
+            <div class="stat-label">Total customers</div>
+          </div>
+        </div>
+        <div class="col-6 col-md-3">
+          <div class="stat-card">
+            <div class="stat-value text-success">{{ effective.effectively_on }}</div>
+            <div class="stat-label">Receiving notifications</div>
+          </div>
+        </div>
+        <div class="col-6 col-md-3">
+          <div class="stat-card">
+            <div class="stat-value text-danger">{{ effective.effectively_off }}</div>
+            <div class="stat-label">Notifications off</div>
+          </div>
+        </div>
+        <div class="col-6 col-md-3">
+          <div class="stat-card">
+            <div class="stat-value">{{ stats.default_on }}</div>
+            <div class="stat-label">Default opted-in</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══════════════════════════════════════════════════════════ -->
+      <!-- BULK ACTIONS                                              -->
+      <!-- ══════════════════════════════════════════════════════════ -->
+      <h5 class="fw-bold mb-3">Bulk actions</h5>
+
+      <!-- Enable all -->
+      <div class="action-card">
+        <div class="action-icon bg-success-subtle text-success">
+          <i class="bi bi-bell-fill"></i>
+        </div>
+        <div class="action-body">
+          <div class="action-title">Temporarily enable all notifications</div>
+          <div class="action-desc">
+            Override every customer's individual setting and enable SMS &amp; email
+            delivery system-wide. Each customer's personal default is preserved
+            and will resume when you reset.
+          </div>
+          <form method="post" class="action-footer" id="form-enable">
+            {% csrf_token %}
+            {{ form_enable.action }}
+            <div class="form-check mb-0">
+              {{ form_enable.confirm }}
+              <label class="form-check-label" for="{{ form_enable.confirm.id_for_label }}" style="font-size:.8125rem;">
+                I understand this affects all customers
+              </label>
+            </div>
+            <button type="submit" class="btn btn-sm btn-success" disabled id="btn-enable">
+              <i class="bi bi-bell-fill me-1"></i> Enable all
+            </button>
+          </form>
+        </div>
+      </div>
+
+      <!-- Disable all -->
+      <div class="action-card">
+        <div class="action-icon bg-danger-subtle text-danger">
+          <i class="bi bi-bell-slash-fill"></i>
+        </div>
+        <div class="action-body">
+          <div class="action-title">Temporarily disable all notifications</div>
+          <div class="action-desc">
+            Suppress all outbound SMS &amp; email notifications for every customer.
+            Useful during system maintenance or bulk data migrations.
+            Individual defaults are preserved.
+          </div>
+          <form method="post" class="action-footer" id="form-disable">
+            {% csrf_token %}
+            {{ form_disable.action }}
+            <div class="form-check mb-0">
+              {{ form_disable.confirm }}
+              <label class="form-check-label" for="{{ form_disable.confirm.id_for_label }}" style="font-size:.8125rem;">
+                I understand this affects all customers
+              </label>
+            </div>
+            <button type="submit" class="btn btn-sm btn-danger" disabled id="btn-disable">
+              <i class="bi bi-bell-slash-fill me-1"></i> Disable all
+            </button>
+          </form>
+        </div>
+      </div>
+
+      <!-- Reset all -->
+      <div class="action-card">
+        <div class="action-icon bg-warning-subtle text-warning">
+          <i class="bi bi-arrow-counterclockwise"></i>
+        </div>
+        <div class="action-body">
+          <div class="action-title">Reset to individual defaults</div>
+          <div class="action-desc">
+            Remove the temporary override and revert every customer to their
+            personal notification preference (the setting chosen during onboarding).
+          </div>
+          <form method="post" class="action-footer" id="form-reset">
+            {% csrf_token %}
+            {{ form_reset.action }}
+            <div class="form-check mb-0">
+              {{ form_reset.confirm }}
+              <label class="form-check-label" for="{{ form_reset.confirm.id_for_label }}" style="font-size:.8125rem;">
+                I understand this affects all customers
+              </label>
+            </div>
+            <button type="submit" class="btn btn-sm btn-warning" disabled id="btn-reset">
+              <i class="bi bi-arrow-counterclockwise me-1"></i> Reset all
+            </button>
+          </form>
+        </div>
+      </div>
+
+      <!-- ══════════════════════════════════════════════════════════ -->
+      <!-- HOW IT WORKS                                              -->
+      <!-- ══════════════════════════════════════════════════════════ -->
+      <div class="mt-4 p-3 rounded" style="background: var(--d365-surface-alt, #f3f2f1); font-size:.8125rem;">
+        <strong>How it works:</strong>
+        Each customer has a <em>default</em> notification preference set during
+        onboarding. The temporary override sits on top — when set, it controls
+        whether the system actually sends messages, regardless of the individual
+        default. Resetting clears the override so each customer's own preference
+        takes effect again.
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  // Wire each confirm checkbox to enable/disable its submit button
+  var pairs = [
+    ['form-enable',  'btn-enable'],
+    ['form-disable', 'btn-disable'],
+    ['form-reset',   'btn-reset'],
+  ];
+  pairs.forEach(function (pair) {
+    var form = document.getElementById(pair[0]);
+    var btn  = document.getElementById(pair[1]);
+    if (!form || !btn) return;
+    var cb = form.querySelector('input[type="checkbox"]');
+    if (!cb) return;
+    cb.addEventListener('change', function () {
+      btn.disabled = !cb.checked;
+    });
+  });
+});
+</script>
+{% endblock %}

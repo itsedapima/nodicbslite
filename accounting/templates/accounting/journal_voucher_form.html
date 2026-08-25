@@ -1,0 +1,332 @@
+{% extends "base.html" %}
+{% load crispy_forms_tags %}
+{% block content %}
+{% include 'accounting/includes/accounting_quick_actions.html' %}
+<style>
+    .jv-grid { background: var(--d365-surface); border-radius: .5rem; box-shadow: var(--d365-shadow-2); overflow: hidden; border: 1px solid var(--d365-border); }
+    .jv-header-row { display: flex; background: var(--d365-surface-alt); border-bottom: 2px solid var(--d365-border); }
+    .jv-row { display: flex; border-bottom: 1px solid var(--d365-border); min-height: 52px; transition: background 0.15s; }
+    .jv-row:hover { background: var(--d365-surface-alt); }
+    .jv-cell { flex: 1; border-right: 1px solid var(--d365-border); padding: 0; min-width: 140px; display: flex; align-items: stretch; }
+    .jv-cell:last-child { border-right: none; }
+    .jv-cell label { display: none; }
+    .jv-cell input, .jv-cell select, .jv-cell textarea {
+        width: 100%; padding: 14px 16px; border: none; border-radius: 0;
+        outline: none !important; box-shadow: none !important; font-size: 0.9rem;
+        background: transparent;
+    }
+    .jv-cell input:focus, .jv-cell select:focus, .jv-cell textarea:focus { background-color: #e8f0fe; }
+    .jv-cell-header { padding: 12px 16px; font-weight: 700; font-size: .78rem; color: var(--d365-text-secondary); text-transform: uppercase; letter-spacing: 0.04em; }
+    .cell-sm  { flex: 0.6; min-width: 110px; }
+    .cell-md  { flex: 1;   min-width: 160px; }
+    .cell-lg  { flex: 1.8; min-width: 260px; }
+    .cell-xl  { flex: 3;   min-width: 350px; }
+
+    /* ── Inline member search autocomplete ───────────────────── */
+    .member-search-wrapper { position: relative; width: 100%; }
+    .member-search-wrapper input { padding-right: 36px; }
+    .member-search-clear {
+        position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
+        cursor: pointer; color: #aaa; font-size: 1rem; display: none;
+    }
+    .member-search-clear:hover { color: #d9534f; }
+    .member-dropdown {
+        position: absolute; top: 100%; left: 0; right: 0; z-index: 1050;
+        background: var(--d365-surface); border: 1px solid var(--d365-border); border-top: none;
+        border-radius: 0 0 .4rem .4rem; box-shadow: var(--d365-shadow-2);
+        max-height: 260px; overflow-y: auto; display: none;
+    }
+    .member-dropdown .dd-item {
+        padding: 10px 16px; cursor: pointer; border-bottom: 1px solid var(--d365-border);
+        font-size: 0.88rem; display: flex; justify-content: space-between; align-items: center;
+    }
+    .member-dropdown .dd-item:last-child { border-bottom: none; }
+    .member-dropdown .dd-item:hover, .member-dropdown .dd-item.active { background: var(--d365-surface-alt); }
+    .dd-item .dd-name { font-weight: 600; color: var(--d365-text); }
+    .dd-item .dd-meta { font-size: 0.78rem; color: var(--d365-text-secondary); font-family: monospace; }
+    .dd-item .dd-id   { font-size: 0.75rem; color: var(--d365-text-secondary); }
+    .member-badge-inline {
+        background: var(--d365-primary); color: #fff;
+        font-size: 0.82rem; border-radius: 20px; padding: 4px 14px;
+        display: inline-flex; align-items: center; gap: 6px;
+    }
+
+    /* ── Spacer row for 4-line journal feel ──────────────────── */
+    .jv-spacer-row { display: flex; border-bottom: 1px solid var(--d365-border); min-height: 50px; }
+    .jv-spacer-cell { flex: 1; border-right: 1px solid var(--d365-border); }
+    .jv-spacer-cell:last-child { border-right: none; }
+</style>
+
+<div class="container-fluid px-4 py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h5 class="mb-1 fw-bold" style="color: var(--d365-text);">Journal Voucher Entry</h5>
+            <p class="small mb-0" style="color: var(--d365-text-secondary);">Post corrections, adjustments, and GL transfers for {{ brand_name }}. Voucher date controls where the transaction sits in the ledger.</p>
+        </div>
+    </div>
+
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert {% if message.tags %}alert-{{ message.tags }}{% else %}alert-info{% endif %} alert-dismissible fade show" role="alert" style="border-radius: .4rem;">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        {% endfor %}
+    {% endif %}
+
+    <form method="post" id="jvForm">
+        {% csrf_token %}
+        {{ form.cust_no }}
+
+        <div class="jv-grid mb-4">
+
+            {# ══ LINE 1: Transaction Type | Date | Amount | Ref ══ #}
+            <div class="jv-header-row d-none d-lg-flex">
+                <div class="jv-cell cell-lg jv-cell-header">Transaction Type</div>
+                <div class="jv-cell cell-md jv-cell-header">
+                    Voucher Date
+                    <i class="bi bi-info-circle ms-1" style="color: var(--d365-primary);" data-bs-toggle="tooltip"
+                       title="Controls the transaction date on both the GL and member statement. Backdate corrections here."></i>
+                </div>
+                <div class="jv-cell cell-sm jv-cell-header">Amount (KES)</div>
+                <div class="jv-cell cell-sm jv-cell-header">Reference</div>
+            </div>
+            <div class="jv-row flex-column flex-lg-row">
+                <div class="jv-cell cell-lg">{{ form.transaction_direction }}</div>
+                <div class="jv-cell cell-md">{{ form.date }}</div>
+                <div class="jv-cell cell-sm">{{ form.amount }}</div>
+                <div class="jv-cell cell-sm">{{ form.reference }}</div>
+            </div>
+
+            {# ══ LINE 2: Member (inline search) | Primary GL | Secondary GL ══ #}
+            <div class="jv-header-row d-none d-lg-flex">
+                <div class="jv-cell cell-md jv-cell-header" id="header_member">
+                    Member
+                    <small class="fw-normal ms-1" style="color: var(--d365-text-secondary);">(type name or mobile to search)</small>
+                </div>
+                <div class="jv-cell cell-md jv-cell-header" id="header_member_acc">Member Account</div>
+                <div class="jv-cell cell-md jv-cell-header">Primary GL Account</div>
+                <div class="jv-cell cell-md jv-cell-header" id="header_secondary_gl">Secondary GL (GL Transfer)</div>
+            </div>
+            <div class="jv-row flex-column flex-lg-row">
+                {# ── Inline member search cell ───────────────────── #}
+                <div class="jv-cell cell-md" id="cell_member_search">
+                    <div class="member-search-wrapper">
+                        <input type="text" id="member_search_input" class="form-control border-0"
+                               placeholder="Type name, member no, or mobile..." autocomplete="off">
+                        <span class="member-search-clear" id="member_clear" title="Clear selection">&times;</span>
+                        <div class="member-dropdown" id="member_dropdown"></div>
+                    </div>
+                </div>
+                <div class="jv-cell cell-md" id="cell_member_acc">{{ form.target_account }}</div>
+                <div class="jv-cell cell-md">{{ form.sacco_account }}</div>
+                <div class="jv-cell cell-md" id="cell_secondary_gl" style="background: var(--d365-surface-alt);">{{ form.secondary_sacco_account }}</div>
+            </div>
+
+            {# ══ LINE 3: Description ══ #}
+            <div class="jv-header-row d-none d-lg-flex">
+                <div class="jv-cell jv-cell-header">Description / Narration</div>
+            </div>
+            <div class="jv-row flex-column flex-lg-row">
+                <div class="jv-cell cell-xl">{{ form.description }}</div>
+            </div>
+
+            {# ══ LINE 4: Visual spacer — gives the 4-line ledger feel ══ #}
+            <div class="jv-spacer-row d-none d-lg-flex">
+                <div class="jv-spacer-cell cell-md"></div>
+                <div class="jv-spacer-cell cell-md"></div>
+                <div class="jv-spacer-cell cell-md"></div>
+                <div class="jv-spacer-cell cell-md"></div>
+            </div>
+        </div>
+
+        {# ── Action Bar ─────────────────────────────────────────── #}
+        <div class="d-flex justify-content-between align-items-center">
+            <div id="member_display_badge" class="d-none">
+                <span class="member-badge-inline">
+                    <i class="bi bi-person-check"></i>
+                    <span id="display_name">—</span>
+                    <span class="opacity-75">(<span id="display_cust_no_label">—</span>)</span>
+                </span>
+            </div>
+            <button type="submit" style="background: var(--d365-primary); color: #fff; border: 1px solid var(--d365-primary); border-radius: .4rem; font-weight: 600; padding: .5rem 2rem; font-size: .85rem;" class="ms-auto" id="post_btn">
+                <i class="bi bi-journal-check me-2"></i>Post JV Entry
+            </button>
+        </div>
+    </form>
+</div>
+
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script>
+$(document).ready(function() {
+    // ── Tooltips (Bootstrap 5) ───────────────────────────────────────
+    var tooltipList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+    tooltipList.forEach(function(el) { new bootstrap.Tooltip(el); });
+
+    // ══════════════════════════════════════════════════════════════
+    //  1. UI TOGGLE — show/hide member vs GL transfer fields
+    // ══════════════════════════════════════════════════════════════
+    function handleUILayout() {
+        let txType = $('#id_transaction_direction').val();
+
+        if (txType === 'sacco_transfer') {
+            // Hide member columns, enable secondary GL
+            $('#cell_member_search, #header_member').css('opacity', '0.3').find('input').prop('disabled', true);
+            $('#cell_member_acc, #header_member_acc').css('opacity', '0.3');
+            $('#cell_member_acc select').prop('disabled', true);
+
+            $('#cell_secondary_gl select').prop('disabled', false).removeClass('bg-light');
+            $('#header_secondary_gl, #cell_secondary_gl').css('opacity', '1');
+            $('#member_display_badge').addClass('d-none');
+        } else {
+            // Show member columns, disable secondary GL
+            $('#cell_member_search, #header_member').css('opacity', '1').find('input').prop('disabled', false);
+            $('#cell_member_acc, #header_member_acc').css('opacity', '1');
+            $('#cell_member_acc select').prop('disabled', false);
+
+            $('#cell_secondary_gl select').prop('disabled', true).addClass('bg-light');
+            $('#header_secondary_gl, #cell_secondary_gl').css('opacity', '0.3');
+
+            if ($('#id_cust_no').val()) {
+                $('#member_display_badge').removeClass('d-none');
+            }
+        }
+    }
+
+    $('#id_transaction_direction').on('change', handleUILayout);
+    handleUILayout();
+
+    // ══════════════════════════════════════════════════════════════
+    //  2. INLINE MEMBER SEARCH — type name/mobile in grid cell
+    // ══════════════════════════════════════════════════════════════
+    let debounceTimer;
+    let dropdownIndex = -1;
+    const $input    = $('#member_search_input');
+    const $dropdown = $('#member_dropdown');
+    const $clear    = $('#member_clear');
+
+    $input.on('input', function() {
+        clearTimeout(debounceTimer);
+        let q = $(this).val().trim();
+        dropdownIndex = -1;
+
+        if (q.length < 2) {
+            $dropdown.hide().empty();
+            $clear.hide();
+            return;
+        }
+
+        debounceTimer = setTimeout(function() {
+            $.ajax({
+                url: "{% url 'accounting:customer_search_list_ajax' %}",
+                data: { 'q': q },
+                dataType: 'html',
+                success: function(html) {
+                    // Parse the returned HTML partial to build dropdown items
+                    let $temp = $('<div>').html(html);
+                    let $radios = $temp.find('.customer-radio');
+
+                    if ($radios.length === 0) {
+                        $dropdown.html('<div class="dd-item text-muted">No results found</div>').show();
+                        return;
+                    }
+
+                    $dropdown.empty();
+                    $radios.each(function() {
+                        let no     = $(this).data('no');
+                        let name   = $(this).data('name');
+                        let mobile = $(this).closest('tr, li, div').find('.customer-mobile').text() || '';
+                        $dropdown.append(
+                            '<div class="dd-item" data-no="' + no + '" data-name="' + name + '">' +
+                                '<span class="dd-name">' + name + '</span>' +
+                                '<span class="dd-meta">' + no + (mobile ? ' &middot; ' + mobile : '') + '</span>' +
+                            '</div>'
+                        );
+                    });
+                    $dropdown.show();
+                }
+            });
+        }, 250);
+    });
+
+    // Keyboard navigation in dropdown
+    $input.on('keydown', function(e) {
+        let $items = $dropdown.find('.dd-item[data-no]');
+        if (!$items.length || !$dropdown.is(':visible')) return;
+
+        if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            dropdownIndex = Math.min(dropdownIndex + 1, $items.length - 1);
+            $items.removeClass('active').eq(dropdownIndex).addClass('active');
+        } else if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            dropdownIndex = Math.max(dropdownIndex - 1, 0);
+            $items.removeClass('active').eq(dropdownIndex).addClass('active');
+        } else if (e.key === 'Enter') {
+            e.preventDefault();
+            if (dropdownIndex >= 0) {
+                $items.eq(dropdownIndex).trigger('click');
+            } else if ($items.length === 1) {
+                // Auto-select sole result on Enter
+                $items.first().trigger('click');
+            }
+        } else if (e.key === 'Escape') {
+            $dropdown.hide();
+        }
+    });
+
+    // Click to select from dropdown
+    $(document).on('click', '.dd-item[data-no]', function() {
+        let selectedNo   = $(this).data('no');
+        let selectedName = $(this).data('name');
+        selectMember(selectedNo, selectedName);
+    });
+
+    // Clear selection
+    $clear.on('click', function() {
+        $input.val('').prop('readonly', false).focus();
+        $clear.hide();
+        $('#id_cust_no').val('');
+        $('#member_display_badge').addClass('d-none');
+        $('#id_target_account').empty().append('<option value="">-- Select Member Account --</option>');
+    });
+
+    // Close dropdown on outside click
+    $(document).on('click', function(e) {
+        if (!$(e.target).closest('.member-search-wrapper').length) {
+            $dropdown.hide();
+        }
+    });
+
+    function selectMember(custNo, custName) {
+        // Lock the search input to show selected name
+        $input.val(custName + ' (' + custNo + ')').prop('readonly', true);
+        $dropdown.hide();
+        $clear.show();
+
+        // Set hidden cust_no field
+        $('#id_cust_no').val(custNo);
+
+        // Update badge
+        $('#display_name').text(custName);
+        $('#display_cust_no_label').text(custNo);
+        $('#member_display_badge').removeClass('d-none');
+
+        // Fetch accounts for this member
+        let $accDropdown = $('#id_target_account');
+        $accDropdown.empty().append('<option value="">Fetching accounts...</option>');
+
+        $.ajax({
+            url: "{% url 'accounting:get_customer_accounts_api' %}",
+            data: { 'cust_no': custNo },
+            success: function(data) {
+                $accDropdown.empty().append('<option value="">-- Select Member Account --</option>');
+                data.results.forEach(function(acc) {
+                    $accDropdown.append($('<option>', { value: acc.id, text: acc.text }));
+                });
+            }
+        });
+    }
+});
+</script>
+{% endblock %}

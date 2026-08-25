@@ -1,0 +1,721 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block content %}
+{% include 'loans/includes/loans_quick_actions.html' %}
+
+<div class="container-fluid px-md-4" style="margin-top:.5rem;">
+
+    {# ── Page header (D365 command-bar style) ─────────────────────────── #}
+    <div style="background:var(--d365-surface); border:1px solid var(--d365-border); border-radius:var(--d365-radius-md); box-shadow:var(--d365-shadow-2); padding:.75rem 1rem; margin-bottom:.75rem; display:flex; justify-content:space-between; align-items:center;">
+        <div>
+            <h6 style="margin:0 0 .15rem 0; font-size:.875rem; font-weight:600; color:var(--d365-text); text-transform:uppercase; letter-spacing:.02em;">
+                <i class="bi bi-file-earmark-spreadsheet" style="color:var(--d365-primary); margin-right:.35rem;"></i>
+                {% if editing_loan %}Edit Loan · {{ editing_loan.loan_no }}{% else %}Commercial Loan Dispatch{% endif %}
+            </h6>
+            <p style="margin:0; font-size:.75rem; color:var(--d365-text-secondary);">
+                {% if editing_loan %}Amend underwriting parameters for this pending facility.{% else %}Complete the underwriting and security parameters to disburse funds.{% endif %}
+            </p>
+        </div>
+        {% if editing_loan %}
+        <a href="{% url 'loans:loan_dashboard' %}" class="btn btn-sm btn-outline-secondary" style="font-size:.8rem;">
+            <i class="bi bi-arrow-left me-1"></i> Back
+        </a>
+        {% endif %}
+    </div>
+
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags }} alert-dismissible fade show py-2 px-3 small mb-2" role="alert" style="border-radius:var(--d365-radius-sm); font-size:.8rem;">
+                {{ message }}
+                <button type="button" class="btn-close py-2" data-bs-dismiss="alert" aria-label="Close" style="font-size:.65rem;"></button>
+            </div>
+        {% endfor %}
+    {% endif %}
+
+    <form method="post" id="loanDispatchForm" novalidate>
+        {% csrf_token %}
+        
+        <div class="row g-3">
+            {# ═══════════ LEFT COLUMN ═══════════ #}
+            <div class="col-lg-7">
+                
+                {# ── 1. Borrower Identification ──────────────────────────── #}
+                <div style="background:var(--d365-surface); border:1px solid var(--d365-border); border-radius:var(--d365-radius-sm); margin-bottom:.75rem;">
+                    <div style="background:var(--d365-surface-alt); padding:.5rem .75rem; border-bottom:1px solid var(--d365-border);">
+                        <h6 style="margin:0; font-size:.75rem; font-weight:600; text-transform:uppercase; color:var(--d365-text-secondary); letter-spacing:.03em;">
+                            <i class="bi bi-person-check me-1" style="color:var(--d365-primary);"></i> 1. Borrower Identification
+                        </h6>
+                    </div>
+                    <div style="padding:.75rem;">
+                        <div class="position-relative mb-1">
+                            <label style="font-size:.8rem; font-weight:500; color:var(--d365-text-secondary); margin-bottom:.25rem; display:block;">Search Member Profile</label>
+                            <div class="input-group input-group-sm">
+                                <span class="input-group-text" style="background:var(--d365-surface-alt); border-color:var(--d365-border);"><i class="bi bi-search" style="color:var(--d365-text-disabled); font-size:.75rem;"></i></span>
+                                <input type="text" id="customerSearchInput" class="form-control" placeholder="Type member number or name..."
+                                       autocomplete="off" style="font-size:.8rem; border-color:var(--d365-border);"
+                                       {% if editing_loan %}value="{{ editing_loan.customer.cust_no }} - {{ editing_loan.customer.full_name }}"{% endif %}>
+                            </div>
+                            <input type="hidden" name="cust_no" id="selectedCustomerNo" required
+                                   {% if editing_loan %}value="{{ editing_loan.customer.cust_no }}"{% endif %}>
+                            <ul id="searchResultsDropdown" class="dropdown-menu w-100 shadow mt-1 style-scroll" style="display:none; max-height:250px; overflow-y:auto; z-index:1050; position:absolute; font-size:.8rem; border-radius:var(--d365-radius-sm);"></ul>
+                            <div id="searchFeedback" class="form-text mt-1 fw-medium small {% if not editing_loan %}d-none{% endif %}" style="font-size:.75rem; color:var(--d365-success);">
+                                {% if editing_loan %}
+                                    <i class="bi bi-check-circle-fill me-1"></i> Editing: {{ editing_loan.customer.full_name }} ({{ editing_loan.customer.cust_no }})
+                                {% else %}
+                                    <i class="bi bi-check-circle-fill me-1"></i> Borrower Locked &amp; Active Accounts Fetched
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {# ── 2. Product Configuration ────────────────────────────── #}
+                <div style="background:var(--d365-surface); border:1px solid var(--d365-border); border-radius:var(--d365-radius-sm); margin-bottom:.75rem;">
+                    <div style="background:var(--d365-surface-alt); padding:.5rem .75rem; border-bottom:1px solid var(--d365-border);">
+                        <h6 style="margin:0; font-size:.75rem; font-weight:600; text-transform:uppercase; color:var(--d365-text-secondary); letter-spacing:.03em;">
+                            <i class="bi bi-sliders me-1" style="color:var(--d365-primary);"></i> 2. Product Configuration
+                        </h6>
+                    </div>
+                    <div style="padding:.75rem;">
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label style="font-size:.8rem; font-weight:500; color:var(--d365-text-secondary); margin-bottom:.25rem; display:block;">Loan Date</label>
+                                {{ form.loan_date }}
+                            </div>
+                            <div class="col-md-6">
+                                <label style="font-size:.8rem; font-weight:500; color:var(--d365-text-secondary); margin-bottom:.25rem; display:block;">Loan Product Type</label>
+                                {{ form.loan_type }}
+                                <input type="hidden" id="interestCalcMethod" value="">
+                            </div>
+                            <div class="col-md-6">
+                                <label style="font-size:.8rem; font-weight:500; color:var(--d365-text-secondary); margin-bottom:.25rem; display:block;">Principal Amount (Ksh)</label>
+                                <input type="number" id="loanPrincipal" name="principal" class="form-control form-control-sm fw-semibold font-monospace" step="0.01" min="0" placeholder="0.00" required style="font-size:.8rem; border-color:var(--d365-border);"
+                                       {% if editing_loan %}value="{{ editing_loan.principal }}"{% endif %}>
+                            </div>
+                            <div class="col-md-6">
+                                <label style="font-size:.8rem; font-weight:500; color:var(--d365-text-secondary); margin-bottom:.25rem; display:block;">Interest Rate (%)</label>
+                                <input type="number" id="interestRate" name="interest_rate" class="form-control form-control-sm font-monospace" step="0.01" min="0" placeholder="e.g. 1.5" required style="font-size:.8rem; border-color:var(--d365-border);"
+                                       {% if editing_loan %}value="{{ editing_loan.interest_rate }}"{% endif %}>
+                            </div>
+                            <div class="col-md-6">
+                                <label style="font-size:.8rem; font-weight:500; color:var(--d365-text-secondary); margin-bottom:.25rem; display:block;">Repayment Period (Months)</label>
+                                <input type="number" id="loanPeriod" name="loan_period" class="form-control form-control-sm font-monospace" min="1"
+                                       value="{% if editing_loan %}{{ editing_loan.loan_period }}{% else %}1{% endif %}" required style="font-size:.8rem; border-color:var(--d365-border);">
+                            </div>
+                            <div class="col-md-6">
+                                <label style="font-size:.8rem; font-weight:500; color:var(--d365-text-secondary); margin-bottom:.25rem; display:flex; justify-content:space-between; align-items:center;">
+                                    <span>Monthly Installment</span>
+                                    <span id="installmentMethodBadge" class="badge d-none" style="font-size:.65rem; font-weight:500; background:var(--d365-primary-tint-40); color:var(--d365-primary);"></span>
+                                </label>
+                                <div class="input-group input-group-sm">
+                                    <span class="input-group-text" style="background:var(--d365-surface-alt); border-color:var(--d365-border);"><i class="bi bi-calculator" style="color:var(--d365-text-disabled); font-size:.75rem;"></i></span>
+                                    <input type="text" id="installmentDisplay" name="installment" class="form-control fw-bold font-monospace" placeholder="— select product first —" readonly tabindex="-1"
+                                           style="font-size:.8rem; background:var(--d365-surface-alt); border-color:var(--d365-border); color:var(--d365-text);"
+                                           {% if editing_loan %}value="{{ editing_loan.installment }}"{% endif %}>
+                                </div>
+                                <div class="form-text font-monospace mt-1" id="installmentBreakdown" style="font-size:.7rem; color:var(--d365-text-secondary);"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {# ═══════════ RIGHT COLUMN ═══════════ #}
+            <div class="col-lg-5">
+
+                {# ── Disbursement Charges ────────────────────────────────── #}
+                <div style="background:var(--d365-surface); border:1px solid var(--d365-border); border-top:2px solid var(--d365-primary); border-radius:var(--d365-radius-sm); margin-bottom:.75rem;">
+                    <div style="background:var(--d365-surface-alt); padding:.5rem .75rem; border-bottom:1px solid var(--d365-border); display:flex; justify-content:space-between; align-items:center;">
+                        <h6 style="margin:0; font-size:.75rem; font-weight:600; text-transform:uppercase; color:var(--d365-text); letter-spacing:.03em;">
+                            <i class="bi bi-receipt-cutoff me-1" style="color:var(--d365-primary);"></i> Disbursement Charges
+                        </h6>
+                        <button type="button" class="btn btn-sm btn-light border py-0 px-2" id="addOptionalChargeBtn" disabled style="font-size:.725rem; border-color:var(--d365-border); color:var(--d365-text-secondary);">
+                            <i class="bi bi-plus-lg"></i> Add Optional
+                        </button>
+                    </div>
+                    <div class="table-responsive" style="padding:0;">
+                        <table class="table table-sm table-hover align-middle mb-0" style="font-size:.8rem;">
+                            <tbody id="mandatoryChargesTableBody" class="border-bottom">
+                                <tr id="chargesPlaceholderRow">
+                                    <td colspan="3" class="text-center small py-3" style="color:var(--d365-text-disabled);">
+                                        <i class="bi bi-arrow-up-circle me-1"></i> Select a loan product to load applicable charges
+                                    </td>
+                                </tr>
+                            </tbody>
+                            <tbody id="chargesTableBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                {# ── 3. Bridging & Loan Offsets ──────────────────────────── #}
+                <div style="background:var(--d365-surface); border:1px solid var(--d365-border); border-radius:var(--d365-radius-sm); margin-bottom:.75rem;">
+                    <div style="background:var(--d365-surface-alt); padding:.5rem .75rem; border-bottom:1px solid var(--d365-border); display:flex; justify-content:space-between; align-items:center;">
+                        <h6 style="margin:0; font-size:.75rem; font-weight:600; text-transform:uppercase; color:var(--d365-text-secondary); letter-spacing:.03em;">
+                            <i class="bi bi-link-45deg me-1" style="color:var(--d365-primary);"></i> 3. Bridging &amp; Loan Offsets
+                        </h6>
+                        <button type="button" id="addOffsetBtn" class="btn btn-sm btn-light border py-0 px-2" disabled style="font-size:.725rem; border-color:var(--d365-border); color:var(--d365-text-secondary);">
+                            <i class="bi bi-plus-lg me-1"></i> Add Offset
+                        </button>
+                    </div>
+                    <div class="table-responsive" style="padding:0;">
+                        <table class="table table-sm table-hover mb-0 align-middle" style="font-size:.8rem;">
+                            <thead style="background:var(--d365-surface-alt); font-size:.725rem;">
+                                <tr>
+                                    <th class="ps-3 py-1 fw-semibold text-uppercase" style="color:var(--d365-text-secondary);">Target Loan ID / Number</th>
+                                    <th class="w-25 py-1 fw-semibold text-uppercase text-end" style="color:var(--d365-text-secondary);">Offset Amount</th>
+                                    <th class="text-center w-25 py-1 fw-semibold text-uppercase" style="color:var(--d365-text-secondary);">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="offsetsTableBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {# ── Sticky submit bar ──────────────────────────────────────────── #}
+        <div class="position-sticky bottom-0 z-3 d-flex justify-content-between align-items-center mt-3" style="background:var(--d365-surface-alt); border:1px solid var(--d365-border); padding:.65rem 1rem; border-radius:var(--d365-radius-sm) var(--d365-radius-sm) 0 0; box-shadow:var(--d365-shadow-4);">
+            <div style="font-size:.75rem; color:var(--d365-text-secondary);">
+                <i class="bi bi-shield-check me-1" style="color:var(--d365-success);"></i> Transactions are wrapped securely.
+            </div>
+            <div class="gap-2 d-flex">
+                <button type="reset" class="btn btn-sm btn-light border px-3" id="clearFormBtn" style="font-size:.8rem; color:var(--d365-text-secondary); border-color:var(--d365-border);">Clear Form</button>
+                <button type="submit" class="btn btn-sm px-4" id="loanSubmitBtn" style="font-size:.8rem; font-weight:500; background:var(--d365-primary); color:#fff; border-color:var(--d365-primary-hover);">
+                    <i class="bi bi-check-circle me-1"></i> {% if editing_loan %}Update Loan{% else %}Submit{% endif %}
+                </button>
+            </div>
+        </div>
+    </form>
+</div>
+
+{# ═══════════════════ TEMPLATES ═══════════════════ #}
+
+<template id="offsetTemplate">
+    <tr style="border-bottom:1px solid var(--d365-border);">
+        <td class="ps-3 w-50 position-relative py-1">
+            <select name="offset_loan_ids" class="form-select form-select-sm offset-loan-select" required style="font-size:.775rem; border-radius:var(--d365-radius-sm); border-color:var(--d365-border);">
+                <option value="" selected disabled>Select loan to offset...</option>
+            </select>
+        </td>
+        <td class="w-25 py-1">
+            <input type="number" name="offset_amounts" class="form-control form-control-sm text-end offset-amount-input font-monospace" step="0.01" placeholder="0.00" required style="font-size:.775rem; border-radius:var(--d365-radius-sm); border-color:var(--d365-border);">
+        </td>
+        <td class="text-center w-25 py-1">
+            <button type="button" class="btn btn-sm py-0 px-2 btn-link text-decoration-none remove-row-btn" style="color:var(--d365-danger); font-size:.8rem;"><i class="bi bi-x-lg"></i></button>
+        </td>
+    </tr>
+</template>
+
+<template id="chargeTemplate">
+    <tr style="border-bottom:1px solid var(--d365-border);">
+        <td class="ps-3 w-50 py-1">
+            <select name="charge_profile[]" class="form-select form-select-sm charge-select" required style="font-size:.775rem; border-radius:var(--d365-radius-sm); border-color:var(--d365-border);">
+                <option value="" selected disabled>Select Optional Charge...</option>
+            </select>
+        </td>
+        <td class="w-25 py-1">
+            <input type="number" name="charge_amount[]" class="form-control form-control-sm text-end charge-amount font-monospace fw-semibold optional-charge-input" step="0.01" value="0.00" required style="font-size:.775rem; border-radius:var(--d365-radius-sm); border-color:var(--d365-border);">
+        </td>
+        <td class="text-center w-25 py-1">
+            <button type="button" class="btn btn-sm py-0 px-2 btn-link text-decoration-none remove-row-btn" style="color:var(--d365-danger); font-size:.8rem;"><i class="bi bi-x-lg"></i></button>
+        </td>
+    </tr>
+</template>
+{# ================= JAVASCRIPT ================= #}
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+
+    // ─── State ────────────────────────────────────────────────────────────────
+    let activeCustomerLoansCache = [];
+    let currentOptionalChargeOptions = [];
+    let currentMandatoryChargeOptions = [];
+    let currentInterestMethod = '';
+
+    // ─── DOM refs ─────────────────────────────────────────────────────────────
+    const principalInput        = document.getElementById('loanPrincipal');
+    const interestRateInput     = document.getElementById('interestRate');
+    const loanPeriodInput       = document.getElementById('loanPeriod');
+    const installmentDisplay    = document.getElementById('installmentDisplay');
+    const installmentBreakdown  = document.getElementById('installmentBreakdown');
+    const installmentBadge      = document.getElementById('installmentMethodBadge');
+    const interestCalcMethod    = document.getElementById('interestCalcMethod');
+
+    const searchInput           = document.getElementById('customerSearchInput');
+    const hiddenCustNo          = document.getElementById('selectedCustomerNo');
+    const dropdownMenu          = document.getElementById('searchResultsDropdown');
+    const searchFeedback        = document.getElementById('searchFeedback');
+
+    const addOffsetBtn          = document.getElementById('addOffsetBtn');
+    const offsetsTableBody      = document.getElementById('offsetsTableBody');
+    const addOptionalChargeBtn  = document.getElementById('addOptionalChargeBtn');
+    const mandatoryChargeTbody  = document.getElementById('mandatoryChargesTableBody');
+    const chargesTableBody      = document.getElementById('chargesTableBody');
+
+    const loanTypeSelect = document.querySelector('[name="loan_type"]');
+
+    // ─── 1. Loan Product → fetch product charges + calc method ───────────────
+    if (loanTypeSelect) {
+        loanTypeSelect.addEventListener('change', function () {
+            const productId = this.value;
+            if (!productId) return;
+
+            mandatoryChargeTbody.innerHTML = `
+                <tr>
+                    <td colspan="3" class="text-center small py-3" style="color:var(--d365-text-disabled);">
+                        <span class="spinner-border spinner-border-sm me-1"></span> Loading product charges...
+                    </td>
+                </tr>`;
+            chargesTableBody.innerHTML = '';
+            addOptionalChargeBtn.setAttribute('disabled', 'true');
+
+            fetch(`/loans/api/product-charges/?product_id=${productId}`)
+                .then(res => { if (!res.ok) throw new Error('Failed to load charges.'); return res.json(); })
+                .then(data => {
+                    if (data.status !== 'success') throw new Error(data.message || 'Unknown error');
+
+                    currentInterestMethod = data.interest_calc_method || 'reducing_balance';
+                    interestCalcMethod.value = currentInterestMethod;
+                    currentOptionalChargeOptions = data.optional || [];
+                    currentMandatoryChargeOptions = data.mandatory || [];
+
+                    const methodLabels = {
+                        'flat_rate': 'Flat Rate',
+                        'principal_flat_rate': 'Principal Flat',
+                        'reducing_balance': 'Reducing Balance',
+                    };
+                    installmentBadge.textContent = methodLabels[currentInterestMethod] || currentInterestMethod;
+                    installmentBadge.classList.remove('d-none');
+
+                    buildMandatoryCharges(data.mandatory || []);
+                    addOptionalChargeBtn.removeAttribute('disabled');
+                    recalculateInstallment();
+                    recalculateAllCharges();
+                })
+                .catch(err => {
+                    mandatoryChargeTbody.innerHTML = `
+                        <tr>
+                            <td colspan="3" class="text-center small py-3" style="color:var(--d365-danger);">
+                                <i class="bi bi-exclamation-triangle-fill me-1"></i> ${err.message}
+                            </td>
+                        </tr>`;
+                });
+        });
+    }
+
+    // ─── 2. Build mandatory charges table rows ────────────────────────────────
+    function buildMandatoryCharges(charges) {
+        mandatoryChargeTbody.innerHTML = '';
+
+        if (charges.length === 0) {
+            mandatoryChargeTbody.innerHTML = `
+                <tr>
+                    <td colspan="3" class="text-center small py-3" style="color:var(--d365-text-disabled);">
+                        No mandatory charges configured for this product.
+                    </td>
+                </tr>`;
+            return;
+        }
+
+        charges.forEach(charge => {
+            const principalAmt = Math.max(0, parseFloat(principalInput.value) || 0);
+            const minAmt = parseFloat(charge.min_amount) || 0;
+            const maxAmt = parseFloat(charge.max_amount) || 0;
+            let calcValue = charge.charge_type === 'percentage'
+                ? (principalAmt * (parseFloat(charge.amount) / 100))
+                : parseFloat(charge.amount);
+
+            // Clamp to min/max bounds
+            if (minAmt > 0 && calcValue < minAmt) calcValue = minAmt;
+            if (maxAmt > 0 && calcValue > maxAmt) calcValue = maxAmt;
+
+            const badgeHtml = charge.charge_type === 'percentage'
+                ? `<span class="badge ms-2" style="background:var(--d365-primary-tint-40); color:var(--d365-primary); font-size:.65rem;">${charge.amount}%</span>`
+                : '';
+
+            let boundsHtml = '';
+            if (minAmt > 0 || maxAmt > 0) {
+                const parts = [];
+                if (minAmt > 0) parts.push('Min: ' + minAmt.toFixed(2));
+                if (maxAmt > 0) parts.push('Max: ' + maxAmt.toFixed(2));
+                boundsHtml = `<div class="small" style="color:var(--d365-text-secondary); font-size:.6rem;">${parts.join(' · ')}</div>`;
+            }
+
+            mandatoryChargeTbody.insertAdjacentHTML('beforeend', `
+                <tr>
+                    <td class="ps-3 w-50">
+                        <div class="d-flex align-items-center">
+                            <i class="bi bi-lock-fill me-2 small" style="color:var(--d365-text-disabled);"></i>
+                            <span class="fw-semibold" style="color:var(--d365-text);">${charge.name}</span>
+                            ${badgeHtml}
+                        </div>
+                        ${boundsHtml}
+                    </td>
+                    <td class="w-25">
+                        <input type="text"
+                               class="form-control form-control-sm text-end fw-bold mandatory-charge-input"
+                               data-charge-id="${charge.id}"
+                               data-charge-type="${charge.charge_type}"
+                               data-charge-value="${charge.amount}"
+                               data-min-amount="${charge.min_amount}"
+                               data-max-amount="${charge.max_amount}"
+                               value="${calcValue.toFixed(2)}"
+                               readonly tabindex="-1"
+                               style="color:var(--d365-danger); background:var(--d365-surface); border-color:var(--d365-border);">
+                    </td>
+                    <td class="text-center w-25">
+                        <span class="badge" style="background:var(--d365-danger-bg); color:var(--d365-danger); border:1px solid var(--d365-danger); font-size:.65rem;">Mandatory</span>
+                    </td>
+                </tr>`);
+        });
+    }
+
+    // ─── 3. Installment Calculator ────────────────────────────────────────────
+    function recalculateInstallment() {
+        const principal = Math.max(0, parseFloat(principalInput.value) || 0);
+        const rate      = Math.max(0, parseFloat(interestRateInput.value) || 0) / 100;
+        const period    = Math.max(1, parseInt(loanPeriodInput.value) || 1);
+        const method    = currentInterestMethod;
+
+        if (!method || principal === 0) {
+            installmentDisplay.value = '';
+            installmentBreakdown.textContent = '';
+            return;
+        }
+
+        let installment = 0;
+        let breakdownText = '';
+
+        if (method === 'flat_rate') {
+            const totalInterest = principal * rate * period;
+            installment = (principal + totalInterest) / period;
+            breakdownText = `Total Interest: KES ${totalInterest.toLocaleString(undefined, {minimumFractionDigits:2})} | Repayable: KES ${(principal + totalInterest).toLocaleString(undefined, {minimumFractionDigits:2})}`;
+
+        } else if (method === 'principal_flat_rate') {
+            installment = (principal / period) + (principal * rate);
+            breakdownText = `Principal/mo: KES ${(principal / period).toFixed(2)} + Interest: KES ${(principal * rate).toFixed(2)}`;
+
+        } else if (method === 'reducing_balance') {
+            if (rate > 0) {
+                const rateFactor = Math.pow(1 + rate, period);
+                installment = (principal * rate * rateFactor) / (rateFactor - 1);
+            } else {
+                installment = principal / period;
+            }
+            const totalRepayable = installment * period;
+            const totalInterest  = totalRepayable - principal;
+            breakdownText = `Total Repayable: KES ${totalRepayable.toLocaleString(undefined, {minimumFractionDigits:2})} | Interest Paid: KES ${totalInterest.toLocaleString(undefined, {minimumFractionDigits:2})}`;
+        }
+
+        installmentDisplay.value = installment.toFixed(2);
+        installmentBreakdown.textContent = breakdownText;
+    }
+
+    [principalInput, interestRateInput, loanPeriodInput].forEach(el => {
+        if (el) el.addEventListener('input', () => { recalculateInstallment(); recalculateAllCharges(); });
+    });
+
+    // ─── 4. Universal Charge Recalculator ────────────────────────────────────
+    function recalculateAllCharges() {
+        const principalAmt = Math.max(0, parseFloat(principalInput.value) || 0);
+
+        document.querySelectorAll('.mandatory-charge-input').forEach(input => {
+            const cType  = input.getAttribute('data-charge-type');
+            const cVal   = parseFloat(input.getAttribute('data-charge-value')) || 0;
+            const minAmt = parseFloat(input.getAttribute('data-min-amount')) || 0;
+            const maxAmt = parseFloat(input.getAttribute('data-max-amount')) || 0;
+            let computed  = cType === 'percentage' ? (principalAmt * (cVal / 100)) : cVal;
+            if (minAmt > 0 && computed < minAmt) computed = minAmt;
+            if (maxAmt > 0 && computed > maxAmt) computed = maxAmt;
+            input.value = computed.toFixed(2);
+        });
+
+        document.querySelectorAll('.charge-select').forEach(select => {
+            const opt = select.options[select.selectedIndex];
+            if (opt && opt.value) {
+                const cType  = opt.getAttribute('data-type');
+                const cVal   = parseFloat(opt.getAttribute('data-amount')) || 0;
+                const minAmt = parseFloat(opt.getAttribute('data-min-amount')) || 0;
+                const maxAmt = parseFloat(opt.getAttribute('data-max-amount')) || 0;
+                const amtIn  = select.closest('tr').querySelector('.charge-amount');
+                if (amtIn) {
+                    let computed = cType === 'percentage' ? (principalAmt * (cVal / 100)) : cVal;
+                    if (minAmt > 0 && computed < minAmt) computed = minAmt;
+                    if (maxAmt > 0 && computed > maxAmt) computed = maxAmt;
+                    amtIn.value = computed.toFixed(2);
+                }
+            }
+        });
+
+        let totalBridgingBalance = 0;
+        document.querySelectorAll('.offset-loan-select').forEach(select => {
+            const opt = select.options[select.selectedIndex];
+            if (opt && opt.value) {
+                const amtIn = select.closest('tr').querySelector('.offset-amount-input');
+                if (amtIn) totalBridgingBalance += parseFloat(amtIn.value) || 0;
+            }
+        });
+
+        document.querySelectorAll('.calculated-bridging-fee-row').forEach(r => r.remove());
+
+        if (totalBridgingBalance > 0) {
+            const allCharges = [...currentMandatoryChargeOptions, ...currentOptionalChargeOptions];
+            const bridgingOption = allCharges.find(c => c.is_bridging_fee)
+                                || allCharges.find(c => /bridging/i.test(c.name));
+            if (bridgingOption && chargesTableBody) {
+                const bId    = bridgingOption.id;
+                const bName  = bridgingOption.name;
+                const bType  = bridgingOption.charge_type;
+                const bValue = parseFloat(bridgingOption.amount) || 0;
+
+                let bridgingFee = bType === 'percentage'
+                    ? totalBridgingBalance * (bValue / 100)
+                    : bValue * document.querySelectorAll('.offset-loan-select').length;
+
+                chargesTableBody.insertAdjacentHTML('afterbegin', `
+                    <tr class="calculated-bridging-fee-row" style="background:var(--d365-warning-bg); border-bottom:1px solid var(--d365-border);">
+                        <td class="ps-3 w-50">
+                            <div class="fw-bold" style="color:var(--d365-text);">
+                                <i class="bi bi-shuffle me-1" style="color:var(--d365-warning);"></i> ${bName}
+                            </div>
+                            <div class="small" style="color:var(--d365-text-secondary);">
+                                Calculated on Offset Balance: KES ${totalBridgingBalance.toFixed(2)}
+                                <em class="ms-1">(auto-applied at save)</em>
+                            </div>
+                        </td>
+                        <td class="w-25">
+                            <input type="number"
+                                   class="form-control form-control-sm text-end fw-bold"
+                                   value="${bridgingFee.toFixed(2)}" readonly disabled
+                                   style="color:var(--d365-danger); background:var(--d365-surface); border-color:var(--d365-border);">
+                        </td>
+                        <td class="text-center w-25">
+                            <span class="badge" style="background:var(--d365-warning-bg); color:var(--d365-warning); border:1px solid var(--d365-warning); font-size:.65rem;">Bridging</span>
+                        </td>
+                    </tr>`);
+            }
+        }
+    }
+
+    // ─── 5. Optional Charge Row Injection ────────────────────────────────────
+    if (addOptionalChargeBtn) {
+        addOptionalChargeBtn.addEventListener('click', () => {
+            const template = document.getElementById('chargeTemplate');
+            if (!template || !chargesTableBody) return;
+
+            const clone = document.importNode(template.content, true);
+            const select = clone.querySelector('.charge-select');
+
+            currentOptionalChargeOptions.forEach(charge => {
+                const opt = document.createElement('option');
+                opt.value = charge.id;
+                opt.setAttribute('data-type', charge.charge_type);
+                opt.setAttribute('data-amount', charge.amount);
+                opt.setAttribute('data-min-amount', charge.min_amount || '0');
+                opt.setAttribute('data-max-amount', charge.max_amount || '0');
+                opt.textContent = charge.name + (charge.charge_type === 'percentage' ? ` (${charge.amount}%)` : '');
+                select.appendChild(opt);
+            });
+
+            const removeBtn = clone.querySelector('.remove-row-btn');
+            if (removeBtn) removeBtn.addEventListener('click', function () {
+                this.closest('tr').remove();
+                recalculateAllCharges();
+            });
+
+            chargesTableBody.appendChild(clone);
+        });
+    }
+
+    if (chargesTableBody) {
+        chargesTableBody.addEventListener('change', function (e) {
+            if (e.target.classList.contains('charge-select')) {
+                const opt   = e.target.options[e.target.selectedIndex];
+                const amtIn = e.target.closest('tr').querySelector('.charge-amount');
+                if (!amtIn || !opt.value) return;
+                const cType  = opt.getAttribute('data-type');
+                const cVal   = parseFloat(opt.getAttribute('data-amount')) || 0;
+                const minAmt = parseFloat(opt.getAttribute('data-min-amount')) || 0;
+                const maxAmt = parseFloat(opt.getAttribute('data-max-amount')) || 0;
+                const principal = Math.max(0, parseFloat(principalInput.value) || 0);
+                let computed = cType === 'percentage' ? principal * (cVal / 100) : cVal;
+                if (minAmt > 0 && computed < minAmt) computed = minAmt;
+                if (maxAmt > 0 && computed > maxAmt) computed = maxAmt;
+                amtIn.value = computed.toFixed(2);
+                recalculateAllCharges();
+            }
+        });
+    }
+
+    // ─── 6. Offset/Bridging Row Injection ────────────────────────────────────
+    if (addOffsetBtn) {
+        addOffsetBtn.addEventListener('click', function (e) {
+            e.preventDefault();
+            const template = document.getElementById('offsetTemplate');
+            if (!template || !offsetsTableBody) return;
+
+            const clone     = document.importNode(template.content, true);
+            const selectEl  = clone.querySelector('.offset-loan-select');
+            const amtInput  = clone.querySelector('.offset-amount-input');
+            const deleteBtn = clone.querySelector('.remove-row-btn');
+
+            activeCustomerLoansCache.forEach(loan => {
+                const opt = document.createElement('option');
+                opt.value = loan.loan_no;
+                opt.textContent = `${loan.loan_no} [Bal: KES ${parseFloat(loan.loan_balance).toLocaleString()}] - ${loan.product_description}`;
+                opt.setAttribute('data-balance', loan.loan_balance);
+                selectEl.appendChild(opt);
+            });
+
+            selectEl.addEventListener('change', function () {
+                const selOpt = this.options[this.selectedIndex];
+                amtInput.value = this.value
+                    ? (parseFloat(selOpt.getAttribute('data-balance')) || 0).toFixed(2)
+                    : '0.00';
+                recalculateAllCharges();
+            });
+
+            amtInput.addEventListener('input', recalculateAllCharges);
+            deleteBtn.addEventListener('click', function () {
+                this.closest('tr').remove();
+                recalculateAllCharges();
+            });
+
+            offsetsTableBody.appendChild(clone);
+        });
+    }
+
+    // ─── 7. Borrower Search ───────────────────────────────────────────────────
+    let mainDebounceTimer;
+    if (searchInput && dropdownMenu) {
+        searchInput.addEventListener('input', function () {
+            clearTimeout(mainDebounceTimer);
+            const query = searchInput.value.trim();
+            if (query.length < 2) { dropdownMenu.style.display = 'none'; return; }
+
+            mainDebounceTimer = setTimeout(() => {
+                fetch(`/customers/customer-search/?q=${encodeURIComponent(query)}`)
+                    .then(res => res.json())
+                    .then(data => {
+                        dropdownMenu.innerHTML = '';
+                        if (!data.results || data.results.length === 0) {
+                            dropdownMenu.innerHTML = '<li><span class="dropdown-item text-muted small">No members found</span></li>';
+                        } else {
+                            data.results.forEach(item => {
+                                const li = document.createElement('li');
+                                li.innerHTML = `<button type="button" class="dropdown-item py-2 search-item" data-custno="${item.cust_no}">
+                                    ${item.cust_no} - ${item.full_name} - ${item.national_id}</button>`;
+                                dropdownMenu.appendChild(li);
+                            });
+                        }
+                        dropdownMenu.style.display = 'block';
+                    });
+            }, 300);
+        });
+
+        dropdownMenu.addEventListener('click', function (e) {
+            if (!e.target.classList.contains('search-item')) return;
+            const targetCustNo = e.target.getAttribute('data-custno');
+            searchInput.value = e.target.textContent.trim();
+            if (hiddenCustNo) hiddenCustNo.value = targetCustNo;
+            dropdownMenu.style.display = 'none';
+
+            searchFeedback.classList.remove('d-none');
+            searchFeedback.style.color = 'var(--d365-warning)';
+            searchFeedback.innerHTML = `<span class="spinner-border spinner-border-sm me-1" role="status"></span> Compiling stats &amp; ledger balances...`;
+
+            if (addOffsetBtn) addOffsetBtn.setAttribute('disabled', 'true');
+            if (offsetsTableBody) offsetsTableBody.innerHTML = '';
+
+            fetch(`/loans/api/unsettled-loans/?cust_no=${targetCustNo}`)
+                .then(res => { if (!res.ok) throw new Error("Ledger fetch rejected."); return res.json(); })
+                .then(data => {
+                    if (data.status === 'success') {
+                        activeCustomerLoansCache = data.loans;
+                        searchFeedback.style.color = 'var(--d365-success)';
+                        searchFeedback.innerHTML = `<i class="bi bi-check-circle-fill me-1"></i> Borrower Locked (${activeCustomerLoansCache.length} Active Accounts Loaded)`;
+                        if (addOffsetBtn) addOffsetBtn.removeAttribute('disabled');
+                        recalculateAllCharges();
+                    }
+                })
+                .catch(() => {
+                    searchFeedback.style.color = 'var(--d365-danger)';
+                    searchFeedback.innerHTML = `<i class="bi bi-exclamation-triangle-fill me-1"></i> Error loading active statistics.`;
+                });
+
+            searchInput.style.borderColor = 'var(--d365-success)';
+            searchInput.style.background = 'var(--d365-surface-alt)';
+        });
+    }
+
+    // ─── 8. Clear form resets ────────────────────────────────────────────────
+    document.getElementById('clearFormBtn').addEventListener('click', function () {
+        currentInterestMethod = '';
+        currentOptionalChargeOptions = [];
+        currentMandatoryChargeOptions = [];
+        activeCustomerLoansCache = [];
+        installmentDisplay.value = '';
+        installmentBreakdown.textContent = '';
+        installmentBadge.classList.add('d-none');
+        mandatoryChargeTbody.innerHTML = `
+            <tr id="chargesPlaceholderRow">
+                <td colspan="3" class="text-center small py-3" style="color:var(--d365-text-disabled);">
+                    <i class="bi bi-arrow-up-circle me-1"></i> Select a loan product to load applicable charges
+                </td>
+            </tr>`;
+        chargesTableBody.innerHTML = '';
+        offsetsTableBody.innerHTML = '';
+        addOffsetBtn.setAttribute('disabled', 'true');
+        addOptionalChargeBtn.setAttribute('disabled', 'true');
+        searchInput.value = '';
+        searchInput.style.borderColor = '';
+        searchInput.style.background = '';
+        hiddenCustNo.value = '';
+        searchFeedback.classList.add('d-none');
+    });
+
+    // ─── 9. Global dropdown dismissal ────────────────────────────────────────
+    document.addEventListener('click', function (e) {
+        if (searchInput && !searchInput.contains(e.target) && !dropdownMenu.contains(e.target))
+            dropdownMenu.style.display = 'none';
+    });
+
+    // ─── 10. Edit mode: auto-trigger product load ────────────────────────────
+    {% if editing_loan %}
+    if (loanTypeSelect && loanTypeSelect.value) {
+        // Slight delay to let DOM settle, then fire change to load charges
+        setTimeout(() => loanTypeSelect.dispatchEvent(new Event('change')), 200);
+
+        // Also fetch unsettled loans for the customer
+        const editCustNo = '{{ editing_loan.customer.cust_no }}';
+        if (editCustNo) {
+            fetch(`/loans/api/unsettled-loans/?cust_no=${editCustNo}`)
+                .then(res => res.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        activeCustomerLoansCache = data.loans;
+                        if (addOffsetBtn) addOffsetBtn.removeAttribute('disabled');
+                    }
+                });
+        }
+    }
+    {% endif %}
+
+    // ─── 11. Double-submit prevention ────────────────────────────────────────
+    const dispatchForm = document.getElementById('loanDispatchForm');
+    const submitBtn    = document.getElementById('loanSubmitBtn');
+    if (dispatchForm && submitBtn) {
+        dispatchForm.addEventListener('submit', function (e) {
+            if (submitBtn.disabled) {
+                e.preventDefault();
+                return;
+            }
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1" role="status"></span> Submitting…';
+            submitBtn.style.opacity = '0.7';
+            submitBtn.style.pointerEvents = 'none';
+        });
+    }
+
+});
+</script>
+{% endblock %}

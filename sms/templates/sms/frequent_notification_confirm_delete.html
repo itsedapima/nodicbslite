@@ -1,0 +1,46 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="page-shell">
+    {% include 'administration/includes/administration_quick_actions.html' %}
+
+    <div class="page-head mb-3">
+        <div>
+            <h2>Delete Notification Template</h2>
+            <p class="page-sub">This action cannot be undone</p>
+        </div>
+        <a href="{% url 'sms:frequent_notifications' %}" class="btn btn-outline-secondary btn-sm">
+            <i class="bi bi-arrow-left me-1"></i> Back to List
+        </a>
+    </div>
+
+    <div class="card" style="border-left: 3px solid var(--d365-danger);">
+        <div class="card-body">
+            <h5 class="mb-3">
+                <i class="bi bi-exclamation-triangle text-danger me-2"></i>
+                Confirm Deletion
+            </h5>
+            <p>
+                You are about to permanently delete the notification template
+                <strong>"{{ notif.name }}"</strong>
+                ({{ notif.get_category_display }}).
+            </p>
+            <p class="text-muted">
+                This will not affect any SMS already queued or sent. Only the template definition will be removed.
+            </p>
+
+            <div class="border rounded p-3 bg-light mb-3" style="font-size: 13px; white-space: pre-wrap;">{{ notif.message_template }}</div>
+
+            <form method="post">
+                {% csrf_token %}
+                <div class="d-flex gap-2">
+                    <button type="submit" class="btn btn-danger">
+                        <i class="bi bi-trash me-1"></i> Delete Permanently
+                    </button>
+                    <a href="{% url 'sms:frequent_notifications' %}" class="btn btn-outline-secondary">Cancel</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,144 @@
+{% extends "base.html" %}
+{% block content %}
+{% include 'more_menu_customers.html' %}
+
+<div class="container mt-20">
+    <h2>Customer Search & Management</h2>
+    
+    <input type="text" id="searchBox" class="form-control mb-4" 
+           placeholder="Type name, phone number, or National ID to search...">
+
+    <span id="profileUrlBase" data-url-base="{% url 'customers:customer_profile' 0 %}" style="display: none;"></span>
+    <span id="editUrlBase" data-url-base="{% url 'customers:edit_customer' 0 %}" style="display: none;"></span>
+    <span id="nokUrlBase" data-url-base="{% url 'customers:list_next_of_kin' 0 %}" style="display: none;"></span>
+
+    <h3 id="tableTitle">Last 100 Customers</h3>
+    <table class="table table-striped mt-3">
+        <thead>
+            <tr>
+                <th>Cust No</th>
+                <th>Full Name</th>
+                <th>National ID</th>
+                <th>Mobile</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody id="customerTableBody">
+            {% for c in customers %}
+            <tr>
+                <td>{{ c.cust_no }}</td>
+                <td><a href="{% url 'customers:customer_profile' c.id %}">{{ c.full_name }}</a></td>
+                <td>{{ c.national_id }}</td>
+                <td>{{ c.mobile }}</td>
+                <td>
+                    <a href="{% url 'customers:edit_customer' c.id %}" class="btn btn-sm btn-info">Edit</a>
+                    <a href="{% url 'customers:list_next_of_kin' c.id %}" class="btn btn-sm btn-warning">Next of Kin</a>
+                    </td>
+            </tr>
+            {% empty %}
+            <tr id="initialNoResults"><td colspan="5">No customers found.</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    const searchBox = document.getElementById("searchBox");
+    const tableBody = document.getElementById("customerTableBody");
+    const tableTitle = document.getElementById("tableTitle");
+
+    // Get base URLs from hidden Django template elements
+    const getBaseUrl = (id) => document.getElementById(id).dataset.urlBase;
+    const profileUrlBase = getBaseUrl("profileUrlBase");
+    const editUrlBase = getBaseUrl("editUrlBase");
+    const nokUrlBase = getBaseUrl("nokUrlBase");
+
+    // Helper function to create the dynamic URL
+    const getDynamicUrl = (baseUrl, id) => baseUrl.replace('/0/', `/${id}/`);
+
+    // Debounce function to limit API calls
+    function debounce(func, timeout = 300) {
+        let timer;
+        return (...args) => {
+            clearTimeout(timer);
+            timer = setTimeout(() => { func.apply(this, args); }, timeout);
+        };
+    }
+
+    // Function to render customer rows into the table body
+    const renderCustomers = (customers) => {
+        tableBody.innerHTML = ''; // Clear previous results
+
+        if (customers.length === 0) {
+            tableBody.innerHTML = '<tr><td colspan="5">No matches found for your search query.</td></tr>';
+            return;
+        }
+
+        customers.forEach(customer => {
+            const row = document.createElement('tr');
+            
+            // Trivial data columns
+            row.innerHTML += `<td>${customer.cust_no || 'N/A'}</td>`;
+            row.innerHTML += `<td><a href="${getDynamicUrl(profileUrlBase, customer.id)}">${customer.full_name}</a></td>`;
+            row.innerHTML += `<td>${customer.national_id || 'N/A'}</td>`;
+            row.innerHTML += `<td>${customer.mobile || 'N/A'}</td>`;
+
+            // Actions column
+            row.innerHTML += `
+                <td>
+                    <a href="${getDynamicUrl(editUrlBase, customer.id)}" class="btn btn-sm btn-info">Edit</a>
+                    <a href="${getDynamicUrl(profileUrlBase, customer.id)}" class="btn btn-sm btn-primary">Profile</a>
+                    <a href="${getDynamicUrl(nokUrlBase, customer.id)}" class="btn btn-sm btn-warning">Next of Kin</a>
+                </td>
+            `;
+
+            tableBody.appendChild(row);
+        });
+    };
+    
+    const fetchResults = debounce(function() {
+        const query = searchBox.value.trim();
+        
+        if (query.length < 2) {
+            // Restore initial content/logic if the query is cleared or too short
+            tableTitle.textContent = "Last 100 Customers";
+            // Note: To truly restore, you'd need to re-render the initial list 
+            // from a stored variable or force a page reload/initial load API call.
+            // For now, we'll just clear the search results.
+            tableBody.innerHTML = '<tr><td colspan="5" class="text-muted">Type at least 2 characters to search.</td></tr>';
+            return;
+        }
+
+        tableTitle.textContent = `Search Results for "${query}"`;
+        tableBody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">Searching...</td></tr>';
+
+        // NOTE: Ensure your Django API view is updated to return cust_no, national_id, and mobile!
+        fetch(`/customers/search_api/?q=${encodeURIComponent(query)}`) 
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                renderCustomers(data);
+            })
+            .catch(err => {
+                console.error("Error fetching search results:", err);
+                tableBody.innerHTML = '<tr><td colspan="5" class="text-danger">Error fetching results. Please check the API.</td></tr>';
+            });
+    });
+
+    // Clear the initial list on first keypress to prepare for search results
+    searchBox.addEventListener("keydown", function(e) {
+        if (searchBox.value.trim().length === 0 && e.key.length === 1) {
+            tableBody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">Continue typing...</td></tr>';
+        }
+    });
+    
+    searchBox.addEventListener("keyup", fetchResults);
+    searchBox.addEventListener("change", fetchResults); 
+});
+</script>
+{%endblock%}

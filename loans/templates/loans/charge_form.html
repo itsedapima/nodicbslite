@@ -1,0 +1,95 @@
+{% extends 'base.html' %}
+
+{% block title %}Add Loan Charge — NODi Lite{% endblock %}
+
+{% block content %}
+<div class="page-shell">
+
+    {# ── Page Head ────────────────────────────────────────────────────── #}
+    <div class="page-head">
+        <div>
+            <h2><i class="bi bi-tag me-2"></i>Add Loan Charge</h2>
+            <p class="page-sub">Configure a new fee or charge for loan products</p>
+        </div>
+        <a href="{% url 'loans:charge_list' %}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left me-1"></i> Back to Charges
+        </a>
+    </div>
+
+    {# ── Messages ─────────────────────────────────────────────────────── #}
+    {% if messages %}
+    <div class="mb-3">
+        {% for message in messages %}
+        <div class="alert alert-{{ message.tags|default:'info' }} alert-dismissible fade show" role="alert">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-body p-4">
+                    <form method="post" class="d365-form">
+                        {% csrf_token %}
+
+                        <div class="field-group">
+                            <label for="id_name">Charge Name *</label>
+                            <input type="text" name="name" id="id_name"
+                                   value="{{ request.POST.name|default:'' }}"
+                                   placeholder="e.g. Processing Fee" required>
+                        </div>
+
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <div class="field-group">
+                                    <label for="id_charge_type">Type *</label>
+                                    <select name="charge_type" id="id_charge_type" required>
+                                        <option value="fixed"
+                                            {% if request.POST.charge_type == 'fixed' %}selected{% endif %}>
+                                            Fixed Amount
+                                        </option>
+                                        <option value="percentage"
+                                            {% if request.POST.charge_type == 'percentage' %}selected{% endif %}>
+                                            Percentage
+                                        </option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="field-group">
+                                    <label for="id_value">Value *</label>
+                                    <input type="number" name="value" id="id_value" step="0.01" min="0"
+                                           value="{{ request.POST.value|default:'' }}" required>
+                                    <span class="form-text">Amount in KES or percentage value</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="field-group mt-3">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" name="is_active"
+                                       id="id_is_active" value="1" checked>
+                                <label class="form-check-label" for="id_is_active">
+                                    Active
+                                </label>
+                            </div>
+                            <span class="form-text">Inactive charges will not be applied to new loans</span>
+                        </div>
+
+                        <div class="d-flex gap-2 mt-4">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-check-lg me-1"></i> Save Charge
+                            </button>
+                            <a href="{% url 'loans:charge_list' %}" class="btn btn-outline-secondary">Cancel</a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+{% endblock %}

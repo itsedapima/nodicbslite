@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+
+{% block title %}Record Withdrawal - NODi Lite{% endblock %}
+
+{% block content %}
+<div class="d365-page-head">
+    <a href="{% url 'transactions:savings_list' %}" class="d365-btn d365-btn-back">
+        <i class="fluent-icon">arrow_left</i> Back to Savings
+    </a>
+    <h1>Record Withdrawal</h1>
+</div>
+
+{% if errors %}
+<div class="d365-alert d365-alert-danger">
+    <ul>
+        {% for error in errors %}
+        <li>{{ error }}</li>
+        {% endfor %}
+    </ul>
+</div>
+{% endif %}
+
+<div class="d365-card">
+    <form method="post" class="d365-form">
+        {% csrf_token %}
+
+        <div class="d365-form-group">
+            <label class="d365-label" for="member">Member <span class="d365-required">*</span></label>
+            <input type="text" id="member" name="member" class="d365-input" placeholder="Member number or search..." value="{{ request.POST.member }}" required>
+        </div>
+
+        <div class="d365-form-group">
+            <label class="d365-label" for="product">Product <span class="d365-required">*</span></label>
+            <select id="product" name="product" class="d365-select" required>
+                <option value="">-- Select Product --</option>
+                {% for p in products %}
+                <option value="{{ p.pk }}" {% if request.POST.product == p.pk|slugify %}selected{% endif %}>
+                    {{ p.name }}
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="d365-form-group">
+            <label class="d365-label" for="amount">Amount <span class="d365-required">*</span></label>
+            <input type="number" id="amount" name="amount" class="d365-input" step="0.01" min="0" value="{{ request.POST.amount }}" required>
+        </div>
+
+        <div class="d365-form-group">
+            <label class="d365-label" for="reference">Reference</label>
+            <input type="text" id="reference" name="reference" class="d365-input" placeholder="Transaction reference" value="{{ request.POST.reference }}">
+        </div>
+
+        <div class="d365-form-group">
+            <label class="d365-label" for="date">Date <span class="d365-required">*</span></label>
+            <input type="date" id="date" name="date" class="d365-input" value="{{ request.POST.date }}" required>
+        </div>
+
+        <div class="d365-form-group">
+            <label class="d365-label" for="notes">Notes</label>
+            <textarea id="notes" name="notes" class="d365-textarea" rows="3" placeholder="Optional notes...">{{ request.POST.notes }}</textarea>
+        </div>
+
+        <div class="d365-form-actions">
+            <button type="submit" class="d365-btn d365-btn-primary">Record Withdrawal</button>
+            <a href="{% url 'transactions:savings_list' %}" class="d365-btn d365-btn-secondary">Cancel</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

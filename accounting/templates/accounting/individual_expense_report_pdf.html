@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Expenses Report</title>
+    <style>
+        body { font-family: Arial, sans-serif; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { border: 1px solid black; padding: 8px; text-align: left; }
+        th { background-color: #f2f2f2; }
+    </style>
+</head>
+<body>
+    <h2>Expenses Report for {{ account.account_name }}</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>#</th>
+                <th>Description</th>
+                <th>Amount</th>
+                <th>Date</th>
+                <th>Reconciliation Status</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for expense in expenses %}
+            <tr>
+                <td>{{ forloop.counter }}</td>
+                <td>{{ expense.description }}</td>
+                <td>{{ expense.amount }}</td>
+                <td>{{ expense.expense_date|date:"Y-m-d" }}</td>
+                <td>{{ expense.get_reconciliation_status_display }}</td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="5" class="text-center">No expenses recorded.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    <h4>Total Expenses: {{ total_expense }}</h4>
+</body>
+</html>

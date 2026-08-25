@@ -1,0 +1,39 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="container my-5">
+    {% include 'accounting/includes/accounting_quick_actions.html' %}
+    <h2>Income Details</h2>
+    <table class="table table-bordered">
+        <tr><th>Income Date</th><td>{{ income.income_date|date:"Y-m-d"}}</td></tr>
+        <tr><th>Description</th><td>{{ income.description }}</td></tr>
+        <tr><th>Customer</th><td>{{ income.customer }}</td></tr>
+        <tr><th>Reference</th><td>{{ income.income_reference }}</td></tr>
+        <tr><th>Amount</th><td>{{ income.amount }}</td></tr>
+        <tr>
+            <th>Income File</th>
+            <td>
+                {% if income.income_file %}
+                    <a href="{{ income.income_file.url }}" target="_blank" class="btn btn-success">View File</a>
+                    <a href="{{ income.income_file.url }}" download class="btn btn-warning">Download</a>
+                {% else %}
+                    <span class="text-danger">No file uploaded</span>
+                {% endif %}
+            </td>
+        </tr>
+        <tr>
+            <th>Reconciliation File</th>
+            <td>
+                {% if income.reconciliation_file %}
+                    <a href="{{ income.reconciliation_file.url }}" target="_blank" class="btn btn-success">View File</a>
+                    <a href="{{ income.reconciliation_file.url }}" download class="btn btn-warning">Download</a>
+                {% else %}
+                    <span class="text-danger">No file uploaded</span>
+                {% endif %}
+            </td>
+        </tr>
+    </table>
+    <a href="{% url 'accounting:income_list' %}" class="btn btn-secondary">Back to List</a>
+</div>
+{% endblock %}

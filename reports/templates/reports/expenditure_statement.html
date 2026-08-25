@@ -1,0 +1,56 @@
+{% extends 'base.html' %}
+{% load humanize %}
+{% block title %}Expenditure Statement — NODi Lite{% endblock %}
+{% block content %}
+<div class="page-shell">
+    <div class="page-head">
+        <div><h2><i class="bi bi-graph-down-arrow me-2"></i>Expenditure Statement</h2></div>
+        <a href="{% url 'reports:index' %}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left me-1"></i> Reports</a>
+    </div>
+
+    <form method="get" class="filter-bar">
+        <input type="date" name="date_from" value="{{ date_from|date:'Y-m-d' }}" class="form-control">
+        <input type="date" name="date_to" value="{{ date_to|date:'Y-m-d' }}" class="form-control">
+        <button type="submit" class="btn btn-primary"><i class="bi bi-funnel me-1"></i> Filter</button>
+    </form>
+
+    <div class="row g-3 mb-3">
+        <div class="col-md-12">
+            <div class="stat-card p-3">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="icon-shape tone-danger"><i class="bi bi-cash-stack"></i></div>
+                    <div>
+                        <div class="kpi-label">Total Expenses</div>
+                        <div class="kpi-value">{{ total_expenses|floatformat:2|intcomma|default:"0.00" }}</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header"><i class="bi bi-pie-chart me-1"></i> Expenses by Category</div>
+        <div class="grid-scroll">
+            <table class="grid-table">
+                <thead><tr><th>Category</th><th>Description</th><th class="num">Amount (KES)</th></tr></thead>
+                <tbody>
+                    {% for item in expense_by_category %}
+                    <tr>
+                        <td><strong>{{ item.category__name|default:item.category }}</strong></td>
+                        <td>{{ item.description|default:"-" }}</td>
+                        <td class="num">{{ item.total|floatformat:2|intcomma }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="3" class="text-center text-muted py-4">No expense records for this period.</td></tr>
+                    {% endfor %}
+                </tbody>
+                {% if expense_by_category %}
+                <tfoot>
+                    <tr class="fw-bold"><td colspan="2">Total</td><td class="num">{{ total_expenses|floatformat:2|intcomma }}</td></tr>
+                </tfoot>
+                {% endif %}
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,63 @@
+{% extends 'base.html' %}
+{% block title %}Quotations — NODi Lite{% endblock %}
+{% block content %}
+<div class="page-shell">
+    <div class="app-toolbar">
+        <div class="app-toolbar-body">
+            <h1 class="toolbar-title">
+                <span class="toolbar-badge"><i class="bi bi-file-earmark-text"></i></span>
+                Quotations
+            </h1>
+        </div>
+    </div>
+
+    <form method="get" class="filter-bar">
+        <select name="status" class="form-select" onchange="this.form.submit()">
+            <option value="">All Statuses</option>
+            <option value="draft" {% if status_filter == 'draft' %}selected{% endif %}>Draft</option>
+            <option value="submitted" {% if status_filter == 'submitted' %}selected{% endif %}>Submitted</option>
+            <option value="approved" {% if status_filter == 'approved' %}selected{% endif %}>Approved</option>
+            <option value="rejected" {% if status_filter == 'rejected' %}selected{% endif %}>Rejected</option>
+        </select>
+    </form>
+
+    <div class="grid-scroll">
+        <table class="grid-table">
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Vendor</th>
+                    <th>Description</th>
+                    <th class="num">Amount</th>
+                    <th>Status</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for q in quotations %}
+                <tr>
+                    <td>{{ q.created_at|date:"d M Y" }}</td>
+                    <td>{{ q.vendor|default:"-" }}</td>
+                    <td>{{ q.description|truncatewords:8 }}</td>
+                    <td class="num">{{ q.amount|floatformat:2 }}</td>
+                    <td>
+                        {% if q.status == 'draft' %}<span class="badge bg-secondary">Draft</span>
+                        {% elif q.status == 'submitted' %}<span class="badge bg-info">Submitted</span>
+                        {% elif q.status == 'approved' %}<span class="badge bg-success">Approved</span>
+                        {% elif q.status == 'rejected' %}<span class="badge bg-danger">Rejected</span>
+                        {% else %}<span class="badge bg-warning">{{ q.status }}</span>{% endif %}
+                    </td>
+                    <td>
+                        <a href="{% url 'administration:quotation_detail' q.pk %}" class="btn btn-sm btn-outline-primary">
+                            <i class="bi bi-eye"></i>
+                        </a>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="6" class="text-center text-muted py-4">No quotations found.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

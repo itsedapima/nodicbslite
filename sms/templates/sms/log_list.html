@@ -1,0 +1,60 @@
+{% extends 'base.html' %}
+{% block title %}SMS Log — NODi Lite{% endblock %}
+{% block content %}
+<div class="page-shell">
+    <div class="app-toolbar">
+        <div class="app-toolbar-body">
+            <h1 class="toolbar-title"><span class="toolbar-badge"><i class="bi bi-chat-dots"></i></span> SMS Log</h1>
+            <div class="toolbar-actions">
+                <a href="{% url 'sms:send' %}" class="btn btn-primary"><i class="bi bi-send me-1"></i> Send SMS</a>
+                <a href="{% url 'sms:send_bulk' %}" class="btn btn-outline-primary"><i class="bi bi-megaphone me-1"></i> Send Bulk</a>
+            </div>
+        </div>
+    </div>
+
+    <form method="get" class="filter-bar">
+        <input type="date" name="date_from" value="{{ date_from|date:'Y-m-d' }}" class="form-control" placeholder="From">
+        <input type="date" name="date_to" value="{{ date_to|date:'Y-m-d' }}" class="form-control" placeholder="To">
+        <select name="status" class="form-select" onchange="this.form.submit()">
+            <option value="">All Status</option>
+            <option value="sent" {% if status_filter == 'sent' %}selected{% endif %}>Sent</option>
+            <option value="failed" {% if status_filter == 'failed' %}selected{% endif %}>Failed</option>
+            <option value="pending" {% if status_filter == 'pending' %}selected{% endif %}>Pending</option>
+        </select>
+        <button type="submit" class="btn btn-primary"><i class="bi bi-funnel me-1"></i> Filter</button>
+    </form>
+
+    <div class="grid-scroll">
+        <table class="grid-table">
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Recipient</th>
+                    <th>Phone</th>
+                    <th>Message</th>
+                    <th>Status</th>
+                    <th class="num">Cost</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for log in logs %}
+                <tr>
+                    <td>{{ log.sent_at|date:"d M Y H:i" }}</td>
+                    <td>{{ log.recipient_name|default:"-" }}</td>
+                    <td>{{ log.phone_number }}</td>
+                    <td>{{ log.message|truncatewords:10 }}</td>
+                    <td>
+                        {% if log.status == 'sent' %}<span class="badge bg-success">Sent</span>
+                        {% elif log.status == 'failed' %}<span class="badge bg-danger">Failed</span>
+                        {% else %}<span class="badge bg-warning">Pending</span>{% endif %}
+                    </td>
+                    <td class="num">{{ log.cost|floatformat:2|default:"-" }}</td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="6" class="text-center text-muted py-4">No SMS logs.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

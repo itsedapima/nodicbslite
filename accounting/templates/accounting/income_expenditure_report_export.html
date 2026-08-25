@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    {% load custom_filters %}
+    <meta charset="UTF-8">
+    <title>Income & Expenditure Report</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            font-size: 12px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+        th, td {
+            border: 1px solid black;
+            padding: 6px;
+            text-align: left;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+        .report-title {
+            text-align: center;
+            font-size: 16px;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        .report-period {
+            text-align: center;
+            font-size: 14px;
+            margin-bottom: 15px;
+        }
+        .total-row {
+            font-weight: bold;
+            background-color: #f2f2f2;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="report-title">Income & Expenditure Report</div>
+    <div class="report-period">From: {{ start_date|date:"F d, Y" }} - To: {{ end_date|date:"F d, Y" }}</div>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Income Description</th>
+                <th>Amount (KES)</th>
+                <th>Date</th>
+                <th>Expense Description</th>
+                <th>Amount (KES)</th>
+                <th>Date</th>
+                
+            </tr>
+        </thead>
+        <tbody>
+            {% for income, expense in incomes|zip_lists:expenses %}
+            <tr>
+                <td>{{ income.description|default_if_none:"" }}</td>
+                <td>{{ income.amount|default_if_none:"0.00"|floatformat:2 }}</td>
+                <td>{{ income.income_date|default_if_none:"&nbsp;"|date:"Y-m-d" }}</td>
+                <td>{{ expense.description|default_if_none:"" }}</td>
+                <td>{{ expense.amount|default_if_none:"0.00"|floatformat:2 }}</td>
+                <td>{{ expense.expense_date|default_if_none:"&nbsp;"|date:"Y-m-d" }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+        <tfoot>
+            <tr class="total-row">
+                <td><strong>Total Income:</strong></td>
+                <td><strong>{{ total_income|floatformat:2 }}</strong></td>
+                <td></td>
+                <td><strong>Total Expenses:</strong></td>
+                <td><strong>{{ total_expenses|floatformat:2 }}</strong></td>
+                <td></td>
+            </tr>
+            <tr class="total-row">
+                <td colspan="6" style="text-align: center;"><strong>Net Balance: {{ net_balance|floatformat:2 }}</strong></td>
+            </tr>
+        </tfoot>
+    </table>
+
+</body>
+</html>

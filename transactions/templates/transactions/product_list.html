@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+
+{% block title %}Savings Products - NODi Lite{% endblock %}
+
+{% block content %}
+<div class="app-toolbar">
+    <div class="app-toolbar-title">
+        <h1>Savings Products</h1>
+    </div>
+    <div class="app-toolbar-actions">
+        <a href="{% url 'transactions:product_add' %}" class="d365-btn d365-btn-primary">
+            <i class="fluent-icon">add</i> Add Product
+        </a>
+    </div>
+</div>
+
+<div class="d365-card">
+    <div class="d365-grid-table-wrapper">
+        <table class="d365-grid-table">
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Code</th>
+                    <th>Type</th>
+                    <th class="text-right">Min Balance</th>
+                    <th class="text-right">Interest Rate</th>
+                    <th>Active</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for product in products %}
+                <tr>
+                    <td>{{ product.name }}</td>
+                    <td>{{ product.code }}</td>
+                    <td>{{ product.get_type_display|default:product.type }}</td>
+                    <td class="text-right">{{ product.min_balance }}</td>
+                    <td class="text-right">{{ product.interest_rate }}%</td>
+                    <td>
+                        {% if product.is_active %}
+                        <span class="d365-badge d365-badge-success">Active</span>
+                        {% else %}
+                        <span class="d365-badge d365-badge-danger">Inactive</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <a href="{% url 'transactions:product_edit' product.pk %}" class="d365-btn d365-btn-sm d365-btn-secondary">
+                            <i class="fluent-icon">edit</i> Edit
+                        </a>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="7" class="d365-empty-state">No savings products configured.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

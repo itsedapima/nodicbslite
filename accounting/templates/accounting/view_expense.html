@@ -1,0 +1,41 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="container my-5">
+    {% include 'accounting/includes/accounting_quick_actions.html' %}
+    <h2>Expense Details</h2>
+    <table class="table table-bordered">
+        <tr><th>Expense Date</th><td>{{ expense.expense_date|date:"Y-m-d" }}</td></tr>
+        <tr><th>Description</th><td>{{ expense.description }}</td></tr>
+         <tr><th>Customer</th><td>{{ expense.customer }}</td></tr>
+        <tr><th>Cheque No</th><td>{{ expense.cheque_number }}</td></tr>
+        <tr><th>Invoice No</th><td>{{ expense.expense_invoice }}</td></tr>
+        <tr><th>Amount</th><td>{{ expense.amount }}</td></tr>
+
+        <tr>
+            <th>Expense File</th>
+            <td>
+                {% if expense.expense_file %}
+                    <a href="{{ expense.expense_file.url }}" target="_blank" class="btn btn-success">View File</a>
+                    <a href="{{ expense.expense_file.url }}" download class="btn btn-warning">Download</a>
+                {% else %}
+                    <span class="text-danger">No file uploaded</span>
+                {% endif %}
+            </td>
+        </tr>
+        <tr>
+            <th>Reconciliation File</th>
+            <td>
+                {% if expense.reconciliation_file %}
+                    <a href="{{ expense.reconciliation_file.url }}" target="_blank" class="btn btn-success">View File</a>
+                    <a href="{{ expense.reconciliation_file.url }}" download class="btn btn-warning">Download</a>
+                {% else %}
+                    <span class="text-danger">No file uploaded</span>
+                {% endif %}
+            </td>
+        </tr>
+    </table>
+    <a href="{% url 'accounting:expense_list' %}" class="btn btn-secondary">Back to List</a>
+</div>
+{% endblock %}

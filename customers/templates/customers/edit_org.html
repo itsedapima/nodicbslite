@@ -1,0 +1,161 @@
+{% extends "base.html" %}
+{% load static %}
+{% block content %}
+{% include 'customers/includes/customer_quick_actions.html' %}
+
+<style>
+  /* Make all form inputs clearly visible with borders and subtle background */
+  .edit-org-form input[type="text"],
+  .edit-org-form input[type="number"],
+  .edit-org-form input[type="email"],
+  .edit-org-form input[type="date"],
+  .edit-org-form input[type="tel"],
+  .edit-org-form select,
+  .edit-org-form textarea {
+    display: block;
+    width: 100%;
+    padding: .4rem .65rem;
+    font-size: .875rem;
+    border: 1px solid var(--d365-border-strong, #b4b4b4);
+    border-radius: var(--d365-radius-sm, 4px);
+    background-color: var(--d365-surface, #fafafa);
+    color: var(--d365-text, #333);
+    transition: border-color .2s, box-shadow .2s;
+  }
+  .edit-org-form input:focus,
+  .edit-org-form select:focus,
+  .edit-org-form textarea:focus {
+    border-color: var(--d365-primary, #0078d4);
+    box-shadow: 0 0 0 2px var(--d365-primary-tint-40, rgba(0,120,212,.25));
+    outline: none;
+  }
+  /* Table inputs: fill the cell */
+  .edit-org-form .table td input,
+  .edit-org-form .table td select {
+    min-width: 100px;
+  }
+</style>
+
+<div class="container-fluid px-4 py-3">
+
+    <div class="d-flex align-items-center gap-2 mb-4">
+        <span class="toolbar-badge" style="background:var(--d365-primary-tint-40); color:var(--d365-primary);">
+            <i class="bi bi-building"></i>
+        </span>
+        <h5 class="mb-0" style="color:var(--d365-text); font-weight:600;">Edit {{ title }} — {{ customer.full_name }}</h5>
+    </div>
+
+    {% if form.errors %}
+    <div class="alert alert-danger alert-dismissible fade show" role="alert"
+         style="border:none; background:var(--d365-danger-bg); color:var(--d365-text); border-left:3px solid var(--d365-danger); border-radius:var(--d365-radius-sm);">
+        <strong><i class="bi bi-exclamation-triangle-fill me-2"></i>Entity Details Errors:</strong>
+        <ul class="mb-0 mt-2" style="font-size:.8125rem;">
+            {% for field, errors in form.errors.items %}
+                {% for error in errors %}
+                    <li>{{ field|capfirst }}: {{ error }}</li>
+                {% endfor %}
+            {% endfor %}
+        </ul>
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+    {% endif %}
+
+    {% if formset.errors %}
+    <div class="alert alert-warning alert-dismissible fade show" role="alert"
+         style="border:none; background:var(--d365-warning-bg); color:var(--d365-text); border-left:3px solid var(--d365-warning); border-radius:var(--d365-radius-sm);">
+        <strong><i class="bi bi-people-fill me-2"></i>Official Details Errors:</strong>
+        <p class="mb-0" style="font-size:.8125rem;">Please check the official rows below. Some required fields are missing or invalid.</p>
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+    {% endif %}
+
+    <form method="post" autocomplete="off" class="edit-org-form">
+        {% csrf_token %}
+
+        <!-- Entity Details Card -->
+        <div class="card mb-3" style="border:1px solid var(--d365-border); border-radius:var(--d365-radius-lg); box-shadow:var(--d365-shadow-2);">
+            <div class="card-header" style="background:var(--d365-surface-alt); border-bottom:1px solid var(--d365-border); font-size:.8125rem; font-weight:600; color:var(--d365-text-secondary);">
+                <i class="bi bi-info-circle me-1"></i> {{ title }} Basic Information
+            </div>
+            <div class="card-body">
+                <div class="row g-3">
+                    {% for field in form %}
+                    <div class="col-md-6 col-lg-4">
+                        <label class="form-label" for="{{ field.id_for_label }}"
+                               style="font-size:.8125rem; font-weight:600; color:var(--d365-text-secondary);">{{ field.label }}</label>
+                        {{ field }}
+                        {% if field.help_text %}
+                            <small style="color:var(--d365-text-secondary); font-size:.75rem;">{{ field.help_text }}</small>
+                        {% endif %}
+                        {% for e in field.errors %}<div style="color:var(--d365-danger); font-size:.75rem; margin-top:.25rem;">{{ e }}</div>{% endfor %}
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Officials Card -->
+        <div class="card mb-3" style="border:1px solid var(--d365-border); border-radius:var(--d365-radius-lg); box-shadow:var(--d365-shadow-2);">
+            <div class="card-header d-flex justify-content-between align-items-center"
+                 style="background:var(--d365-surface-alt); border-bottom:1px solid var(--d365-border); font-size:.8125rem; font-weight:600; color:var(--d365-text-secondary);">
+                <span><i class="bi bi-people me-1"></i> Officials / Authorized Signatories</span>
+                <span class="badge" style="background:var(--d365-primary-tint-40); color:var(--d365-primary); font-weight:500;">
+                    Tick Delete to remove
+                </span>
+            </div>
+            <div class="card-body p-0">
+                {{ formset.management_form }}
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0" style="font-size:.8125rem;">
+                        <thead>
+                            <tr style="background:var(--d365-surface-alt);">
+                                <th class="ps-3" style="color:var(--d365-text-secondary); font-weight:600;">Full Name</th>
+                                <th style="color:var(--d365-text-secondary); font-weight:600;">Designation</th>
+                                <th style="color:var(--d365-text-secondary); font-weight:600;">Phone</th>
+                                <th style="color:var(--d365-text-secondary); font-weight:600;">National ID</th>
+                                <th class="pe-3 text-center" style="color:var(--d365-text-secondary); font-weight:600;">Delete</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for s_form in formset %}
+                            <tr style="border-color:var(--d365-border);">
+                                <td class="ps-3 py-2">{{ s_form.name }}</td>
+                                <td class="py-2">{{ s_form.designation }}</td>
+                                <td class="py-2">{{ s_form.phone }}</td>
+                                <td class="py-2">
+                                    {{ s_form.national_id }}
+                                    {% for hidden in s_form.hidden_fields %} {{ hidden }} {% endfor %}
+                                </td>
+                                <td class="pe-3 py-2 text-center">
+                                    {% if s_form.instance.pk %}
+                                        {{ s_form.DELETE }}
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div class="px-3 py-2 mb-3" style="background:var(--d365-info-bg); border-left:3px solid var(--d365-info); border-radius:var(--d365-radius-sm); font-size:.78rem; color:var(--d365-text);">
+            <i class="bi bi-info-circle me-1"></i>
+            You can add new officials in the blank row, or tick "Delete" to remove existing ones.
+            Certificate number maps to the National ID field.
+        </div>
+
+        <div class="d-flex gap-2 mb-4">
+            <button type="submit" class="btn btn-sm py-2 px-4"
+                    style="background:var(--d365-primary); color:#fff; border:none; border-radius:var(--d365-radius-sm); font-weight:600;">
+                <i class="bi bi-check-circle me-1"></i> Save Changes
+            </button>
+            <a href="{% url 'customers:customer_profile' customer_id=customer.id %}" class="btn btn-sm btn-outline-secondary py-2 px-4"
+               style="border-radius:var(--d365-radius-sm);">
+                Cancel
+            </a>
+        </div>
+    </form>
+</div>
+
+{% endblock %}

@@ -1,0 +1,236 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Bulk Transaction Upload{% endblock %}
+{% block content %}
+
+<style>
+  .upload-zone {
+    border: 2px dashed var(--d365-border-strong);
+    border-radius: .75rem;
+    padding: 2rem;
+    text-align: center;
+    background: var(--d365-surface);
+    transition: border-color .2s, background .2s;
+  }
+  .upload-zone:hover,
+  .upload-zone.dragover {
+    border-color: var(--d365-primary);
+    background: var(--d365-primary-tint-40, rgba(0,90,158,.06));
+  }
+  .upload-zone .icon { font-size: 2.5rem; color: var(--d365-primary); }
+
+  .results-table { font-size: .8125rem; }
+  .results-table th {
+    background: var(--d365-surface-alt, #f3f2f1);
+    position: sticky; top: 0; z-index: 2;
+    font-weight: 600; white-space: nowrap;
+  }
+  .results-table td, .results-table th { padding: .5rem .625rem; vertical-align: middle; }
+  .row-error { background: #fff5f5; }
+  .row-valid { background: #f0fdf4; }
+  .badge-valid {
+    background: #d1e7dd; color: #0f5132;
+    padding: .2rem .5rem; border-radius: .25rem; font-size: .75rem; font-weight: 600;
+  }
+  .badge-error {
+    background: #f8d7da; color: #842029;
+    padding: .2rem .5rem; border-radius: .25rem; font-size: .75rem; font-weight: 600;
+  }
+  .error-text { color: var(--d365-danger); font-size: .75rem; }
+  .stat-pill {
+    display: inline-flex; align-items: center; gap: .375rem;
+    padding: .375rem .75rem; border-radius: 1rem;
+    font-size: .8125rem; font-weight: 600;
+  }
+  .stat-pill.total  { background: var(--d365-surface-alt, #f3f2f1); }
+  .stat-pill.valid  { background: #d1e7dd; color: #0f5132; }
+  .stat-pill.errors { background: #f8d7da; color: #842029; }
+</style>
+
+<div class="container my-4">
+  <div class="row justify-content-center">
+    <div class="col-lg-11 col-xl-10">
+
+      <div class="d-flex align-items-center justify-content-between mb-4">
+        <div>
+          <h1 class="fs-3 fw-bold mb-1">Bulk Transaction Upload</h1>
+          <p class="text-secondary mb-0" style="font-size:.875rem;">
+            Upload credit transactions in bulk — validate, review, then post.
+          </p>
+        </div>
+        <a href="{% url 'administration:download_bulk_template' %}"
+           class="btn btn-outline-primary btn-sm">
+          <i class="bi bi-download me-1"></i> Download template
+        </a>
+      </div>
+
+      <!-- ── Messages ── -->
+      {% if messages %}
+      {% for msg in messages %}
+      <div class="alert alert-{{ msg.tags }} alert-dismissible fade show" role="alert">
+        {{ msg }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+      </div>
+      {% endfor %}
+      {% endif %}
+
+      <!-- ════════════════════════════════════════════════════════════ -->
+      <!-- UPLOAD FORM                                                 -->
+      <!-- ════════════════════════════════════════════════════════════ -->
+      {% if not validated_rows %}
+      <div class="card p-4 mb-4">
+        <form method="post" enctype="multipart/form-data" id="upload-form">
+          {% csrf_token %}
+
+          <div class="mb-3">
+            <label for="{{ form.description.id_for_label }}" class="form-label fw-semibold">
+              Batch description
+            </label>
+            {{ form.description }}
+            {% for e in form.description.errors %}<div class="text-danger" style="font-size:.75rem;">{{ e }}</div>{% endfor %}
+          </div>
+
+          <div class="upload-zone mb-3" id="drop-zone">
+            <div class="icon mb-2"><i class="bi bi-cloud-arrow-up"></i></div>
+            <p class="fw-semibold mb-1">Drag &amp; drop your CSV file here</p>
+            <p class="text-secondary mb-3" style="font-size:.8125rem;">or click to browse</p>
+            {{ form.file }}
+            {% for e in form.file.errors %}<div class="text-danger mt-2" style="font-size:.75rem;">{{ e }}</div>{% endfor %}
+          </div>
+
+          <div class="d-flex justify-content-end">
+            <button type="submit" class="btn btn-primary">
+              <i class="bi bi-shield-check me-1"></i> Upload &amp; validate
+            </button>
+          </div>
+        </form>
+      </div>
+
+      <div class="p-3 rounded" style="background: var(--d365-surface-alt, #f3f2f1); font-size:.8125rem;">
+        <strong>Workflow:</strong>
+        Download the template, fill in your transactions, upload the file, review the
+        validation results, and click "Bulk Post" to persist. A summary PDF is generated
+        after successful posting.
+      </div>
+      {% endif %}
+
+      <!-- ════════════════════════════════════════════════════════════ -->
+      <!-- VALIDATION RESULTS                                          -->
+      <!-- ════════════════════════════════════════════════════════════ -->
+      {% if validated_rows %}
+      <div class="card p-4 mb-4">
+        <div class="d-flex align-items-center justify-content-between mb-3">
+          <h5 class="fw-bold mb-0">Validation results</h5>
+          <div class="d-flex gap-2">
+            {% with valid_count=0 error_count=0 %}
+            {% for r in validated_rows %}
+              {% if r.validation_status == "Validated" %}
+                {% comment %}count{% endcomment %}
+              {% endif %}
+            {% endfor %}
+            {% endwith %}
+            <span class="stat-pill total">
+              <i class="bi bi-list-ul"></i> {{ validated_rows|length }} rows
+            </span>
+          </div>
+        </div>
+
+        <div class="table-responsive" style="max-height: 28rem; overflow-y: auto;">
+          <table class="table table-sm results-table mb-0">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Date</th>
+                <th>Bank</th>
+                <th>Cust No</th>
+                <th>Customer Name</th>
+                <th class="text-end">Amount</th>
+                <th>Account</th>
+                <th>Status</th>
+                <th>Error</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for row in validated_rows %}
+              <tr class="{% if row.validation_status == 'Error' %}row-error{% else %}row-valid{% endif %}">
+                <td>{{ forloop.counter }}</td>
+                <td>{{ row.date }}</td>
+                <td>{{ row.receiving_bank }}</td>
+                <td>{{ row.customer_no }}</td>
+                <td>{{ row.customer_name }}</td>
+                <td class="text-end">{{ row.credit_amount }}</td>
+                <td><code>{{ row.account }}</code></td>
+                <td>
+                  {% if row.validation_status == "Validated" %}
+                    <span class="badge-valid"><i class="bi bi-check-circle-fill me-1"></i>Valid</span>
+                  {% else %}
+                    <span class="badge-error"><i class="bi bi-x-circle-fill me-1"></i>Error</span>
+                  {% endif %}
+                </td>
+                <td class="error-text">{{ row.error }}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Action buttons -->
+        <div class="d-flex justify-content-between align-items-center mt-4 pt-3" style="border-top: 1px solid var(--d365-border);">
+          <a href="{% url 'administration:bulk_transaction_upload' %}" class="btn btn-outline-secondary btn-sm">
+            <i class="bi bi-arrow-counterclockwise me-1"></i> Re-upload
+          </a>
+
+          {% if all_valid %}
+          <form method="post" id="post-form">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="bulk_post">
+            <button type="button" class="btn btn-success" id="btn-post">
+              <i class="bi bi-check2-all me-1"></i> Bulk post {{ validated_rows|length }} transaction(s)
+            </button>
+          </form>
+          {% else %}
+          <button class="btn btn-secondary btn-sm" disabled>
+            <i class="bi bi-exclamation-triangle me-1"></i> Fix errors before posting
+          </button>
+          {% endif %}
+        </div>
+      </div>
+      {% endif %}
+
+    </div>
+  </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  // ── Drag-and-drop styling ──
+  var zone = document.getElementById('drop-zone');
+  if (zone) {
+    ['dragenter', 'dragover'].forEach(function (evt) {
+      zone.addEventListener(evt, function (e) { e.preventDefault(); zone.classList.add('dragover'); });
+    });
+    ['dragleave', 'drop'].forEach(function (evt) {
+      zone.addEventListener(evt, function () { zone.classList.remove('dragover'); });
+    });
+    zone.addEventListener('drop', function (e) {
+      e.preventDefault();
+      var input = zone.querySelector('input[type="file"]');
+      if (input && e.dataTransfer.files.length) {
+        input.files = e.dataTransfer.files;
+      }
+    });
+  }
+
+  // ── Confirm before bulk post ──
+  var btnPost = document.getElementById('btn-post');
+  var postForm = document.getElementById('post-form');
+  if (btnPost && postForm) {
+    btnPost.addEventListener('click', function () {
+      if (confirm('This will post all validated transactions and create GL entries. Proceed?')) {
+        postForm.submit();
+      }
+    });
+  }
+});
+</script>
+{% endblock %}

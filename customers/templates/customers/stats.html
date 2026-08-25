@@ -1,0 +1,153 @@
+{% extends "base.html" %}
+{% load humanize %}
+
+{% block content %}
+    {# --- QUICK ACTIONS INCLUDE (Sits perfectly flush edge-to-edge) --- #}
+    {% include 'customers/includes/customer_quick_actions.html' %}
+
+    <div class="container mt-4 mb-5">
+        
+        {# --- HEADER SECTOR --- #}
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2 class="h4 mb-0 font-weight-bold text-dark">
+                <i class="bi bi-graph-up-arrow me-2 text-primary"></i>Membership Analytics
+            </h2>
+            <div class="d-flex align-items-center gap-3">
+                <span class="text-muted small">Last Update: {{ stats.last_updated|date:"H:i" }}</span>
+                <a href="{% url 'customers:trigger_update' %}" class="btn btn-primary btn-sm">
+                    <i class="bi bi-arrow-clockwise me-1"></i> Refresh Now
+                </a>
+            </div>
+        </div>
+
+        {# --- KPI STAT CARDS CUBE --- #}
+        <div class="row g-3 mb-4">
+            <!-- Total Members -->
+            <div class="col-sm-6 col-md-3">
+                <div class="stat-card p-3 d-flex align-items-center gap-3">
+                    <div class="icon-shape tone-info">
+                        <i class="bi bi-people-fill"></i>
+                    </div>
+                    <div>
+                        <div class="kpi-label">Total Members</div>
+                        <div class="kpi-value">{{ stats.total_members|intcomma }}</div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Active Members -->
+            <div class="col-sm-6 col-md-3">
+                <div class="stat-card p-3 d-flex align-items-center gap-3">
+                    <div class="icon-shape tone-success">
+                        <i class="bi bi-person-check-fill"></i>
+                    </div>
+                    <div>
+                        <div class="kpi-label">Active</div>
+                        <div class="kpi-value">{{ stats.active|intcomma }}</div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Dormant Members -->
+            <div class="col-sm-6 col-md-3">
+                <div class="stat-card p-3 d-flex align-items-center gap-3">
+                    <div class="icon-shape">
+                        <i class="bi bi-person-dash-fill" style="color: var(--d365-text-secondary);"></i>
+                    </div>
+                    <div>
+                        <div class="kpi-label">Dormant</div>
+                        <div class="kpi-value">{{ stats.dormant|intcomma }}</div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Deceased Members -->
+            <div class="col-sm-6 col-md-3">
+                <div class="stat-card p-3 d-flex align-items-center gap-3">
+                    <div class="icon-shape tone-danger">
+                        <i class="bi bi-heartbreak-fill"></i>
+                    </div>
+                    <div>
+                        <div class="kpi-label">Deceased</div>
+                        <div class="kpi-value">{{ stats.deceased|intcomma }}</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {# --- DETAIL DATA ARRAYS --- #}
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white pt-3 pb-2 border-bottom">
+                <h3 class="h6 text-uppercase tracking-wider text-muted font-weight-bold mb-0">Demographics & Category Breakdown</h3>
+            </div>
+            <div class="card-body p-3">
+                <div class="row g-4">
+                    <!-- Categories Table -->
+                    <div class="col-md-6">
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle mb-0">
+                                <thead>
+                                    <tr>
+                                        <th>Category</th>
+                                        <th class="text-end" style="width: 120px;">Count</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td><i class="bi bi-building me-2 text-muted"></i>Churches</td>
+                                        <td class="text-end font-monospace font-weight-bold">{{ stats.churches|intcomma }}</td>
+                                    </tr>
+                                    <tr>
+                                        <td><i class="bi bi-diagram-3 me-2 text-muted"></i>Groups / Businesses</td>
+                                        <td class="text-end font-monospace font-weight-bold">{{ stats.groups|intcomma }}</td>
+                                    </tr>
+                                    <tr>
+                                        <td><i class="bi bi-gender-male me-2 text-primary"></i>Male Individuals</td>
+                                        <td class="text-end font-monospace font-weight-bold">{{ stats.male|intcomma }}</td>
+                                    </tr>
+                                    <tr>
+                                        <td><i class="bi bi-gender-female me-2 text-danger"></i>Female Individuals</td>
+                                        <td class="text-end font-monospace font-weight-bold">{{ stats.female|intcomma }}</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    
+                    <!-- Age Bracket Table -->
+                    <div class="col-md-6">
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle mb-0">
+                                <thead>
+                                    <tr>
+                                        <th>Age Bracket</th>
+                                        <th class="text-end" style="width: 120px;">Count</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td>Youth (18–35)</td>
+                                        <td class="text-end font-monospace font-weight-bold">{{ stats.age_18_35|intcomma }}</td>
+                                    </tr>
+                                    <tr>
+                                        <td>Middle Age (36–50)</td>
+                                        <td class="text-end font-monospace font-weight-bold">{{ stats.age_35_50|intcomma }}</td>
+                                    </tr>
+                                    <tr>
+                                        <td>Seniors (51–70)</td>
+                                        <td class="text-end font-monospace font-weight-bold">{{ stats.age_50_60|intcomma }}</td>
+                                    </tr>
+                                    <tr>
+                                        <td>Elderly (Above 70)</td>
+                                        <td class="text-end font-monospace font-weight-bold">{{ stats.age_above_70|intcomma }}</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+{% endblock %}

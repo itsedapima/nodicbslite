@@ -1,0 +1,102 @@
+{% extends "base.html" %}
+{% block content %}
+{% include 'statements/includes/statements_quick_actions.html' %}
+    
+<div class="container my-5">
+
+    <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+        <h5 class="fw-bold mb-0">Statement Management</h5>
+        {% if tb_verified %}
+            <span style="display:inline-flex;align-items:center;gap:.3rem;font-size:.7rem;font-weight:600;padding:.2rem .55rem;border-radius:999px;background:#d1fae5;color:#065f46;border:1px solid #6ee7b7;text-transform:uppercase;letter-spacing:.03em;" title="Statements backed by TigerBeetle — immutable ledger">
+                <i class="bi bi-shield-check"></i> TB Verified
+            </span>
+        {% elif tb_enabled %}
+            <span style="display:inline-flex;align-items:center;gap:.3rem;font-size:.7rem;font-weight:600;padding:.2rem .55rem;border-radius:999px;background:#fef3c7;color:#92400e;border:1px solid #fcd34d;text-transform:uppercase;letter-spacing:.03em;">
+                <i class="bi bi-exclamation-triangle"></i> TB Disconnected
+            </span>
+        {% endif %}
+    </div>
+
+    {% if messages %}
+    <div class="container mt-4">
+        {% for message in messages %}
+            <div class="alert {% if message.tags %}alert-{{ message.tags }}{% else %}alert-info{% endif %}" role="alert">
+                {{ message }}
+                <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+    <div class="row">
+        <div class="col-md-4">
+            <div class="card shadow-sm border-0 mb-4">
+                <div class="card-header bg-dark text-white">
+                    <h6 class="mb-0">Schedule Configuration</h6>
+                </div>
+                <div class="card-body">
+                    <form method="post">
+                        {% csrf_token %}
+                        {{ form.as_p }}
+                        <button type="submit" class="btn btn-primary btn-sm w-100">Update Schedule</button>
+                    </form>
+                    <hr>
+                    <p class="small text-muted mb-0">Last successful run: {{ schedule.last_run|default:"Never" }}</p>
+                </div>
+            </div>
+
+            <div class="card shadow-sm border-0 border-top border-warning border-3">
+                <div class="card-body text-center">
+                    <h6 class="fw-bold">Manual Override</h6>
+                    <p class="small text-muted mb-3">Send statements to all active members immediately, regardless of the schedule.</p>
+                    <a href="{% url 'statements:trigger_statements' %}" class="btn btn-warning btn-sm w-100 fw-bold" onclick="return confirm('Are you sure you want to email statements to ALL members right now?');">
+                        <i class="bi bi-send-fill me-1"></i> Send Statements Now
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-8">
+            <div class="card shadow-sm border-0">
+                <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                    <h6 class="mb-0">Email Transmission Logs</h6>
+                    <a href="{% url 'statements:statement_dashboard' %}" class="btn btn-light btn-sm border">
+                        <i class="bi bi-arrow-clockwise"></i> Refresh Logs
+                    </a>
+                </div>
+                <div class="table-responsive" style="max-height: 500px;">
+                    <table class="table table-sm small align-middle mb-0">
+                        <thead class="table-light sticky-top">
+                            <tr>
+                                <th>Member</th>
+                                <th>Status</th>
+                                <th>Timestamp</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for log in logs %}
+                            <tr>
+                                <td>{{ log.customer_name }}<br><span class="text-muted">{{ log.email }}</span></td>
+                                <td>
+                                    {% if log.status == 'sent' %}
+                                        <span class="badge bg-success">Sent</span>
+                                    {% else %}
+                                        <span class="badge bg-danger" title="{{ log.error_message }}">Failed</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ log.timestamp|date:"d M Y H:i" }}</td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="3" class="text-center py-4 text-muted">No statements sent yet.</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

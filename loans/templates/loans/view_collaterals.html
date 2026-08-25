@@ -1,0 +1,312 @@
+{% extends 'base.html' %}
+
+{% block extra_css %}
+<style>
+  .page-hero {
+    background: linear-gradient(135deg, #0E2B4D 0%, #1a4170 100%);
+    color: #fff;
+    padding: 1.5rem 1.5rem;
+    border-radius: .75rem;
+    margin-bottom: 1.25rem;
+  }
+  .page-hero h1 { font-size: 1.4rem; font-weight: 700; margin: 0 0 .15rem; color: #fff; }
+  .page-hero p  { margin: 0; opacity: .85; font-size: .85rem; color: #fff; }
+  .page-hero i  { color: #fff; }
+
+  .filter-bar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: .5rem;
+    margin-bottom: 1.25rem;
+  }
+  .filter-bar .form-control {
+    max-width: 320px;
+    font-size: .85rem;
+    border: 1px solid var(--d365-border-strong, #D2D0CE);
+    border-radius: .4rem;
+  }
+  .filter-bar .form-control:focus {
+    border-color: var(--d365-primary, #0078D4);
+    box-shadow: 0 0 0 2px var(--d365-primary-tint-40, #DEECF9);
+  }
+  .btn-d365 {
+    font-size: .82rem;
+    padding: .35rem .85rem;
+    border-radius: .4rem;
+    font-weight: 600;
+    transition: all .15s ease;
+  }
+  .btn-d365-primary {
+    background: var(--d365-primary, #0078D4);
+    color: #fff;
+    border: 1px solid var(--d365-primary, #0078D4);
+  }
+  .btn-d365-primary:hover {
+    background: var(--d365-primary-hover, #106EBE);
+    border-color: var(--d365-primary-hover, #106EBE);
+    color: #fff;
+  }
+
+  .data-card {
+    background: var(--d365-surface, #fff);
+    border: 1px solid var(--d365-border, #EDEBE9);
+    border-radius: .5rem;
+    box-shadow: var(--d365-shadow-2);
+    overflow: hidden;
+  }
+  .data-card .table thead {
+    background: var(--d365-surface-alt, #FAF9F8);
+  }
+  .data-card .table thead th {
+    font-size: .75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+    color: var(--d365-text-secondary, #605E5C);
+    border-bottom: 2px solid var(--d365-border, #EDEBE9);
+    padding: .65rem .75rem;
+  }
+  .data-card .table tbody td {
+    font-size: .84rem;
+    color: var(--d365-text, #323130);
+    padding: .6rem .75rem;
+    border-bottom: 1px solid var(--d365-border, #EDEBE9);
+  }
+  .data-card .table tbody tr:hover {
+    background: var(--d365-primary-tint-40, #DEECF9);
+  }
+
+  .type-pill {
+    display: inline-block;
+    font-size: .72rem;
+    font-weight: 600;
+    padding: .18rem .5rem;
+    border-radius: .3rem;
+    line-height: 1.4;
+  }
+  .type-pill-land    { background: #DFF6DD; color: var(--d365-success, #107C10); }
+  .type-pill-vehicle { background: var(--d365-primary-tint-40, #DEECF9); color: var(--d365-primary, #0078D4); }
+  .type-pill-other   { background: #F3F2F1; color: var(--d365-text-secondary, #605E5C); }
+
+  .action-btn {
+    font-size: .75rem;
+    padding: .2rem .55rem;
+    border-radius: .3rem;
+    font-weight: 600;
+    text-decoration: none;
+    transition: all .12s ease;
+    display: inline-block;
+  }
+  .action-btn-view {
+    background: var(--d365-primary-tint-40, #DEECF9);
+    color: var(--d365-primary, #0078D4);
+    border: 1px solid var(--d365-primary-tint-30, #C7E0F4);
+  }
+  .action-btn-view:hover {
+    background: var(--d365-primary, #0078D4);
+    color: #fff;
+  }
+  .action-btn-edit {
+    background: #FFF4CE;
+    color: #6B4D00;
+    border: 1px solid #F5E6A3;
+  }
+  .action-btn-edit:hover {
+    background: var(--d365-warning, #C19C00);
+    color: #fff;
+  }
+
+  .d365-pagination .page-link {
+    font-size: .82rem;
+    color: var(--d365-text, #323130);
+    border-color: var(--d365-border, #EDEBE9);
+    padding: .35rem .7rem;
+  }
+  .d365-pagination .page-item.active .page-link {
+    background: var(--d365-primary, #0078D4);
+    border-color: var(--d365-primary, #0078D4);
+    color: #fff;
+  }
+  .d365-pagination .page-item.disabled .page-link {
+    color: var(--d365-text-disabled, #A19F9D);
+  }
+
+  .pag-footer {
+    background: var(--d365-surface, #fff);
+    border-top: 1px solid var(--d365-border, #EDEBE9);
+    padding: .75rem 1rem;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: center;
+    gap: .75rem;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+{% include 'loans/includes/loans_quick_actions.html' %}
+
+<!-- Page hero -->
+<div class="page-hero">
+    <h1><i class="bi bi-shield-lock-fill me-2"></i>Collateral Register</h1>
+    <p>
+        {% if query %}
+            Search results for "<strong>{{ query }}</strong>"
+        {% else %}
+            View and manage all collateral items pledged against active loans.
+        {% endif %}
+    </p>
+</div>
+
+{% if messages %}
+<div class="mb-3">
+    {% for msg in messages %}
+        <div class="alert alert-{{ msg.tags }} alert-dismissible fade show" role="alert" style="border-radius:.4rem;">
+            {{ msg }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    {% endfor %}
+</div>
+{% endif %}
+
+<!-- Filter bar -->
+<div class="filter-bar">
+    <form method="GET" class="d-flex align-items-center gap-2">
+        <div class="input-group" style="max-width:340px;">
+            <span class="input-group-text" style="background:var(--d365-surface-alt);border-color:var(--d365-border-strong);"><i class="bi bi-search" style="font-size:.85rem;color:var(--d365-text-secondary);"></i></span>
+            <input type="text" name="q" class="form-control live-search-input" placeholder="Search by Loan No, Owner, or Plate..." value="{{ query }}" autocomplete="off" style="border-left:0;">
+        </div>
+        <button class="btn btn-d365 btn-d365-primary" type="submit">Search</button>
+    </form>
+</div>
+
+<div id="liveResults">
+<!-- Data table card -->
+<div class="data-card">
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+            <thead>
+                <tr>
+                    <th class="ps-3">Type</th>
+                    <th>Owner</th>
+                    <th>Identifier</th>
+                    <th class="text-end">Market Value</th>
+                    <th class="text-end">Forced Sale</th>
+                    <th>Loan Ref</th>
+                    <th class="text-center pe-3">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in collaterals %}
+                <tr>
+                    <td class="ps-3">
+                        {% if item.collateral_type == 'land' %}
+                            <span class="type-pill type-pill-land"><i class="bi bi-house-door me-1"></i>Land</span>
+                        {% elif item.collateral_type == 'vehicle' %}
+                            <span class="type-pill type-pill-vehicle"><i class="bi bi-car-front me-1"></i>Vehicle</span>
+                        {% else %}
+                            <span class="type-pill type-pill-other"><i class="bi bi-box me-1"></i>Other</span>
+                        {% endif %}
+                    </td>
+                    <td>{{ item.owner.full_name }}</td>
+                    <td>
+                        {% if item.collateral_type == 'land' %}
+                            <span class="fw-bold">{{ item.title_deed_no }}</span><br>
+                            <small style="color:var(--d365-text-secondary);">{{ item.location }}</small>
+                        {% else %}
+                            <span class="fw-bold">{{ item.registration_no }}</span><br>
+                            <small style="color:var(--d365-text-secondary);">{{ item.model }}</small>
+                        {% endif %}
+                    </td>
+                    <td class="text-end font-monospace fw-semibold">{{ item.market_value|floatformat:2 }}</td>
+                    <td class="text-end font-monospace fw-semibold" style="color:var(--d365-danger, #D13438);">{{ item.forced_sale_value|floatformat:2 }}</td>
+                    <td>
+                        <a href="{% url 'loans:view_loan_details' item.loan.id %}" class="fw-bold" style="color:var(--d365-primary);text-decoration:none;">
+                            {{ item.loan.loan_no|default:item.loan.id }}
+                        </a>
+                    </td>
+                    <td class="text-center pe-3">
+                        <div class="d-inline-flex gap-1">
+                            <a href="{% url 'loans:view_collateral_details' item.id %}" class="action-btn action-btn-view">
+                                <i class="bi bi-eye me-1"></i>View
+                            </a>
+                            <a href="{% url 'loans:edit_collateral' item.id %}" class="action-btn action-btn-edit">
+                                <i class="bi bi-pencil-square me-1"></i>Edit
+                            </a>
+                        </div>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="7" class="text-center py-5" style="color:var(--d365-text-disabled);">
+                        <i class="bi bi-inbox d-block mb-2" style="font-size:1.75rem;"></i>
+                        No records matching your search.
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    {# --- D365 PAGINATION --- #}
+    {% if collaterals.has_other_pages %}
+    <div class="pag-footer">
+        <div style="color:var(--d365-text-secondary);font-size:.82rem;">
+            Showing records {{ collaterals.start_index }}-{{ collaterals.end_index }} of {{ collaterals.paginator.count }}
+        </div>
+
+        <nav aria-label="Collateral register navigation">
+            <ul class="pagination d365-pagination pagination-sm mb-0 justify-content-center">
+                {% if collaterals.has_previous %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page=1{% if query %}&q={{ query }}{% endif %}" aria-label="First">
+                            <span aria-hidden="true">&laquo;&laquo;</span>
+                        </a>
+                    </li>
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ collaterals.previous_page_number }}{% if query %}&q={{ query }}{% endif %}" aria-label="Previous">
+                            <span aria-hidden="true">&laquo;</span>
+                        </a>
+                    </li>
+                {% else %}
+                    <li class="page-item disabled"><span class="page-link">&laquo;&laquo;</span></li>
+                    <li class="page-item disabled"><span class="page-link">&laquo;</span></li>
+                {% endif %}
+
+                {% for i in collaterals.paginator.page_range %}
+                    {% if collaterals.number == i %}
+                        <li class="page-item active" aria-current="page">
+                            <span class="page-link">{{ i }}</span>
+                        </li>
+                    {% elif i > collaterals.number|add:-3 and i < collaterals.number|add:3 %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ i }}{% if query %}&q={{ query }}{% endif %}">{{ i }}</a>
+                        </li>
+                    {% endif %}
+                {% endfor %}
+
+                {% if collaterals.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ collaterals.next_page_number }}{% if query %}&q={{ query }}{% endif %}" aria-label="Next">
+                            <span aria-hidden="true">&raquo;</span>
+                        </a>
+                    </li>
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ collaterals.paginator.num_pages }}{% if query %}&q={{ query }}{% endif %}" aria-label="Last">
+                            <span aria-hidden="true">&raquo;&raquo;</span>
+                        </a>
+                    </li>
+                {% else %}
+                    <li class="page-item disabled"><span class="page-link">&raquo;</span></li>
+                    <li class="page-item disabled"><span class="page-link">&raquo;&raquo;</span></li>
+                {% endif %}
+            </ul>
+        </nav>
+    </div>
+    {% endif %}
+</div>
+</div>{# /liveResults #}
+{% include 'loans/includes/live_search.html' %}
+{% endblock %}

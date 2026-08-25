@@ -1,0 +1,244 @@
+{% extends "admin/base_site.html" %}
+{% load i18n admin_urls static %}
+
+{% block extrahead %}
+    <style>
+        :root {
+            --bg-primary: #f9f9f9;
+            --bg-secondary: white;
+            --text-primary: #333;
+            --text-secondary: #666;
+            --border-color: #ddd;
+            --btn-primary-bg: #417690;
+            --btn-primary-hover: #205067;
+            --btn-secondary-bg: #666;
+            --btn-secondary-hover: #444;
+            --accent-color: #417690;
+        }
+
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --bg-primary: #1a1a1a;
+                --bg-secondary: #2d2d2d;
+                --text-primary: #e0e0e0;
+                --text-secondary: #b0b0b0;
+                --border-color: #444;
+                --btn-primary-bg: #417690;
+                --btn-primary-hover: #5a8db8;
+                --btn-secondary-bg: #555;
+                --btn-secondary-hover: #777;
+                --accent-color: #5a8db8;
+            }
+        }
+
+        .upload-container {
+            max-width: 700px;
+            margin: 2rem auto;
+            padding: 2rem;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+        }
+
+        .upload-form {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .form-group label {
+            font-weight: bold;
+            margin-bottom: 0.5rem;
+            color: var(--text-primary);
+        }
+
+        .form-group input[type="file"] {
+            padding: 0.5rem;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            font-family: monospace;
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+        }
+
+        .form-group input[type="file"]::file-selector-button {
+            background: var(--btn-primary-bg);
+            color: white;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        .form-group input[type="file"]::file-selector-button:hover {
+            background: var(--btn-primary-hover);
+        }
+
+        .btn {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 4px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        .btn-primary {
+            background-color: var(--btn-primary-bg);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background-color: var(--btn-primary-hover);
+        }
+
+        .btn-secondary {
+            background-color: var(--btn-secondary-bg);
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background-color: var(--btn-secondary-hover);
+        }
+
+        .help-text {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            margin-top: 0.5rem;
+            line-height: 1.5;
+        }
+
+        .help-text ul {
+            color: var(--text-secondary);
+        }
+
+        .help-text li {
+            margin: 0.25rem 0;
+        }
+
+        .example-table {
+            background: var(--bg-secondary);
+            padding: 1rem;
+            border-radius: 4px;
+            margin-top: 1rem;
+            border-left: 4px solid var(--accent-color);
+            overflow-x: auto;
+        }
+
+        .example-table table {
+            width: 100%;
+            border-collapse: collapse;
+            font-family: monospace;
+            font-size: 0.85rem;
+            color: var(--text-primary);
+        }
+
+        .example-table th,
+        .example-table td {
+            padding: 0.5rem;
+            text-align: left;
+            border: 1px solid var(--border-color);
+        }
+
+        .example-table th {
+            background: var(--bg-primary);
+            font-weight: bold;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+        }
+
+        h1 {
+            color: var(--text-primary);
+        }
+    </style>
+{% endblock %}
+
+{% block content %}
+<div id="content-main">
+    <div class="upload-container">
+        <h1>Import Guarantors from Excel</h1>
+        
+        <form method="post" enctype="multipart/form-data" class="upload-form">
+            {% csrf_token %}
+            
+            <div class="form-group">
+                <label for="excel_file">Excel File (.xlsx or .xls):</label>
+                <input 
+                    type="file" 
+                    name="excel_file" 
+                    id="excel_file" 
+                    accept=".xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel" 
+                    required
+                >
+            </div>
+
+            <div class="help-text">
+                <strong>Required Columns:</strong>
+                <ul>
+                    <li><strong>loan_no</strong> - Loan number (e.g., LN000001, MOBI00001)</li>
+                    <li><strong>guarantor_cust_no</strong> - Guarantor's member number</li>
+                    <li><strong>amount</strong> - Amount guaranteed (must be ≤ loan principal)</li>
+                </ul>
+            </div>
+
+            <div class="example-table">
+                <strong>Example Excel Format:</strong>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>loan_no</th>
+                            <th>guarantor_cust_no</th>
+                            <th>amount</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>LN000001</td>
+                            <td>00002</td>
+                            <td>25000</td>
+                        </tr>
+                        <tr>
+                            <td>LN000001</td>
+                            <td>00003</td>
+                            <td>25000</td>
+                        </tr>
+                        <tr>
+                            <td>LN000002</td>
+                            <td>00001</td>
+                            <td>50000</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="help-text">
+                <strong>Important Notes:</strong>
+                <ul>
+                    <li>Loan must exist (by loan_no) in the system</li>
+                    <li>Guarantor customer must exist (by cust_no)</li>
+                    <li>Guarantee amount must be positive and ≤ loan principal</li>
+                    <li>Guarantor cannot be the loan borrower</li>
+                    <li>One loan can have multiple guarantors (multiple rows)</li>
+                    <li>Column order doesn't matter - only column names matter</li>
+                </ul>
+            </div>
+            
+            <div class="button-group">
+                <button type="submit" class="btn btn-primary">Import Guarantors</button>
+                <a href="../" class="btn btn-secondary" style="text-decoration: none; display: inline-block;">Cancel</a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,41 @@
+{% comment %}
+  customer_quick_actions.html — D365 quick-links toolbar
+  All styles live in app.css — no inline style block needed.
+{% endcomment %}
+
+<div class="quick-links">
+    <span class="ql-label">Members</span>
+
+    <a href="{% url 'customers:add_customer_stepper' %}">
+        <i class="bi bi-person-plus-fill"></i> New Individual
+    </a>
+    <a href="{% url 'customers:list_customers' %}">
+        <i class="bi bi-list-columns-reverse"></i> Members List
+    </a>
+    <a href="{% url 'customers:dashboard_stats' %}">
+        <i class="bi bi-graph-up-arrow"></i> Member Stats
+    </a>
+    <a href="{% url 'customers:exit_member_page' %}">
+        <i class="bi bi-person-dash"></i> Member Exit
+    </a>
+    <a href="{% url 'customers:process_member_reactivation' %}">
+        <i class="bi bi-person-check"></i> Reactivation
+    </a>
+
+    <span class="ql-divider"></span>
+
+    <div class="ql-dropdown">
+        <button type="button">
+            <i class="bi bi-three-dots"></i> More Actions <i class="bi bi-chevron-down" style="font-size:.6rem;"></i>
+        </button>
+        <div class="ql-dropdown-menu">
+            <a href="{% url 'customers:register_org' 'group' %}">
+                <i class="bi bi-diagram-3"></i> Register Group / Business
+            </a>
+            <a href="{% url 'customers:register_org' 'church' %}">
+                <i class="bi bi-building"></i> Register Church / Institution
+            </a>
+            <hr>
+        </div>
+    </div>
+</div>

@@ -1,0 +1,20 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container mx-auto mt-20">
+    <h2>Select MMF Description</h2>
+    <hr>
+
+    <form method="GET" action="{% url 'accounting:mmf_report' %}" class="mt-3">
+        <div class="form-group">
+            <label for="mmf_description">Select MMF Description:</label>
+            <select name="mmf_description" id="mmf_description" class="form-control">
+                {% for mmf in mmf_descriptions %}
+                <option value="{{ mmf.id }}">{{ mmf.description }} ({{ mmf.financial_start_date }} - {{ mmf.financial_end_date }})</option>
+                {% endfor %}
+            </select>
+        </div>
+        <button type="submit" class="btn btn-primary">Generate Report</button>
+        <a href="{% url 'accounting:mmf_description_list'%}" class="btn btn-secondary">Back</a>
+    </form>
+</div>
+{% endblock %}

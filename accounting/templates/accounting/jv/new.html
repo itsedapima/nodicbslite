@@ -1,0 +1,755 @@
+{% extends "base.html" %}
+{% load humanize %}
+{% block title %}New Journal Voucher – NODi CBS{% endblock %}
+{% block content %}
+{% include 'accounting/includes/accounting_quick_actions.html' %}
+
+{% include 'accounting/jv/_theme.html' %}
+
+<div class="d365-shell">
+  <div class="d365-topbar">
+    <h1><i class="bi bi-journal-plus"></i> New Journal Voucher</h1>
+    <div class="d365-crumbs">
+      <a href="{% url 'accounting:jv_list' %}">Journal Vouchers</a>
+      &rsaquo; <span>New</span>
+    </div>
+  </div>
+
+  {# ── Command bar ─────────────────────────────────────────────── #}
+  <div class="d365-command-bar">
+    <button type="button" class="d365-btn" id="btn-add-row">
+      <i class="bi bi-plus-lg"></i> Add new row
+    </button>
+    <div class="d365-btn-sep"></div>
+    <a class="d365-btn" href="{% url 'accounting:jv_template' %}">
+      <i class="bi bi-file-earmark-arrow-down"></i> Export template
+    </a>
+    <label class="d365-btn" for="upload-file" style="margin-bottom:0;">
+      <i class="bi bi-file-earmark-arrow-up"></i> Import
+      <input type="file" id="upload-file" accept=".csv,.xlsx,.xls" style="display:none;">
+    </label>
+    <div class="d365-btn-sep"></div>
+    <button type="button" class="d365-btn" id="btn-validate">
+      <i class="bi bi-check2-circle"></i> Validate
+    </button>
+    <button type="button" class="d365-btn primary" id="btn-post">
+      <i class="bi bi-send"></i> Validate and post
+    </button>
+    <div class="d365-btn-sep"></div>
+    <a class="d365-btn" href="{% url 'accounting:jv_draft_history' %}">
+      <i class="bi bi-clock-history"></i> Drafts
+    </a>
+    <div style="margin-left:auto; display:flex; align-items:center; gap:8px;" id="live-status">
+      <span style="font-size:11px; color:var(--d365-text-3);" id="autosave-indicator"></span>
+      <span class="d365-status-pill d365-status-warn" id="balance-pill">
+        Not validated
+      </span>
+    </div>
+  </div>
+
+  <div class="d365-page">
+
+    {# ── Voucher metadata ────────────────────────────────────── #}
+    <div class="d365-panel">
+              
+    {# ── Validation errors ────────────────────────────────────── #}
+    <div id="errors-panel" class="d365-errors" style="display:none;"></div>
+
+    {# ── Success area ──────────────────────────────────────────── #}
+    <div id="success-panel" style="display:none;"></div>
+      <div class="d365-panel-header">
+
+        <h2>Voucher Details</h2>
+      </div>
+      <div class="d365-panel-body">
+        <div class="row g-2">
+          <div class="col-md-3">
+            <div class="d365-field">
+              <label>Voucher Date <span class="req">*</span></label>
+              <input type="date" id="voucher_date" class="d365-input" value="{{ today }}">
+            </div>
+          </div>
+          <div class="col-md-9">
+            <div class="d365-field">
+              <label>Description (common to all lines) <span class="req">*</span></label>
+              <input type="text" id="voucher_desc" class="d365-input" maxlength="500"
+                     placeholder="e.g. Month-end interest accrual · Adjustment for misposted deposit · Share capital transfer">
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    {# ── Lines grid ──────────────────────────────────────────── #}
+    <div class="d365-panel">
+      <div class="d365-panel-header">
+        <h2>Journal Voucher Lines</h2>
+        <div style="font-size:12px; color: var(--d365-text-3);">
+          Any leg may be a member account OR a SACCO GL account.
+          Total DR must equal total CR.
+        </div>
+      </div>
+      <div class="d365-panel-body" style="padding:0;">
+        <div style="overflow-x:auto;">
+          <table class="d365-grid" id="grid">
+            <thead>
+              <tr>
+                <th style="width:2.5rem;">#</th>
+                <th style="width:8rem;">Account Type</th>
+                <th style="width:6.5rem;">Member No.</th>
+                <th style="width:11rem;">Name</th>
+                <th style="width:16rem;">Member Account</th>
+                <th style="width:16rem;">Sacco Account</th>
+                <th style="width:14rem;">Description</th>
+                <th style="width:8rem;">Debit</th>
+                <th style="width:8rem;">Credit</th>
+                <th style="width:2.5rem;"></th>
+              </tr>
+            </thead>
+            <tbody id="grid-body"></tbody>
+            <tfoot>
+              <tr>
+                <td colspan="7" style="text-align:right;">TOTALS</td>
+                <td style="text-align:right;" id="total-debit">0.00</td>
+                <td style="text-align:right;" id="total-credit">0.00</td>
+                <td></td>
+              </tr>
+              <tr>
+                <td colspan="7" style="text-align:right; color: var(--d365-text-2);">Difference</td>
+                <td colspan="2" style="text-align:right;" id="difference">0.00</td>
+                <td></td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+{# ── Autocomplete + row template (hidden) ─────────────────────── #}
+<template id="row-template">
+  <tr data-row-idx="__IDX__">
+    <td class="row-idx">__IDX__</td>
+    <td>
+      <select class="entry-type">
+        <option value="sacco">Sacco Acc</option>
+        <option value="customer">Member Acc</option>
+      </select>
+    </td>
+    <td class="cust-no-cell">
+      <input class="cust-no" placeholder="—" autocomplete="off">
+    </td>
+    <td class="cust-name-cell">
+      <input class="cust-name" placeholder="—" readonly>
+    </td>
+    <td class="member-acc-cell" style="position:relative;">
+      <input class="member-acc" placeholder="—" autocomplete="off">
+    </td>
+    <td class="sacco-acc-cell" style="position:relative;">
+      <input class="sacco-acc" placeholder="900-XXXXXX" autocomplete="off">
+    </td>
+    <td>
+      <input class="line-desc" placeholder="Optional per-line note">
+    </td>
+    <td><input class="amount debit" type="number" step="0.01" min="0" placeholder="0.00"></td>
+    <td><input class="amount credit" type="number" step="0.01" min="0" placeholder="0.00"></td>
+    <td>
+      <button type="button" class="d365-btn danger btn-remove" title="Remove row" style="padding: 3px 6px;">
+        <i class="bi bi-trash"></i>
+      </button>
+    </td>
+  </tr>
+</template>
+
+<script>
+(function() {
+  const SACCO_ACCOUNTS = {{ sacco_accounts_json|safe }};
+  const SESSION_ID = "{{ session_id }}";
+  const RESUME_GRID = {{ resume_grid_json|safe }};
+  const RESUME_DESC = "{{ resume_desc|escapejs }}";
+  const CSRF = document.querySelector('[name=csrfmiddlewaretoken]')?.value || getCookie('csrftoken');
+  const AUTOSAVE_DELAY = 30000; // 30s
+  let autosaveTimer = null;
+
+  function getCookie(name) {
+    const cookies = document.cookie.split(';');
+    for (let c of cookies) {
+      const [k, v] = c.trim().split('=');
+      if (k === name) return decodeURIComponent(v);
+    }
+    return '';
+  }
+
+  const gridBody = document.getElementById('grid-body');
+  const rowTpl   = document.getElementById('row-template').innerHTML;
+  const errorsPanel = document.getElementById('errors-panel');
+  const successPanel = document.getElementById('success-panel');
+  const balancePill = document.getElementById('balance-pill');
+  const totalDebitEl = document.getElementById('total-debit');
+  const totalCreditEl = document.getElementById('total-credit');
+  const differenceEl = document.getElementById('difference');
+  const autosaveEl = document.getElementById('autosave-indicator');
+
+  let rowCounter = 0;
+
+  // ─── Add row ────────────────────────────────────────────────
+  function addRow(preset) {
+    rowCounter++;
+    const html = rowTpl.replaceAll('__IDX__', rowCounter);
+    const wrap = document.createElement('tbody');
+    wrap.innerHTML = html;
+    const tr = wrap.querySelector('tr');
+    gridBody.appendChild(tr);
+    bindRow(tr);
+    if (preset) applyPreset(tr, preset);
+    updateTotals();
+    return tr;
+  }
+
+  function bindRow(tr) {
+    tr.querySelector('.btn-remove').addEventListener('click', () => {
+      tr.remove(); renumber(); updateTotals(); clearMessages();
+    });
+    const entryType = tr.querySelector('.entry-type');
+    entryType.addEventListener('change', () => {
+      applyEntryType(tr, entryType.value);
+      updateTotals(); clearMessages();
+    });
+    // Amounts
+    ['debit', 'credit'].forEach(cls => {
+      const el = tr.querySelector('.' + cls);
+      el.addEventListener('input', () => {
+        // If typing in debit, clear credit and vice versa
+        if (cls === 'debit' && parseFloat(el.value) > 0) tr.querySelector('.credit').value = '';
+        if (cls === 'credit' && parseFloat(el.value) > 0) tr.querySelector('.debit').value = '';
+        updateTotals(); clearMessages();
+      });
+    });
+    // Customer lookup (debounced to handle rapid tabbing)
+    const cust = tr.querySelector('.cust-no');
+    let _custTimer = null;
+    cust.addEventListener('blur', () => {
+      clearTimeout(_custTimer);
+      _custTimer = setTimeout(() => lookupCustomer(tr, cust.value.trim()), 150);
+    });
+    cust.addEventListener('keypress', e => {
+      if (e.key === 'Enter') { clearTimeout(_custTimer); lookupCustomer(tr, cust.value.trim()); }
+    });
+
+    // Member account autocomplete
+    const memAcc = tr.querySelector('.member-acc');
+    memAcc.addEventListener('input', () => showMemberSuggest(tr, memAcc.value.trim()));
+    memAcc.addEventListener('blur', () => setTimeout(hideAllSuggests, 200));
+
+    // SACCO account autocomplete
+    const sAcc = tr.querySelector('.sacco-acc');
+    sAcc.addEventListener('input', () => showSaccoSuggest(tr, sAcc.value.trim()));
+    sAcc.addEventListener('blur', () => setTimeout(hideAllSuggests, 200));
+
+    // Init to sacco
+    applyEntryType(tr, 'sacco');
+  }
+
+  function applyEntryType(tr, type) {
+    const isCust = (type === 'customer');
+    tr.querySelectorAll('.cust-no, .cust-name, .member-acc').forEach(el => {
+      el.disabled = !isCust;
+      if (!isCust) el.value = '';
+    });
+    tr.querySelector('.sacco-acc').disabled = false;
+    if (isCust) {
+      // Member account line: SACCO account is auto-derived — hide but keep field
+      tr.querySelector('.sacco-acc').placeholder = '(auto)';
+      tr.querySelector('.sacco-acc').disabled = true;
+      tr.querySelector('.sacco-acc').value = '';
+    } else {
+      tr.querySelector('.sacco-acc').placeholder = '900-XXXXXX';
+    }
+  }
+
+  function applyPreset(tr, p) {
+    if (p.entry_type) {
+      tr.querySelector('.entry-type').value = p.entry_type;
+      applyEntryType(tr, p.entry_type);
+    }
+    if (p.cust_no) tr.querySelector('.cust-no').value = p.cust_no;
+    if (p.member_account) tr.querySelector('.member-acc').value = p.member_account;
+    if (p.sacco_code) tr.querySelector('.sacco-acc').value = p.sacco_code;
+    if (p.description) tr.querySelector('.line-desc').value = p.description;
+    if (p.debit)  tr.querySelector('.debit').value  = p.debit;
+    if (p.credit) tr.querySelector('.credit').value = p.credit;
+    if (p.cust_no) lookupCustomer(tr, p.cust_no);
+  }
+
+  function renumber() {
+    let n = 0;
+    gridBody.querySelectorAll('tr').forEach(tr => {
+      n++;
+      tr.setAttribute('data-row-idx', n);
+      tr.querySelector('.row-idx').textContent = n;
+    });
+  }
+
+  function updateTotals() {
+    let dr = 0, cr = 0;
+    gridBody.querySelectorAll('tr').forEach(tr => {
+      dr += parseFloat(tr.querySelector('.debit').value)  || 0;
+      cr += parseFloat(tr.querySelector('.credit').value) || 0;
+    });
+    const diff = Math.abs(dr - cr);
+    totalDebitEl.textContent = dr.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
+    totalCreditEl.textContent = cr.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
+    differenceEl.textContent = diff.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
+
+    if (dr === 0 && cr === 0) {
+      balancePill.className = 'd365-status-pill d365-status-warn';
+      balancePill.textContent = 'Empty';
+    } else if (diff < 0.01) {
+      balancePill.className = 'd365-status-pill d365-status-ok';
+      balancePill.textContent = '✓ Balanced';
+      differenceEl.style.color = 'var(--d365-success)';
+    } else {
+      balancePill.className = 'd365-status-pill d365-status-err';
+      balancePill.textContent = 'Out of balance';
+      differenceEl.style.color = 'var(--d365-danger)';
+    }
+  }
+
+  // ─── Customer lookup ─────────────────────────────────────────
+  async function lookupCustomer(tr, custNo) {
+    if (!custNo) return;
+    tr.querySelector('.cust-name').value = '(loading…)';
+    try {
+      const r = await fetch(`{% url 'accounting:jv_lookup_customer' %}?cust_no=${encodeURIComponent(custNo)}`);
+      const j = await r.json();
+      if (!j.ok) {
+        tr.querySelector('.cust-name').value = '';
+        tr.querySelector('.cust-no').classList.add('error');
+        return;
+      }
+      tr.querySelector('.cust-no').classList.remove('error');
+      tr.querySelector('.cust-name').value = j.full_name;
+      // Stash the accounts on the row for later autocomplete
+      const allAccounts = [
+        ...j.savings_accounts.map(a => ({...a, group: 'Savings/Deposits'})),
+        ...j.loans.map(l => ({...l, group: 'Loans'})),
+      ];
+      tr._memberAccounts = allAccounts;
+    } catch (e) {
+      tr.querySelector('.cust-name').value = '';
+    }
+  }
+
+  // ─── Suggest dropdowns (rendered at body level to avoid overflow clipping) ──
+  let _activeSuggest = null;  // single active dropdown
+  let _activeSuggestOwner = null;  // the input that owns it
+
+  function hideAllSuggests() {
+    if (_activeSuggest) {
+      _activeSuggest.remove();
+      _activeSuggest = null;
+      _activeSuggestOwner = null;
+    }
+  }
+
+  // Close suggest on any outside click or scroll
+  document.addEventListener('click', (e) => {
+    if (_activeSuggest && !_activeSuggest.contains(e.target)) hideAllSuggests();
+  });
+  document.addEventListener('scroll', hideAllSuggests, true);
+
+  function positionSuggest(inputEl) {
+    if (!_activeSuggest) return;
+    const rect = inputEl.getBoundingClientRect();
+    _activeSuggest.style.left = rect.left + 'px';
+    _activeSuggest.style.top = (rect.bottom + 2) + 'px';
+    _activeSuggest.style.width = Math.max(rect.width, 280) + 'px';
+  }
+
+  function showMemberSuggest(tr, q) {
+    hideAllSuggests();
+    const items = (tr._memberAccounts || []).filter(a =>
+      !q ||
+      a.ref.toLowerCase().includes(q.toLowerCase()) ||
+      (a.name || '').toLowerCase().includes(q.toLowerCase()) ||
+      (a.product || '').toLowerCase().includes(q.toLowerCase())
+    ).slice(0, 30);
+    if (!items.length) return;
+    const inputEl = tr.querySelector('.member-acc');
+    renderSuggest(inputEl, items, (item) => {
+      tr.querySelector('.member-acc').value = item.ref;
+    }, (item) => `
+      <span class="code">${escapeHtml(item.ref)}</span>
+      <span class="name">${escapeHtml(item.name || item.product || '')}</span>
+      <span class="meta">${escapeHtml(item.group)} · Bal ${escapeHtml(item.balance || '—')}</span>
+    `);
+  }
+  function showSaccoSuggest(tr, q) {
+    hideAllSuggests();
+    const items = SACCO_ACCOUNTS.filter(a =>
+      !q ||
+      a.account_code.toLowerCase().includes(q.toLowerCase()) ||
+      a.account_name.toLowerCase().includes(q.toLowerCase())
+    ).slice(0, 20);
+    if (!items.length) return;
+    const inputEl = tr.querySelector('.sacco-acc');
+    renderSuggest(inputEl, items, (item) => {
+      tr.querySelector('.sacco-acc').value = item.account_code;
+    }, (item) => `
+      <span class="code">${escapeHtml(item.account_code)}</span>
+      <span class="name">${escapeHtml(item.account_name)}</span>
+      <span class="meta">${escapeHtml(item.account_group || '')}</span>
+    `);
+  }
+  function renderSuggest(inputEl, items, onSelect, render) {
+    const s = document.createElement('div');
+    s.className = 'd365-suggest';
+    items.forEach(item => {
+      const el = document.createElement('div');
+      el.className = 'item';
+      el.innerHTML = render(item);
+      el.addEventListener('mousedown', (e) => {
+        e.preventDefault();
+        onSelect(item);
+        hideAllSuggests();
+      });
+      s.appendChild(el);
+    });
+    document.body.appendChild(s);
+    _activeSuggest = s;
+    _activeSuggestOwner = inputEl;
+    positionSuggest(inputEl);
+  }
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, c => ({
+      '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;'
+    })[c]);
+  }
+
+  // ─── Collect lines to send to the backend ─────────────────
+  function collectLines() {
+    return Array.from(gridBody.querySelectorAll('tr')).map(tr => {
+      const dr = parseFloat(tr.querySelector('.debit').value)  || 0;
+      const cr = parseFloat(tr.querySelector('.credit').value) || 0;
+      return {
+        entry_type: tr.querySelector('.entry-type').value,
+        cust_no:    tr.querySelector('.cust-no').value.trim(),
+        member_account: tr.querySelector('.member-acc').value.trim(),
+        sacco_code: tr.querySelector('.sacco-acc').value.trim(),
+        debit:  dr,
+        credit: cr,
+        description: tr.querySelector('.line-desc').value.trim(),
+      };
+    }).filter(l => l.debit > 0 || l.credit > 0 || l.cust_no || l.sacco_code || l.member_account);
+  }
+
+  function showErrors(errors, warnings) {
+    // Reset row highlighting
+    gridBody.querySelectorAll('tr').forEach(tr => {
+      tr.classList.remove('row-error', 'row-warning');
+    });
+
+    errorsPanel.innerHTML = '';
+    (errors || []).forEach(e => {
+      if (e.row > 0) {
+        const tr = gridBody.querySelector(`tr:nth-child(${e.row})`);
+        if (tr) tr.classList.add('row-error');
+      }
+      const div = document.createElement('div');
+      div.className = 'item';
+      const rowLbl = e.row > 0 ? `Row ${e.row}: ` : '';
+      div.textContent = rowLbl + e.message;
+      errorsPanel.appendChild(div);
+    });
+    (warnings || []).forEach(w => {
+      if (w.row > 0) {
+        const tr = gridBody.querySelector(`tr:nth-child(${w.row})`);
+        if (tr && !tr.classList.contains('row-error')) tr.classList.add('row-warning');
+      }
+      const div = document.createElement('div');
+      div.className = 'item warn';
+      div.textContent = (w.row > 0 ? `Row ${w.row}: ` : '') + w.message;
+      errorsPanel.appendChild(div);
+    });
+    errorsPanel.style.display = (errors?.length || warnings?.length) ? 'block' : 'none';
+  }
+
+  function clearMessages() {
+    errorsPanel.style.display = 'none';
+    successPanel.style.display = 'none';
+    gridBody.querySelectorAll('tr').forEach(tr => {
+      tr.classList.remove('row-error', 'row-warning');
+    });
+  }
+
+  // ─── Validate & Post buttons ──────────────────────────────
+  async function validateNow() {
+    const lines = collectLines();
+    if (!lines.length) {
+      showErrors([{row: 0, message: 'Add at least two lines before validating.'}], []);
+      return null;
+    }
+    const r = await fetch("{% url 'accounting:jv_validate' %}", {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json', 'X-CSRFToken': CSRF},
+      body: JSON.stringify({lines: lines}),
+    });
+    const j = await r.json();
+    showErrors(j.errors, j.warnings);
+    if (j.ok) {
+      const div = document.createElement('div');
+      div.className = 'd365-toast success';
+      div.textContent = `✓ Validation passed. ${j.resolved_display.length} line(s), balanced at KES ${j.total_debit}.`;
+      errorsPanel.innerHTML = '';
+      errorsPanel.appendChild(div);
+      errorsPanel.style.display = 'block';
+    }
+    return j;
+  }
+
+  let _postingInProgress = false;
+  let _alreadyPosted = false;
+
+  async function postNow() {
+    // Hard block: already posted or request in flight
+    if (_alreadyPosted) {
+      showErrors([{row: 0, message: 'This voucher has already been posted. Start a new voucher.'}], []);
+      return;
+    }
+    if (_postingInProgress) return;
+
+    const desc = document.getElementById('voucher_desc').value.trim();
+    if (!desc) {
+      showErrors([{row: 0, message: 'Voucher description is required.'}], []);
+      return;
+    }
+    const lines = collectLines();
+    if (!lines.length) {
+      showErrors([{row: 0, message: 'Add at least two lines before posting.'}], []);
+      return;
+    }
+
+    // Client-side balance check
+    let totalDr = 0, totalCr = 0;
+    lines.forEach(l => { totalDr += parseFloat(l.debit || 0); totalCr += parseFloat(l.credit || 0); });
+    if (Math.abs(totalDr - totalCr) > 0.01) {
+      showErrors([{row: 0, message: `Journal is OUT OF BALANCE. Total debit KES ${totalDr.toLocaleString(undefined,{minimumFractionDigits:2})} ≠ total credit KES ${totalCr.toLocaleString(undefined,{minimumFractionDigits:2})} (difference KES ${Math.abs(totalDr - totalCr).toLocaleString(undefined,{minimumFractionDigits:2})}). Correct entries before posting.`}], []);
+      return;
+    }
+
+    if (!confirm(`Post this voucher? ${lines.length} line(s) will be committed to the ledger. This cannot be undone.`)) {
+      return;
+    }
+
+    _postingInProgress = true;
+    const postBtn = document.getElementById('btn-post');
+    postBtn.disabled = true;
+    postBtn.innerHTML = '<i class="bi bi-hourglass-split"></i> Posting…';
+
+    try {
+      const r = await fetch("{% url 'accounting:jv_post' %}", {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json', 'X-CSRFToken': CSRF},
+        body: JSON.stringify({
+          lines: lines,
+          description: desc,
+          voucher_date: document.getElementById('voucher_date').value,
+          session_key: SESSION_ID,
+        }),
+      });
+      const j = await r.json();
+      if (j.ok) {
+        _alreadyPosted = true;
+        // Stop autosave — voucher is committed
+        if (autosaveTimer) clearTimeout(autosaveTimer);
+        setAutosaveStatus('Posted', 'var(--d365-success)');
+
+        errorsPanel.style.display = 'none';
+        successPanel.innerHTML = `
+          <div class="d365-toast success">
+            ✓ Voucher <strong>${escapeHtml(j.voucher_no)}</strong> posted successfully.
+            Total KES ${escapeHtml(j.total_amount)} across ${j.line_count} line(s).
+            &nbsp;
+            <a class="d365-btn primary" href="${j.pdf_url}" target="_blank">
+              <i class="bi bi-file-earmark-pdf"></i> Download PDF summary
+            </a>
+            <a class="d365-btn" href="${j.detail_url}">View voucher</a>
+            <a class="d365-btn" href="{% url 'accounting:jv_new' %}">New voucher</a>
+          </div>
+        `;
+        successPanel.style.display = 'block';
+        // Disable further edits
+        gridBody.querySelectorAll('input, select, button').forEach(el => el.disabled = true);
+        document.getElementById('btn-add-row').disabled = true;
+        document.getElementById('btn-validate').disabled = true;
+        window.scrollTo({top: 0, behavior: 'smooth'});
+      } else {
+        showErrors(j.errors, j.warnings || []);
+        postBtn.disabled = false;
+        postBtn.innerHTML = '<i class="bi bi-send"></i> Validate and post';
+      }
+    } catch (err) {
+      showErrors([{row: 0, message: 'Network error — please try again.'}], []);
+      postBtn.disabled = false;
+      postBtn.innerHTML = '<i class="bi bi-send"></i> Validate and post';
+    } finally {
+      _postingInProgress = false;
+    }
+  }
+
+  // ─── Bulk upload ─────────────────────────────────────────
+  document.getElementById('upload-file').addEventListener('change', async (ev) => {
+    const file = ev.target.files[0];
+    if (!file) return;
+    const fd = new FormData();
+    fd.append('file', file);
+    fd.append('csrfmiddlewaretoken', CSRF);
+    const r = await fetch("{% url 'accounting:jv_upload' %}", {
+      method: 'POST',
+      headers: {'X-CSRFToken': CSRF},
+      body: fd,
+    });
+    const j = await r.json();
+    ev.target.value = '';
+    if (!j.ok) {
+      showErrors([{row: 0, message: j.error || 'Upload failed.'}], []);
+      return;
+    }
+    // Clear existing rows and populate from upload
+    gridBody.innerHTML = '';
+    rowCounter = 0;
+    (j.lines || []).forEach(l => addRow(l));
+    updateTotals();
+    const div = document.createElement('div');
+    div.className = 'd365-toast';
+    div.textContent = `Imported ${j.count} line(s). Review and click Validate.`;
+    errorsPanel.innerHTML = '';
+    errorsPanel.appendChild(div);
+    errorsPanel.style.display = 'block';
+  });
+
+  // ─── Autosave ──────────────────────────────────────────────
+  function collectGridState() {
+    return Array.from(gridBody.querySelectorAll('tr')).map(tr => ({
+      entry_type:     tr.querySelector('.entry-type').value,
+      cust_no:        tr.querySelector('.cust-no').value.trim(),
+      cust_name:      tr.querySelector('.cust-name').value.trim(),
+      member_account: tr.querySelector('.member-acc').value.trim(),
+      sacco_code:     tr.querySelector('.sacco-acc').value.trim(),
+      debit:          tr.querySelector('.debit').value || '',
+      credit:         tr.querySelector('.credit').value || '',
+      description:    tr.querySelector('.line-desc').value.trim(),
+    }));
+  }
+
+  function setAutosaveStatus(text, color) {
+    autosaveEl.textContent = text;
+    autosaveEl.style.color = color || 'var(--d365-text-3)';
+  }
+
+  function runAutosave() {
+    const gridData = collectGridState();
+    const hasContent = gridData.some(r => r.cust_no || r.sacco_code || parseFloat(r.debit) > 0 || parseFloat(r.credit) > 0);
+    if (!hasContent) return;
+
+    setAutosaveStatus('Saving…', 'var(--d365-warning)');
+
+    const payload = {
+      session_key: SESSION_ID,
+      grid_data: gridData,
+      description: document.getElementById('voucher_desc').value.trim(),
+      voucher_date: document.getElementById('voucher_date').value,
+      label: `JV — ${gridData.filter(r => parseFloat(r.debit) > 0 || parseFloat(r.credit) > 0).length} lines`,
+    };
+
+    fetch("{% url 'accounting:jv_autosave' %}", {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json', 'X-CSRFToken': CSRF},
+      body: JSON.stringify(payload),
+    })
+    .then(r => r.json())
+    .then(d => {
+      if (d.success) {
+        const now = new Date();
+        setAutosaveStatus(`✓ Saved ${now.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}`, 'var(--d365-success)');
+      } else {
+        setAutosaveStatus('Save failed', 'var(--d365-danger)');
+      }
+    })
+    .catch(() => setAutosaveStatus('Save failed', 'var(--d365-danger)'));
+  }
+
+  function scheduleAutosave() {
+    if (_alreadyPosted) return;  // stop autosaving after post
+    if (autosaveTimer) clearTimeout(autosaveTimer);
+    autosaveTimer = setTimeout(runAutosave, AUTOSAVE_DELAY);
+    setAutosaveStatus('Autosave pending…', 'var(--d365-text-3)');
+  }
+
+  function startAutosaveWatcher() {
+    const grid = document.getElementById('grid');
+    grid.addEventListener('input', scheduleAutosave);
+    grid.addEventListener('change', scheduleAutosave);
+    document.getElementById('voucher_desc').addEventListener('input', scheduleAutosave);
+    document.getElementById('voucher_date').addEventListener('change', scheduleAutosave);
+  }
+
+  // Save before page close
+  window.addEventListener('beforeunload', () => {
+    if (_alreadyPosted) return;  // already committed, no need to save draft
+    const gridData = collectGridState();
+    const hasContent = gridData.some(r => r.cust_no || r.sacco_code || parseFloat(r.debit) > 0 || parseFloat(r.credit) > 0);
+    if (!hasContent) return;
+    navigator.sendBeacon("{% url 'accounting:jv_autosave' %}", new Blob([JSON.stringify({
+      session_key: SESSION_ID,
+      grid_data: gridData,
+      description: document.getElementById('voucher_desc').value.trim(),
+      voucher_date: document.getElementById('voucher_date').value,
+      label: `JV — ${gridData.filter(r => parseFloat(r.debit) > 0 || parseFloat(r.credit) > 0).length} lines`,
+    })], {type: 'application/json'}));
+  });
+
+  // ─── Resume grid restoration ──────────────────────────────────
+  function restoreGrid(gridData) {
+    gridData.forEach(row => {
+      const tr = addRow();
+      if (!tr) return;
+      if (row.entry_type) {
+        tr.querySelector('.entry-type').value = row.entry_type;
+        applyEntryType(tr, row.entry_type);
+      }
+      if (row.cust_no) {
+        tr.querySelector('.cust-no').value = row.cust_no;
+        lookupCustomer(tr, row.cust_no);
+      }
+      if (row.cust_name) tr.querySelector('.cust-name').value = row.cust_name;
+      if (row.member_account) tr.querySelector('.member-acc').value = row.member_account;
+      if (row.sacco_code) tr.querySelector('.sacco-acc').value = row.sacco_code;
+      if (row.debit) tr.querySelector('.debit').value = row.debit;
+      if (row.credit) tr.querySelector('.credit').value = row.credit;
+      if (row.description) tr.querySelector('.line-desc').value = row.description;
+    });
+    updateTotals();
+  }
+
+  // ─── Hook up buttons + initial rows ─────────────────────
+  document.getElementById('btn-add-row').addEventListener('click', () => addRow());
+  document.getElementById('btn-validate').addEventListener('click', validateNow);
+  document.getElementById('btn-post').addEventListener('click', postNow);
+
+  // Boot: resume or start fresh
+  if (RESUME_GRID.length) {
+    restoreGrid(RESUME_GRID);
+    if (RESUME_DESC) document.getElementById('voucher_desc').value = RESUME_DESC;
+  } else {
+    addRow(); addRow();
+  }
+  startAutosaveWatcher();
+})();
+</script>
+
+{# ── CSRF hidden token so getCookie fallback works ────────────── #}
+<form style="display:none;">{% csrf_token %}</form>
+{% endblock %}

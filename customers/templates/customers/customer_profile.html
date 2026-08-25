@@ -1,0 +1,295 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block title %}{{ customer.full_name }} — Profile{% endblock %}
+
+{% block content %} 
+    {# --- QUICK ACTIONS INCLUDE --- #}
+    {% include 'customers/includes/customer_quick_actions.html' %}
+<div class="page-shell">
+    {# D365 Quick Actions Command Bar Ribbon #}
+    <div class="mb-3">
+        {% if mtg_view %}
+        {# Skip actions menu if rendering within an iframe or sub-component modal view #}
+        {% else %}
+        <div class="admin-quick-actions d365-elev-2">
+            <span class="aqa-label"><i class="bi bi-lightning-charge-fill me-1 text-primary"></i>Actions</span>
+            <div class="aqa-divider mx-2 d-none d-sm-inline-block" style="width: 1px; height: 1rem; background: var(--d365-border-strong);"></div>
+            <div class="aqa-links">
+                <a href="{% url 'customers:list_customers' %}" class="aqa-link">
+                    <i class="bi bi-arrow-left"></i> Grid View
+                </a>
+                <a href="{% url 'customers:edit_customer_stepper' pk=customer.pk %}" class="aqa-link">
+                    <i class="bi bi-pencil-square text-primary"></i> Modify Record
+                </a>
+                <button onclick="window.print()" class="aqa-link bg-transparent">
+                    <i class="bi bi-printer text-dark"></i> Print File
+                </button>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    {# Page Header Scaffold #}
+    <div class="page-head border-bottom pb-2 mb-4">
+        <div>
+            <h1 class="h3 mb-1 text-dark fw-bold">{{ customer.full_name }}</h1>
+            <p class="page-sub">
+                Member ID: <strong class="text-dark">{{ customer.cust_no }}</strong> &bull; 
+                Classification: 
+                <span class="status-dot {% if customer.customer_status == 'active' %}active{% else %}blocked{% endif %} ms-1">
+                    {{ customer.get_customer_status_display|title }} Member
+                </span>
+            </p>
+        </div>
+        <div class="d-flex align-items-center gap-2 pt-2 pt-md-0">
+            <span class="role-pill is-manager"><i class="bi bi-building-fill me-1"></i>{{ branch_name }}</span>
+        </div>
+    </div>
+                 {% if messages %}
+                {% for message in messages %}
+                    <div class="alert alert-{{ message.tags|default:'info' }} alert-dismissible fade show py-2" role="alert">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+
+    <div class="row g-3">
+        {# Section Left: Bio Data & Photo Profile Hero #}
+        <div class="col-lg-4">
+            <div class="card d365-elev-2 mb-3">
+                <div class="card-header py-2 d-flex align-items-center justify-content-between">
+                    <span class="small fw-bold text-uppercase"><i class="bi bi-person-badge-fill me-2 text-primary"></i>Registry Meta</span>
+                </div>
+                <div class="card-body bg-light-subtle py-3 text-center border-bottom">
+                    <div class="profile-hero d-inline-flex align-items-center text-start gap-3">
+                        {% if customer.client_photo %}
+                            <img src="{{ customer.client_photo.url }}" alt="Client Photo" 
+                                 class="border border-strong bg-white p-1" style="width: 72px; height: 72px; object-fit: cover; border-radius: var(--d365-radius-sm);">
+                        {% else %}
+                            <div class="avatar-lg shadow-sm" style="border-radius: var(--d365-radius-sm);">
+                                {{ customer.full_name|slice:":2" }}
+                            </div>
+                        {% endif %}
+                        <div>
+                            <div class="fw-bold text-dark fs-6 lh-1 mb-1">{{ customer.full_name }}</div>
+                            <small class="text-muted d-block">Joined: {{ customer.reg_date|date:"d M Y" }}</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="p-0">
+                    <table class="detail-table">
+                        <tbody>
+                            <tr>
+                                <th>National ID</th>
+                                <td class="fw-bold text-end">{{ customer.national_id }}</td>
+                            </tr>
+                            <tr>
+                                <th>Phone No</th>
+                                <td class="text-end font-monospace small">{{ customer.phone }}</td>
+                            </tr>
+                            <tr>
+                                <th>KRA PIN</th>
+                                <td class="text-end font-monospace small">{{ customer.kra_pin|default:"--" }}</td>
+                            </tr>
+                            <tr>
+                                <th>Registered Email</th>
+                                <td class="text-end text-truncate small" style="max-width: 170px;">{{ customer.reg_email|default:"--" }}</td>
+                            </tr>
+                            <tr>
+                                <th>Home Branch</th>
+                                <td class="text-end text-muted">{{ branch_name }}</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        {# Section Center: Ledger Positions (Savings Sub-Accounts & RunningLoanStats) #}
+        <div class="col-lg-4">
+            <div class="card d365-elev-2 h-100">
+                <div class="card-header py-2">
+                    <span class="small fw-bold text-uppercase"><i class="bi bi-list-columns-reverse me-2 text-primary"></i>Financial Position</span>
+                </div>
+                <div class="card-body p-3">
+                    {# Savings Block Group #}
+                    <div class="d-flex align-items-center mb-2 pb-1 border-bottom text-secondary">
+                        <i class="bi bi-piggy-bank me-2 small"></i>
+                        <span class="fw-bold text-uppercase" style="font-size: 0.72rem; letter-spacing: .02em;">Deposit Breakdowns</span>
+                    </div>
+                    {% for sa in savings_accounts %}
+                    <div class="d-flex justify-content-between align-items-center mb-1 py-1 border-bottom border-light">
+                        <span class="small text-secondary">{{ sa.account_name }}</span>
+                        <span class="fw-bold text-dark font-monospace" style="font-size: 0.85rem;">KES {{ sa.balance|intcomma }}</span>
+                    </div>
+                    {% empty %}
+                    <div class="text-muted small text-center my-2 py-1 bg-light">No savings recorded.</div>
+                    {% endfor %}
+
+                    {# Active RunningLoanStat Block Group #}
+                    <div class="d-flex align-items-center mt-4 mb-2 pb-1 border-bottom text-secondary">
+                        <i class="bi bi-currency-exchange me-2 small"></i>
+                        <span class="fw-bold text-uppercase" style="font-size: 0.72rem; letter-spacing: .02em;">Active Loans</span>
+                    </div>
+                    
+                    {% for la in loans_accounts %}
+                    <div class="mb-2 p-2 bg-white border border-light-subtle border-start border-3 {% if la.arrears > 0 %}border-danger{% else %}border-primary{% endif %}">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <span class="fw-bold text-dark small text-truncate" style="max-width: 150px;">{{ la.loan_name }}</span>
+                            <span class="fw-bold font-monospace {% if la.arrears > 0 %}text-danger{% else %}text-dark{% endif %}" style="font-size: 0.85rem;">
+                                KES {{ la.balance|intcomma }}
+                            </span>
+                        </div>
+                        
+                        <div class="d-flex justify-content-between align-items-center mt-1 text-muted font-monospace" style="font-size: 0.7rem;">
+                            <span>Ref: <strong>{{ la.loan_no }}</strong></span>
+                            <span>Limit: {{ la.principal|intcomma }}</span>
+                        </div>
+
+                        {% if la.arrears > 0 or la.next_payment_date %}
+                        <div class="mt-2 pt-1 border-top border-light d-flex justify-content-between align-items-center" style="font-size: 0.7rem;">
+                            {% if la.arrears > 0 %}
+                                <span class="text-danger fw-semibold px-1 rounded-1" style="background-color: var(--d365-danger-bg);">
+                                    <i class="bi bi-exclamation-square-fill me-1"></i>Arrears: {{ la.arrears|intcomma }}
+                                </span>
+                            {% else %}
+                                <span class="text-muted">Next Due: {{ la.next_payment_date|date:"d-M-Y"|default:"--" }}</span>
+                            {% endif %}
+                            
+                            <span class="badge text-uppercase font-monospace" style="font-size:0.65rem; background-color: {% if la.classification == 'Normal' %}var(--d365-success-bg); color: var(--d365-success);{% else %}var(--d365-warning-bg); color: var(--d365-warning);{% endif %}">
+                                {{ la.classification }}
+                            </span>
+                        </div>
+                        {% endif %}
+                    </div>
+                    {% empty %}
+                    <div class="text-success small text-center my-2 p-2 rounded-1" style="background-color: var(--d365-success-bg);">
+                        <i class="bi bi-check-circle-fill me-1"></i>No outstanding or active loans found.
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        
+        {# Section Right: Next of Kin & Related Group Officials #}
+        <div class="col-lg-4">
+            {% if officials %}
+            <div class="card d365-elev-2 mb-3">
+                <div class="card-header py-2">
+                    <span class="small fw-bold text-uppercase"><i class="bi bi-briefcase-fill me-2 text-primary"></i>Authorized Officials</span>
+                </div>
+                <div class="card-body p-0">
+                    <ul class="list-group list-group-flush" style="border-radius: 0;">
+                        {% for off in officials %}
+                        <li class="list-group-item py-2 border-bottom border-light" style="font-size: 0.825rem;">
+                            <div class="fw-bold text-dark">{{ off.name }}</div>
+                            <div class="text-muted small font-monospace">{{ off.designation }} &bull; {{ off.mobile }}</div>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+            {% endif %}
+
+            <div class="card d365-elev-2">
+                <div class="card-header py-2">
+                    <span class="small fw-bold text-uppercase"><i class="bi bi-people-fill me-2 text-primary"></i>Next of Kins</span>
+                </div>
+                <div class="card-body p-0">
+                    {% for kin in customer.kins.all %}
+                    <div class="p-2 px-3 border-bottom border-light" style="font-size: 0.825rem;">
+                        <div class="fw-bold text-dark">{{ kin.kin_name }}</div>
+                        <div class="text-muted small">{{ kin.kin_relationship }} &bull; <span class="font-monospace">{{ kin.kin_mobile }}</span></div>
+                    </div>
+                    {% empty %}
+                    <div class="p-3 text-center text-muted small">No next of kin found.</div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        {# Section Bottom Full-width: Security Network Analysis Grids #}
+        <div class="col-12">
+            <div class="card d365-elev-2">
+                <div class="card-header py-2">
+                    <span class="small fw-bold text-uppercase"><i class="bi bi-shield-shaded me-2 text-primary"></i>Guarantorship</span>
+                </div>
+                <div class="card-body p-3">
+                    <div class="row g-3">
+                        <div class="col-md-6 border-end-md">
+                            <h6 class="kpi-label mb-2 pb-1 border-bottom text-primary">Guaranteed By</h6>
+                            {% for g in my_guarantors %}
+                            <div class="d-flex justify-content-between align-items-center mb-2 p-2 border-bottom border-light bg-light-subtle">
+                                <div>
+                                    <div class="fw-bold text-dark small">{{ g.guarantor_cust.full_name }}</div>
+                                    <small class="text-muted font-monospace" style="font-size: 0.72rem;">Loan No: {{ g.loan.loan_no }}</small>
+                                </div>
+                                <div class="text-end">
+                                    <span class="font-monospace fw-bold text-dark" style="font-size: 0.85rem;">KES {{ g.amount|intcomma }}</span>
+                                </div>
+                            </div>
+                            {% empty %}
+                            <p class="text-muted small text-center py-2 bg-light">None found.</p>
+                            {% endfor %}
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <h6 class="kpi-label mb-2 pb-1 border-bottom text-danger">Guaranteed Who?</h6>
+                            {% for g in guarantees_given %}
+                            <div class="d-flex justify-content-between align-items-center mb-2 p-2 border-bottom border-light bg-light-subtle">
+                                <div>
+                                    <div class="fw-bold text-primary small">{{ g.loan.customer.full_name }}</div>
+                                    <small class="text-muted font-monospace" style="font-size: 0.72rem;">Loan No: {{ g.loan.loan_no }}</small>
+                                </div>
+                                <div class="text-end">
+                                    <span class="font-monospace fw-bold text-danger" style="font-size: 0.85rem;">KES {{ g.amount|intcomma }}</span>
+                                </div>
+                            </div>
+                            {% empty %}
+                            <p class="text-muted small text-center py-2 bg-light">None found.</p>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {# Economic Profiling Metadata Strip #}
+        {% if economic_activity %}
+        <div class="col-12 mb-3">
+            <div class="card d365-elev-2" style="border-left: 3px solid var(--d365-primary) !important;">
+                <div class="card-body py-2 bg-light-subtle">
+                    <div class="row align-items-center text-center text-md-start g-2">
+                        <div class="col-md-4">
+                            <span class="kpi-label d-block text-muted">Employment Classification</span>
+                            <span class="fw-bold text-dark small">{{ economic_activity.get_employment_status_display }}</span>
+                        </div>
+                        <div class="col-md-4 border-start-md border-end-md px-md-3">
+                            <span class="kpi-label d-block text-muted">Economic Sector</span>
+                            <span class="fw-bold text-dark small text-truncate-container" title="{{ economic_activity.profession|default:economic_activity.economic_activity }}">
+                                {{ economic_activity.profession|default:economic_activity.economic_activity }}
+                            </span>
+                        </div>
+                        <div class="col-md-4 text-md-end">
+                            <span class="kpi-label d-block text-muted">Declared Monthly Gross Income</span>
+                            <span class="fw-bold font-monospace text-success fs-6">KES {{ economic_activity.monthly_income|intcomma }}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<style>
+    /* Clean local tweaks ensuring D365 grid alignments conform correctly across scales */
+    @media (min-width: 768px) {
+        .border-end-md { border-end: 1px solid var(--d365-border) !important; border-right: 1px solid var(--d365-border) !important; }
+        .border-start-md { border-start: 1px solid var(--d365-border) !important; border-left: 1px solid var(--d365-border) !important; }
+    }
+    .font-monospace { font-family: SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace !important; }
+</style>
+{% endblock %}

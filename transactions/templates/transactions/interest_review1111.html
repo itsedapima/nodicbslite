@@ -1,0 +1,202 @@
+{% extends "base.html" %}
+{% block content %}
+<style>
+    .posting-mode-card { border-top: 4px solid #0d6efd; }
+    .account-select-sm { height: 30px; font-size: 0.8rem; padding: 2px 5px; }
+    .row-posted { transition: all 0.5s ease; opacity: 0; transform: translateX(50px); }
+</style>
+
+<div class="container my-5">
+    {% include 'transactions/includes/transactions_quick_actions.html' %}
+    
+    <nav aria-label="breadcrumb" class="mb-4">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'transactions:calculate_interest' %}">Calculation Setup</a></li>
+            <li class="breadcrumb-item active">Review Batch #{{ batch.batch_no }}</li>
+        </ol>
+    </nav>
+
+    <div class="row">
+        <!-- Sidebar Summary -->
+        <div class="col-md-4">
+            <div class="card shadow-sm border-0 mb-4">
+                <div class="card-header bg-dark text-white py-3">
+                    <h5 class="mb-0">Batch Summary</h5>
+                </div>
+                <div class="card-body">
+                    <ul class="list-group list-group-flush mb-3">
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            Saving Type: <span class="fw-bold">{{ batch.get_saving_type_display }}</span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between align-items-center bg-light">
+                            <strong>Total Payout:</strong> 
+                            <span class="text-success fw-bold">KES {{ batch.total_net_payout|floatformat:2 }}</span>
+                        </li>
+                    </ul>
+
+                    {% if not batch.is_posted %}
+                    <!-- POSTING OPTIONS -->
+                    <div class="card posting-mode-card shadow-sm border-0 bg-light p-3">
+                        <label class="form-label fw-bold small text-uppercase">Select Posting Mode</label>
+                        <div class="nav nav-pills nav-fill mb-3" id="postingModeTab" role="tablist">
+                            <button class="nav-link active py-1 small" id="bulk-tab" data-bs-toggle="pill" data-bs-target="#bulk-post" type="button">Bulk Unified</button>
+                            <button class="nav-link py-1 small" id="individual-tab" data-bs-toggle="pill" data-bs-target="#individual-post" type="button">Individual</button>
+                        </div>
+
+                        <div class="tab-content">
+                            <!-- MODE 1: BULK UNIFIED -->
+                            <div class="tab-pane fade show active" id="bulk-post">
+                                <form action="{% url 'transactions:post_interest_batch_unified' batch.id %}" method="POST">
+                                    {% csrf_token %}
+                                    <div class="mb-3">
+                                        <label class="form-label small">Target Common Account</label>
+                                        <select name="common_account_type" class="form-select form-select-sm" required>
+                                            <option value="seed_deposit">Seed Deposit</option>
+                                            <option value="shares">Member Shares</option>
+                                            <option value="savings">Normal Savings</option>
+                                        </select>
+                                    </div>
+                                    <button type="submit" class="btn btn-primary btn-sm w-100 fw-bold" onclick="return confirm('Post ALL members to the selected account?')">
+                                        Confirm & Post All
+                                    </button>
+                                </form>
+                            </div>
+
+                            <!-- MODE 2: INDIVIDUAL SELECT -->
+                            <div class="tab-pane fade" id="individual-post">
+                                <p class="text-muted small">Table actions unlocked. Select target accounts per member in the breakdown list.</p>
+                                <div class="alert alert-info py-2">
+                                    <small><i class="fas fa-info-circle me-1"></i> Use the table on the right to post individually.</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <form action="{% url 'transactions:delete_interest_batch' batch.id %}" method="POST" class="mt-3">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-link btn-sm text-danger w-100" onclick="return confirm('Delete draft?')">
+                            Discard Draft
+                        </button>
+                    </form>
+                    {% else %}
+                    <div class="alert alert-success text-center">
+                        <i class="fas fa-check-circle fa-2x mb-2"></i><br><strong>BATCH POSTED</strong>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Member Breakdown Table -->
+        <div class="col-md-8">
+            <div class="card shadow-sm border-0">
+                <div class="card-header bg-white d-flex justify-content-between align-items-center py-3">
+                    <h5 class="mb-0 text-primary">Member Breakdown</h5>
+                    <button id="exportButton" class="btn btn-outline-success btn-sm"><i class="fas fa-file-excel me-1"></i> Excel</button>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive" style="max-height: 600px;">
+                        <table id="dividends-table" class="table table-hover align-middle mb-0">
+                            <thead class="table-light sticky-top">
+                                <tr>
+                                    <th class="ps-3">Cust No</th>
+                                    <th>Member Name</th>
+                                    <th class="text-end">Net Payout</th>
+                                    <th class="target-col d-none">Target Account</th>
+                                    <th class="action-col d-none text-center">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for detail in batch.details.all %}
+                                <tr id="row-{{ detail.id }}">
+                                    <td class="ps-3 small">{{ detail.cust_no }}</td>
+                                    <td class="small">{{ detail.member_name }}</td>
+                                    <td class="text-end fw-bold text-success">{{ detail.net_payout|floatformat:2 }}</td>
+                                    
+                                    <!-- Dynamic Account Selection -->
+                                    <td class="target-col d-none">
+                                        <select class="form-select account-select-sm" id="acc-{{ detail.id }}">
+                                            <option value="seed_deposit">Seed Deposit</option>
+                                            <!-- Dynamically logic here could fetch member specific loans -->
+                                            {% for loan in detail.member_loans %}
+                                                <option value="{{ loan.loan_no }}">{{ loan.loan_no }} (Loan)</option>
+                                            {% endfor %}
+                                        </select>
+                                    </td>
+                                    
+                                    <td class="action-col d-none text-center">
+                                        <button type="button" class="btn btn-success btn-sm py-0 px-2 post-individual-btn" 
+                                                data-id="{{ detail.id }}">
+                                            Post
+                                        </button>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const bulkTab = document.getElementById('bulk-tab');
+        const individualTab = document.getElementById('individual-tab');
+        const targetCols = document.querySelectorAll('.target-col');
+        const actionCols = document.querySelectorAll('.action-col');
+
+        // Toggle Columns based on Mode
+        individualTab.addEventListener('shown.bs.tab', () => {
+            targetCols.forEach(c => c.classList.remove('d-none'));
+            actionCols.forEach(c => c.classList.remove('d-none'));
+        });
+
+        bulkTab.addEventListener('shown.bs.tab', () => {
+            targetCols.forEach(c => c.classList.add('d-none'));
+            actionCols.forEach(c => c.classList.add('d-none'));
+        });
+
+        // Individual Posting via AJAX
+        document.querySelectorAll('.post-individual-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const detailId = this.dataset.id;
+                const accountSelected = document.getElementById(`acc-${detailId}`).value;
+                const row = document.getElementById(`row-${detailId}`);
+
+                if(!confirm(`Post this interest to ${accountSelected}?`)) return;
+
+                btn.disabled = true;
+                btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
+
+                fetch(`/transactions/interest/detail/${detailId}/post-individual/`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': '{{ csrf_token }}'
+                    },
+                    body: JSON.stringify({ target_account: accountSelected })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        row.classList.add('row-posted');
+                        setTimeout(() => row.remove(), 500); // Remove from list after animation
+                    } else {
+                        alert('Error: ' + data.message);
+                        btn.disabled = false;
+                        btn.innerHTML = 'Post';
+                    }
+                })
+                .catch(err => {
+                    console.error(err);
+                    btn.disabled = false;
+                    btn.innerHTML = 'Post';
+                });
+            });
+        });
+    });
+</script>
+{% endblock %}

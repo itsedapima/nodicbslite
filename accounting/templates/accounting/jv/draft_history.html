@@ -1,0 +1,221 @@
+{% extends "base.html" %}
+{% load role_tags %}
+{% load humanize %}
+{% block title %}JV Drafts – NODi CBS{% endblock %}
+{% block content %}
+{% include 'accounting/includes/accounting_quick_actions.html' %}
+{% include 'accounting/jv/_theme.html' %}
+
+<style>
+    .bh-shell { max-width: 960px; margin: 0 auto; padding: 1rem; }
+    .bh-header {
+        display: flex; justify-content: space-between; align-items: center;
+        margin-bottom: 1.25rem; flex-wrap: wrap; gap: .75rem;
+    }
+    .bh-title { font-size: 1.125rem; font-weight: 600; color: var(--d365-text); }
+    .bh-new-btn {
+        font-size: .8125rem; font-weight: 600; padding: .45rem .9rem;
+        background: var(--d365-primary); color: #fff; border: none;
+        border-radius: var(--d365-radius-sm); cursor: pointer;
+        text-decoration: none; display: inline-flex; align-items: center; gap: .35rem;
+    }
+    .bh-new-btn:hover { background: var(--d365-primary-hover); color: #fff; }
+
+    .bh-card {
+        background: var(--d365-surface); border: 1px solid var(--d365-border);
+        border-radius: var(--d365-radius-md); margin-bottom: .75rem;
+        box-shadow: var(--d365-shadow-2); overflow: hidden;
+        transition: box-shadow .15s;
+    }
+    .bh-card:hover { box-shadow: var(--d365-shadow-4); }
+
+    .bh-row {
+        display: flex; align-items: center; padding: .85rem 1rem;
+        gap: 1rem; cursor: pointer; flex-wrap: wrap;
+    }
+    .bh-row:hover { background: var(--d365-primary-tint-40); }
+
+    .bh-status {
+        font-size: .6875rem; font-weight: 700; text-transform: uppercase;
+        letter-spacing: .04em; padding: .2rem .55rem;
+        border-radius: 10px; white-space: nowrap; flex-shrink: 0;
+    }
+    .bh-status-draft { background: #FFF3CD; color: #856404; }
+    .bh-status-saved { background: #D1ECF1; color: #0C5460; }
+    .bh-status-posted { background: #D4EDDA; color: #155724; }
+
+    .bh-info { flex: 1; min-width: 200px; }
+    .bh-label { font-size: .875rem; font-weight: 600; color: var(--d365-text); }
+    .bh-meta { font-size: .75rem; color: var(--d365-text-secondary); margin-top: .15rem; }
+
+    .bh-amount {
+        font-family: "Cascadia Code", "SF Mono", "Consolas", monospace;
+        font-size: .9375rem; font-weight: 700; color: var(--d365-primary-active);
+        white-space: nowrap;
+    }
+
+    .bh-actions { display: flex; gap: .4rem; flex-shrink: 0; }
+    .bh-act-btn {
+        font-size: .75rem; font-weight: 600; padding: .3rem .6rem;
+        border-radius: var(--d365-radius-sm); border: 1px solid var(--d365-border-strong);
+        background: var(--d365-surface); color: var(--d365-text); cursor: pointer;
+        text-decoration: none; display: inline-flex; align-items: center; gap: .25rem;
+    }
+    .bh-act-btn:hover { background: var(--d365-surface-alt); color: var(--d365-text); }
+    .bh-act-resume { border-color: var(--d365-primary); color: var(--d365-primary); }
+    .bh-act-resume:hover { background: var(--d365-primary); color: #fff; }
+    .bh-act-delete { border-color: var(--d365-danger); color: var(--d365-danger); }
+    .bh-act-delete:hover { background: var(--d365-danger); color: #fff; }
+
+    .bh-empty {
+        text-align: center; padding: 3rem 1rem; color: var(--d365-text-secondary);
+        font-size: .875rem;
+    }
+
+    /* Expandable detail */
+    .bh-detail {
+        display: none; padding: 0 1rem .85rem;
+        border-top: 1px solid var(--d365-border);
+        background: var(--d365-surface-alt);
+    }
+    .bh-detail.show { display: block; }
+    .bh-detail-grid {
+        width: 100%; font-size: .75rem; border-collapse: collapse; margin-top: .6rem;
+    }
+    .bh-detail-grid th {
+        text-align: left; padding: .35rem .5rem; font-weight: 600;
+        border-bottom: 2px solid var(--d365-border-strong); color: var(--d365-text-secondary);
+    }
+    .bh-detail-grid td {
+        padding: .3rem .5rem; border-bottom: 1px solid var(--d365-border);
+    }
+    .bh-detail-grid .mono {
+        font-family: "Cascadia Code", "SF Mono", monospace; text-align: right;
+    }
+</style>
+
+<div class="bh-shell">
+    <div class="bh-header">
+        <div class="bh-title"><i class="bi bi-clock-history"></i> Journal Voucher Drafts</div>
+        <a class="bh-new-btn" href="{% url 'accounting:jv_new' %}">
+            <i class="bi bi-plus-lg"></i> New JV
+        </a>
+    </div>
+
+    {% if drafts %}
+    {% has_role 'admin' as is_admin %}
+    {% for d in drafts %}
+    <div class="bh-card" data-key="{{ d.session_key }}">
+        <div class="bh-row" onclick="toggleDetail(this)">
+            <span class="bh-status bh-status-{{ d.status }}">{{ d.status }}</span>
+            <div class="bh-info">
+                <div class="bh-label">{{ d.label|default:"Untitled JV" }}</div>
+                <div class="bh-meta">
+                    {{ d.line_count }} line{{ d.line_count|pluralize }}
+                    · {{ d.updated_at|date:"d M Y H:i" }}
+                    {% if d.description %}· {{ d.description|truncatechars:60 }}{% endif %}
+                </div>
+            </div>
+            <div class="bh-amount">{{ d.total_debit|intcomma }}</div>
+            <div class="bh-actions" onclick="event.stopPropagation();">
+                {% if d.status != 'posted' %}
+                <a class="bh-act-btn bh-act-resume"
+                   href="{% url 'accounting:jv_new' %}?draft={{ d.session_key }}">
+                    <i class="bi bi-play-fill"></i> Resume
+                </a>
+                {% endif %}
+                {% if is_admin and d.status != 'posted' %}
+                <button class="bh-act-btn bh-act-delete"
+                        onclick="deleteDraft('{{ d.session_key }}')">
+                    <i class="bi bi-trash3"></i> Delete
+                </button>
+                {% endif %}
+            </div>
+        </div>
+        <div class="bh-detail" id="detail-{{ d.session_key }}">
+            <div style="text-align:center; padding:1rem; color:var(--d365-text-secondary); font-size:.8rem;">
+                Loading…
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+    {% else %}
+    <div class="bh-empty">
+        <i class="bi bi-journal-text" style="font-size:2rem; opacity:.4; display:block; margin-bottom:.5rem;"></i>
+        No JV drafts yet. Drafts are saved automatically as you work.
+    </div>
+    {% endif %}
+</div>
+
+<script>
+function toggleDetail(rowEl) {
+    const card = rowEl.closest('.bh-card');
+    const key = card.dataset.key;
+    const detail = document.getElementById('detail-' + key);
+    if (detail.classList.contains('show')) {
+        detail.classList.remove('show');
+        return;
+    }
+    // Close others
+    document.querySelectorAll('.bh-detail.show').forEach(d => d.classList.remove('show'));
+    detail.classList.add('show');
+
+    // Load detail if not loaded
+    if (detail.dataset.loaded) return;
+    fetch(`/accounting/jv/drafts/${key}/load/`)
+    .then(r => r.json())
+    .then(d => {
+        if (!d.success) { detail.innerHTML = '<p style="padding:1rem; color:var(--d365-danger);">Failed to load.</p>'; return; }
+        const rows = d.grid_data || [];
+        if (!rows.length) { detail.innerHTML = '<p style="padding:1rem;">No lines saved.</p>'; detail.dataset.loaded = '1'; return; }
+        let html = '<table class="bh-detail-grid"><thead><tr>' +
+            '<th>#</th><th>Type</th><th>Cust No</th><th>Name</th><th>Account</th>' +
+            '<th style="text-align:right">Debit</th><th style="text-align:right">Credit</th><th>Desc</th>' +
+            '</tr></thead><tbody>';
+        rows.forEach((r, i) => {
+            const dr = parseFloat(r.debit || 0);
+            const cr = parseFloat(r.credit || 0);
+            html += `<tr>
+                <td>${i+1}</td>
+                <td>${esc(r.entry_type || '')}</td>
+                <td>${esc(r.cust_no || '')}</td>
+                <td>${esc(r.cust_name || '')}</td>
+                <td>${esc(r.member_account || r.sacco_code || '')}</td>
+                <td class="mono">${dr > 0 ? fmt(dr) : ''}</td>
+                <td class="mono">${cr > 0 ? fmt(cr) : ''}</td>
+                <td>${esc(r.description || '')}</td>
+            </tr>`;
+        });
+        html += '</tbody></table>';
+        detail.innerHTML = html;
+        detail.dataset.loaded = '1';
+    })
+    .catch(() => { detail.innerHTML = '<p style="padding:1rem; color:var(--d365-danger);">Network error.</p>'; });
+}
+
+function deleteDraft(key) {
+    if (!confirm('Delete this JV draft? This cannot be undone.')) return;
+    fetch(`/accounting/jv/drafts/${key}/delete/`, {
+        method: 'POST',
+        headers: {'X-CSRFToken': getCookie('csrftoken')},
+    })
+    .then(r => r.json())
+    .then(d => {
+        if (d.success) {
+            const card = document.querySelector(`.bh-card[data-key="${key}"]`);
+            if (card) card.remove();
+        } else {
+            alert(d.error || 'Delete failed.');
+        }
+    })
+    .catch(() => alert('Network error.'));
+}
+
+function esc(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+function fmt(n) { return n.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}); }
+function getCookie(name) {
+    const v = document.cookie.match('(^|;)\\s*' + name + '\\s*=\\s*([^;]+)');
+    return v ? v.pop() : '';
+}
+</script>
+{% endblock %}

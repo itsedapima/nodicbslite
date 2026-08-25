@@ -1,0 +1,183 @@
+{% extends 'base.html' %}
+{% block title %}Reports Hub | NODi Lite{% endblock %}
+
+{% block extra_css %}
+<style>
+  .reports-hero {
+    background: linear-gradient(135deg, #0E2B4D 0%, #1a4170 100%);
+    color: #fff;
+    padding: 2rem 1.5rem;
+    border-radius: .75rem;
+    margin-bottom: 1.5rem;
+  }
+  .reports-hero h1 { font-size: 1.65rem; font-weight: 700; margin: 0 0 .25rem; color: #fff; }
+  .reports-hero p  { margin: 0; opacity: .85; color: #fff; }
+
+  .report-section { margin-bottom: 1.75rem; }
+  .report-section h3 {
+    font-size: 1rem;
+    color: #0E2B4D;
+    border-bottom: 2px solid #0E2B4D;
+    padding-bottom: .35rem;
+    margin-bottom: .85rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+  }
+  .report-tile {
+    display: flex;
+    align-items: center;
+    gap: .75rem;
+    padding: .9rem 1rem;
+    background: #fff;
+    border: 1px solid #e3e6ec;
+    border-radius: .5rem;
+    transition: all .15s ease;
+    text-decoration: none;
+    color: inherit;
+    height: 100%;
+  }
+  .report-tile:hover {
+    border-color: #0E2B4D;
+    background: #f6f9fd;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(14, 43, 77, .08);
+  }
+  .report-tile .icon {
+    width: 38px; height: 38px;
+    background: #eef3f9;
+    color: #0E2B4D;
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.25rem;
+    flex-shrink: 0;
+  }
+  .report-tile .label {
+    font-weight: 600; font-size: .92rem;
+    color: #0E2B4D; line-height: 1.2;
+  }
+  .report-tile .desc {
+    font-size: .76rem; color: #6c757d; margin-top: 1px;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<div class="reports-hero">
+    <h1><i class="bi bi-file-earmark-bar-graph me-2"></i>Reports</h1>
+    <p>Generate, filter, and export reports. Every report supports Excel and PDF download.</p>
+</div>
+
+{# -- MEMBERS -- #}
+<div class="report-section">
+  <h3><i class="bi bi-people-fill me-1"></i> Members</h3>
+  <div class="row g-3">
+    <div class="col-md-4 col-lg-3">
+      <a href="{% url 'reports:members_listing' %}" class="report-tile">
+        <div class="icon"><i class="bi bi-list-ul"></i></div>
+        <div>
+          <div class="label">Members Listing</div>
+          <div class="desc">Cust no, ID, phone, name, reg date, status</div>
+        </div>
+      </a>
+    </div>
+    <div class="col-md-4 col-lg-3">
+      <a href="{% url 'reports:member_balances' %}" class="report-tile">
+        <div class="icon"><i class="bi bi-wallet2"></i></div>
+        <div>
+          <div class="label">Member Account Balances</div>
+          <div class="desc">Balance per saving / loan account type</div>
+        </div>
+      </a>
+    </div>
+  </div>
+</div>
+
+{# -- TRANSACTIONS -- #}
+<div class="report-section">
+  <h3><i class="bi bi-arrow-left-right me-1"></i> Transactions</h3>
+  <div class="row g-3">
+    <div class="col-md-4 col-lg-3">
+      <a href="{% url 'reports:cashier_statement' %}" class="report-tile">
+        <div class="icon"><i class="bi bi-receipt"></i></div>
+        <div>
+          <div class="label">Cashier Statement</div>
+          <div class="desc">Manual payments posted per date, by cashier</div>
+        </div>
+      </a>
+    </div>
+    <div class="col-md-4 col-lg-3">
+      <a href="{% url 'reports:payments_summary' %}" class="report-tile">
+        <div class="icon"><i class="bi bi-calendar-month"></i></div>
+        <div>
+          <div class="label">Payments Summary</div>
+          <div class="desc">Monthly customer payments by account</div>
+        </div>
+      </a>
+    </div>
+    <div class="col-md-4 col-lg-3">
+      <a href="{% url 'reports:mpesa_payments' %}" class="report-tile">
+        <div class="icon"><i class="bi bi-phone-vibrate"></i></div>
+        <div>
+          <div class="label">M-PESA Payments</div>
+          <div class="desc">Posted M-PESA receipts &amp; destination accounts</div>
+        </div>
+      </a>
+    </div>
+    <div class="col-md-4 col-lg-3">
+      <a href="{% url 'reports:savings_matrix' %}" class="report-tile">
+        <div class="icon"><i class="bi bi-grid-3x3-gap"></i></div>
+        <div>
+          <div class="label">Savings Breakdown Matrix</div>
+          <div class="desc">Monthly per-member contributions grid</div>
+        </div>
+      </a>
+    </div>
+  </div>
+</div>
+
+{# -- LOANS -- #}
+<div class="report-section">
+  <h3><i class="bi bi-cash-coin me-1"></i> Loans</h3>
+  <div class="row g-3">
+    <div class="col-md-4 col-lg-3">
+      <a href="{% url 'reports:loans_register' %}" class="report-tile">
+        <div class="icon"><i class="bi bi-clipboard-data"></i></div>
+        <div>
+          <div class="label">Loans Register</div>
+          <div class="desc">Disbursed loans + charges recovered</div>
+        </div>
+      </a>
+    </div>
+    <div class="col-md-4 col-lg-3">
+      <a href="{% url 'reports:interest_paid' %}" class="report-tile">
+        <div class="icon"><i class="bi bi-graph-up"></i></div>
+        <div>
+          <div class="label">Interest Income Report</div>
+          <div class="desc">Interest charged &amp; paid, incl. flat-rate upfront</div>
+        </div>
+      </a>
+    </div>
+    <div class="col-md-4 col-lg-3">
+      <a href="{% url 'reports:loan_book' %}" class="report-tile">
+        <div class="icon"><i class="bi bi-book"></i></div>
+        <div>
+          <div class="label">Loan Book</div>
+          <div class="desc">All running loans snapshot</div>
+        </div>
+      </a>
+    </div>
+    <div class="col-md-4 col-lg-3">
+      <a href="{% url 'reports:mobile_loans' %}" class="report-tile">
+        <div class="icon"><i class="bi bi-phone"></i></div>
+        <div>
+          <div class="label">Mobile Loans Report</div>
+          <div class="desc">All mobile loans within a date range</div>
+        </div>
+      </a>
+    </div>
+  </div>
+</div>
+
+{% endblock %}

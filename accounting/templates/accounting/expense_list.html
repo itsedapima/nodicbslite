@@ -1,0 +1,72 @@
+{% extends 'base.html' %}
+{% load humanize %}
+{% block content %}
+{% include 'accounting/includes/accounting_quick_actions.html' %}
+<div class="container my-5">
+        <!-- Message display section -->
+        {% if messages %}
+        <div class="container mt-4">
+            {% for message in messages %}
+            <div class="alert {% if message.tags %}alert-{{ message.tags }}{% else %}alert-info{% endif %}" role="alert">
+                {{ message }}
+                <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        <h2>Expense List</h2>
+        <div class="mb-4">
+            <a href="{% url 'accounting:expense_create' %}" class="btn btn-primary">Add Expense</a>
+        </div>
+    <!-- Search Bar -->
+    <form method="GET" action="{% url 'accounting:expense_list' %}" class="form-inline mb-3">
+        <input type="text" name="q" placeholder="Search by Cheque, Description, Amount, Date" value="{{ query }}" class="form-control w-50 d-inline">
+        <button type="submit" class="btn btn-secondary">Search</button>
+    </form>
+
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Description</th>
+                    <th>Reference</th>
+                    <th>Amount</th>
+                    <th>Reconcile</th>
+                    <th>View</th>
+                    <th>Edit</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for expense in expenses %}
+                <tr>
+                    <td>{{ expense.expense_date | date:'Y-m-d'  }}</td>
+                    <td>{{ expense.description }}</td>
+                    <td>{{ expense.reference}}</td>
+                    <td>{{ expense.amount |intcomma}}</td>
+                    <td>
+                        {% if expense.reconciliation_status == "unreconciled" %}
+                            <a href="{% url 'accounting:reconcile_expense' expense.id %}" class="btn btn-primary">Reconcile</a>
+                        {% else %}
+                            <span class="text-success">Already Reconciled</span>
+                        {% endif %}
+                        </td>
+                        <td>
+                        <a href="{% url 'accounting:view_expense' expense.id %}" class="btn btn-info">View</a>
+                        </td>
+                        <td>
+                        <a href="{% url 'accounting:edit_expense' expense.id %}" class="btn btn-warning">Edit</a>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="6" class="text-center">No results found</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

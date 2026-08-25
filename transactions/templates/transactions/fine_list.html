@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% load humanize %}
+
+{% block title %}Fines & Penalties - NODi Lite{% endblock %}
+
+{% block content %}
+<div class="app-toolbar">
+    <div class="app-toolbar-title">
+        <h1>Fines & Penalties</h1>
+    </div>
+    <div class="app-toolbar-actions">
+        <a href="{% url 'transactions:fine_add' %}" class="d365-btn d365-btn-primary">
+            <i class="fluent-icon">add</i> Add Fine
+        </a>
+    </div>
+</div>
+
+<div class="d365-card">
+    <div class="d365-grid-table-wrapper">
+        <table class="d365-grid-table">
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Member</th>
+                    <th>Reason</th>
+                    <th class="text-right">Amount</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for fine in fines %}
+                <tr>
+                    <td>{{ fine.date|date:"d M Y" }}</td>
+                    <td>
+                        <a href="{% url 'members:detail' fine.member.pk %}" class="d365-link">{{ fine.member }}</a>
+                    </td>
+                    <td>{{ fine.reason }}</td>
+                    <td class="text-right">{{ fine.amount|intcomma }}</td>
+                    <td>
+                        {% if fine.is_paid %}
+                        <span class="d365-badge d365-badge-success">Paid</span>
+                        {% else %}
+                        <span class="d365-badge d365-badge-danger">Unpaid</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if not fine.is_paid %}
+                        <a href="{% url 'transactions:fine_pay' fine.pk %}" class="d365-btn d365-btn-sm d365-btn-primary">
+                            <i class="fluent-icon">payment</i> Pay
+                        </a>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="6" class="d365-empty-state">No fines recorded.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

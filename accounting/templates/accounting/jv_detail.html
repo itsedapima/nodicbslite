@@ -1,0 +1,159 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}{{ voucher.voucher_no }}{% endblock %}
+
+{% block content %}
+{% include "accounting/includes/accounting_quick_actions.html" %}
+
+<div class="page-shell">
+  <div class="page-head">
+    <div>
+      <h4 class="mb-0">
+        <i class="bi bi-journal-text me-2"></i>{{ voucher.voucher_no }}
+      </h4>
+      <small class="text-muted">Journal Voucher Detail</small>
+    </div>
+    <div class="d-flex gap-1">
+      <a href="{% url 'accounting:jv_pdf' voucher.pk %}" class="btn btn-outline-secondary btn-sm" target="_blank">
+        <i class="bi bi-file-earmark-pdf me-1"></i>PDF
+      </a>
+      <a href="{% url 'accounting:jv_list' %}" class="btn btn-outline-secondary btn-sm">
+        <i class="bi bi-arrow-left me-1"></i>Back
+      </a>
+    </div>
+  </div>
+
+  <!-- Voucher Header Card -->
+  <div class="card border-0 shadow-sm mb-3">
+    <div class="card-body">
+      <div class="row g-3">
+        <div class="col-md-3">
+          <label class="form-label text-muted small mb-0">Voucher #</label>
+          <div class="fw-semibold">{{ voucher.voucher_no }}</div>
+        </div>
+        <div class="col-md-3">
+          <label class="form-label text-muted small mb-0">Date</label>
+          <div>{{ voucher.voucher_date|date:"d M Y" }}</div>
+        </div>
+        <div class="col-md-3">
+          <label class="form-label text-muted small mb-0">Status</label>
+          <div>
+            {% if voucher.status == 'posted' %}
+              <span class="badge bg-success-subtle text-success">Posted</span>
+            {% elif voucher.status == 'approved' %}
+              <span class="badge bg-primary-subtle text-primary">Approved</span>
+            {% elif voucher.status == 'draft' %}
+              <span class="badge bg-secondary-subtle text-secondary">Draft</span>
+            {% elif voucher.status == 'pending' %}
+              <span class="badge bg-warning-subtle text-warning">Pending</span>
+            {% else %}
+              <span class="badge bg-danger-subtle text-danger">{{ voucher.status|title }}</span>
+            {% endif %}
+          </div>
+        </div>
+        <div class="col-md-3">
+          <label class="form-label text-muted small mb-0">Total Amount</label>
+          <div class="fw-semibold font-monospace">{{ voucher.total_amount|floatformat:2 }}</div>
+        </div>
+        <div class="col-12">
+          <label class="form-label text-muted small mb-0">Description / Narration</label>
+          <div>{{ voucher.description|default:"—" }}</div>
+        </div>
+      </div>
+
+      <hr class="my-3">
+
+      <div class="row g-3 small text-muted">
+        <div class="col-md-3">
+          <label class="form-label text-muted small mb-0">Created By</label>
+          <div>{{ voucher.created_by.get_full_name|default:voucher.created_by.username }}</div>
+        </div>
+        <div class="col-md-3">
+          <label class="form-label text-muted small mb-0">Created At</label>
+          <div>{{ voucher.created_at|date:"d M Y H:i" }}</div>
+        </div>
+        {% if voucher.approved_by %}
+        <div class="col-md-3">
+          <label class="form-label text-muted small mb-0">Approved By</label>
+          <div>{{ voucher.approved_by.get_full_name|default:voucher.approved_by.username }}</div>
+        </div>
+        {% endif %}
+        {% if voucher.approved_at %}
+        <div class="col-md-3">
+          <label class="form-label text-muted small mb-0">Approved At</label>
+          <div>{{ voucher.approved_at|date:"d M Y H:i" }}</div>
+        </div>
+        {% endif %}
+        {% if voucher.posted_at %}
+        <div class="col-md-3">
+          <label class="form-label text-muted small mb-0">Posted At</label>
+          <div>{{ voucher.posted_at|date:"d M Y H:i" }}</div>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Lines Table -->
+  <div class="card border-0 shadow-sm">
+    <div class="card-header bg-transparent py-2">
+      <h6 class="mb-0"><i class="bi bi-list-ul me-1"></i>Journal Lines</h6>
+    </div>
+    <div class="grid-scroll">
+      <table class="grid-table table table-hover align-middle mb-0">
+        <thead>
+          <tr>
+            <th style="width:40px">#</th>
+            <th>Account</th>
+            <th>Description</th>
+            <th>Type</th>
+            <th class="text-end">Debit</th>
+            <th class="text-end">Credit</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for line in voucher.lines.all %}
+          <tr>
+            <td class="text-muted">{{ forloop.counter }}</td>
+            <td>
+              {% if line.sacco_account %}
+                <span class="fw-semibold">{{ line.sacco_account.account_code }}</span>
+                <span class="text-muted ms-1">{{ line.sacco_account.account_name }}</span>
+              {% else %}
+                <span class="text-muted">—</span>
+              {% endif %}
+            </td>
+            <td>{{ line.description|default:"—" }}</td>
+            <td>
+              {% if line.entry_type == 'customer' %}
+                <span class="badge bg-info-subtle text-info">Member</span>
+              {% else %}
+                <span class="badge bg-secondary-subtle text-secondary">GL</span>
+              {% endif %}
+            </td>
+            <td class="text-end font-monospace">
+              {% if line.debit_amount %}{{ line.debit_amount|floatformat:2 }}{% else %}—{% endif %}
+            </td>
+            <td class="text-end font-monospace">
+              {% if line.credit_amount %}{{ line.credit_amount|floatformat:2 }}{% else %}—{% endif %}
+            </td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="6" class="text-center text-muted py-4">No lines recorded.</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+        <tfoot class="table-light">
+          <tr class="fw-bold">
+            <td colspan="4" class="text-end">Totals</td>
+            <td class="text-end font-monospace">{{ total_debit|floatformat:2 }}</td>
+            <td class="text-end font-monospace">{{ total_credit|floatformat:2 }}</td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}

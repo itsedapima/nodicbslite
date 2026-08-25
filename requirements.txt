@@ -1,0 +1,45 @@
+# ── NODi Lite — Lightweight Chama Management Backend ──
+# Adapted from NODi CBS, optimized for resource-light chama instances.
+
+# Core
+Django==6.0.6
+gunicorn==26.0.0
+psycopg2-binary==2.9.12
+python-dotenv==1.2.2
+whitenoise==6.12.0
+
+# REST API (Android Admin App)
+djangorestframework==3.15.1
+djangorestframework-simplejwt==5.3.1
+django-cors-headers==4.5.0
+
+# Forms & Templates (Web Admin)
+django-crispy-forms==2.0
+crispy-bootstrap5==0.7
+django-widget-tweaks==1.5.0
+
+# Background tasks
+django-q2==1.10.0
+croniter>=1.3.8
+
+# Reports & PDF
+reportlab==4.5.1
+xhtml2pdf==0.2.17
+openpyxl==3.1.5
+
+# SMS & HTTP
+requests==2.34.2
+
+# Security
+cryptography==49.0.0
+
+# Redis (cache + task broker)
+redis>=4.0.0
+
+# Data Processing (Dividend/Interest Engine)
+polars>=1.0.0
+
+# Utilities
+shortuuid==1.0.13
+python-dateutil==2.9.0.post0
+pytz==2026.2

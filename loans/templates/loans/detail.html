@@ -1,0 +1,283 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block title %}Loan {{ loan.loan_number }} — NODi Lite{% endblock %}
+
+{% block content %}
+<div class="page-shell">
+
+    {# ── Admin Quick Actions Bar ──────────────────────────────────────── #}
+    <div class="d-flex flex-wrap align-items-center gap-2 mb-3">
+        <a href="{% url 'loans:list' %}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left me-1"></i> Back to List
+        </a>
+        {% if loan.status == 'pending' or loan.status == 'approved' %}
+        <form method="post" action="{% url 'loans:disburse' loan.pk %}" class="d-inline">
+            {% csrf_token %}
+            <input type="hidden" name="channel" value="bank">
+            <input type="hidden" name="reference" value="DISBURSE">
+            <button type="submit" class="btn btn-success"
+                    onclick="return confirm('Are you sure you want to disburse this loan?');">
+                <i class="bi bi-send me-1"></i> Disburse Loan
+            </button>
+        </form>
+        {% endif %}
+        {% if loan.status == 'disbursed' %}
+        <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#repayModal">
+            <i class="bi bi-arrow-return-left me-1"></i> Record Repayment
+        </button>
+        {% endif %}
+        <button type="button" class="btn btn-outline-secondary" onclick="window.print();">
+            <i class="bi bi-printer me-1"></i> Print
+        </button>
+    </div>
+
+    {# ── Page Head ────────────────────────────────────────────────────── #}
+    <div class="page-head">
+        <div class="d-flex align-items-center gap-3">
+            <div class="icon-shape"
+                 style="width:3rem;height:3rem;font-size:1.25rem;border-radius:50%;">
+                <i class="bi bi-cash-coin"></i>
+            </div>
+            <div>
+                <h2>{{ loan.loan_number }}</h2>
+                <p class="page-sub">
+                    <a href="{% url 'members:detail' loan.member.pk %}" class="text-decoration-none">
+                        {{ loan.member.first_name }} {{ loan.member.last_name }}
+                    </a>
+                    &middot;
+                    {% if loan.status == 'pending' %}
+                        <span class="badge bg-warning text-dark">Pending</span>
+                    {% elif loan.status == 'approved' %}
+                        <span class="badge bg-info">Approved</span>
+                    {% elif loan.status == 'disbursed' %}
+                        <span class="badge bg-primary">Disbursed</span>
+                    {% elif loan.status == 'repaid' %}
+                        <span class="badge bg-success">Repaid</span>
+                    {% elif loan.status == 'defaulted' %}
+                        <span class="badge bg-danger">Defaulted</span>
+                    {% else %}
+                        <span class="badge bg-secondary">{{ loan.status|title }}</span>
+                    {% endif %}
+                </p>
+            </div>
+        </div>
+    </div>
+
+    {# ── Messages ─────────────────────────────────────────────────────── #}
+    {% if messages %}
+    <div class="mb-3">
+        {% for message in messages %}
+        <div class="alert alert-{{ message.tags|default:'info' }} alert-dismissible fade show" role="alert">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    {# ── Summary KPI Cards ────────────────────────────────────────────── #}
+    <div class="row g-3 mb-4">
+        <div class="col-6 col-lg-3">
+            <div class="card text-center p-3">
+                <small class="text-muted text-uppercase fw-semibold">Principal</small>
+                <h3 class="mb-0 mt-1 text-primary">{{ loan.amount|floatformat:2|intcomma }}</h3>
+                <small class="text-muted">KES</small>
+            </div>
+        </div>
+        <div class="col-6 col-lg-3">
+            <div class="card text-center p-3">
+                <small class="text-muted text-uppercase fw-semibold">Total Repaid</small>
+                <h3 class="mb-0 mt-1 text-success">{{ loan.total_repaid|floatformat:2|intcomma }}</h3>
+                <small class="text-muted">KES</small>
+            </div>
+        </div>
+        <div class="col-6 col-lg-3">
+            <div class="card text-center p-3">
+                <small class="text-muted text-uppercase fw-semibold">Outstanding</small>
+                <h3 class="mb-0 mt-1 text-danger">{{ loan.outstanding_balance|floatformat:2|intcomma }}</h3>
+                <small class="text-muted">KES</small>
+            </div>
+        </div>
+        <div class="col-6 col-lg-3">
+            <div class="card text-center p-3">
+                <small class="text-muted text-uppercase fw-semibold">Status</small>
+                <div class="mt-2">
+                    {% if loan.status == 'pending' %}
+                        <span class="badge bg-warning text-dark fs-6 px-3 py-2">Pending</span>
+                    {% elif loan.status == 'approved' %}
+                        <span class="badge bg-info fs-6 px-3 py-2">Approved</span>
+                    {% elif loan.status == 'disbursed' %}
+                        <span class="badge bg-primary fs-6 px-3 py-2">Disbursed</span>
+                    {% elif loan.status == 'repaid' %}
+                        <span class="badge bg-success fs-6 px-3 py-2">Repaid</span>
+                    {% elif loan.status == 'defaulted' %}
+                        <span class="badge bg-danger fs-6 px-3 py-2">Defaulted</span>
+                    {% else %}
+                        <span class="badge bg-secondary fs-6 px-3 py-2">{{ loan.status|title }}</span>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {# ── Loan Details Card ────────────────────────────────────────────── #}
+    <div class="row g-4">
+        <div class="col-lg-6">
+            <div class="card">
+                <div class="card-header">
+                    <i class="bi bi-info-circle me-1"></i> Loan Information
+                </div>
+                <table class="detail-table">
+                    <tr>
+                        <th>Member</th>
+                        <td>
+                            <a href="{% url 'members:detail' loan.member.pk %}" class="text-decoration-none">
+                                {{ loan.member.first_name }} {{ loan.member.last_name }}
+                                ({{ loan.member.member_number }})
+                            </a>
+                        </td>
+                    </tr>
+                    <tr><th>Product</th><td>{{ loan.product|default:"-" }}</td></tr>
+                    <tr><th>Application Date</th><td>{{ loan.application_date|date:"d M Y"|default:loan.created_at|date:"d M Y" }}</td></tr>
+                    <tr><th>Approval Date</th><td>{{ loan.approval_date|date:"d M Y"|default:"-" }}</td></tr>
+                    <tr><th>Disbursement Date</th><td>{{ loan.disbursement_date|date:"d M Y"|default:"-" }}</td></tr>
+                    <tr><th>Interest Rate</th><td>{{ loan.interest_rate|floatformat:2 }}%</td></tr>
+                    <tr><th>Duration</th><td>{{ loan.duration }} month{{ loan.duration|pluralize }}</td></tr>
+                    <tr><th>Installment Amount</th><td>KES {{ loan.installment_amount|floatformat:2|intcomma }}</td></tr>
+                    <tr><th>Purpose</th><td>{{ loan.purpose|default:"-" }}</td></tr>
+                </table>
+            </div>
+        </div>
+
+        <div class="col-lg-6">
+            {# ── Guarantors Card ──────────────────────────────────────── #}
+            {% if guarantors %}
+            <div class="card mb-4">
+                <div class="card-header">
+                    <i class="bi bi-people me-1"></i> Guarantors
+                </div>
+                <div class="grid-scroll">
+                    <table class="grid-table">
+                        <thead>
+                            <tr>
+                                <th>Member</th>
+                                <th>Member No</th>
+                                <th class="num">Amount</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for g in guarantors %}
+                            <tr>
+                                <td>
+                                    <a href="{% url 'members:detail' g.member.pk %}" class="text-decoration-none">
+                                        {{ g.member.first_name }} {{ g.member.last_name }}
+                                    </a>
+                                </td>
+                                <td>{{ g.member.member_number }}</td>
+                                <td class="num">{{ g.amount|floatformat:2|intcomma }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    {# ── Repayment Schedule / History ─────────────────────────────────── #}
+    {% if repayments %}
+    <div class="card mt-4">
+        <div class="card-header">
+            <i class="bi bi-clock-history me-1"></i> Repayment History
+        </div>
+        <div class="grid-scroll">
+            <table class="grid-table">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th class="num">Amount (KES)</th>
+                        <th>Reference</th>
+                        <th class="num">Balance After</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for r in repayments %}
+                    <tr>
+                        <td>{{ r.date|date:"d M Y H:i"|default:r.created_at|date:"d M Y H:i" }}</td>
+                        <td class="num">{{ r.amount|floatformat:2|intcomma }}</td>
+                        <td>{{ r.reference|default:"-" }}</td>
+                        <td class="num">{{ r.balance_after|floatformat:2|intcomma }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endif %}
+
+</div>
+
+{# ── Repayment Modal ─────────────────────────────────────────────────── #}
+{% if loan.status == 'disbursed' %}
+<div class="modal fade" id="repayModal" tabindex="-1" aria-labelledby="repayModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="repayModalLabel">
+                    <i class="bi bi-arrow-return-left me-1"></i> Record Repayment
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="post" action="{% url 'loans:repay' loan.pk %}" class="d365-form">
+                {% csrf_token %}
+                <div class="modal-body">
+                    <div class="alert alert-light border mb-3">
+                        <div class="d-flex justify-content-between">
+                            <span class="text-muted">Outstanding Balance:</span>
+                            <strong>KES {{ loan.outstanding_balance|floatformat:2|intcomma }}</strong>
+                        </div>
+                    </div>
+                    <div class="field-group">
+                        <label for="id_repay_amount">Amount (KES) *</label>
+                        <input type="number" name="amount" id="id_repay_amount"
+                               class="form-control" step="0.01" min="1" required>
+                    </div>
+                    <div class="row g-3 mt-1">
+                        <div class="col-md-6">
+                            <div class="field-group">
+                                <label for="id_repay_channel">Channel</label>
+                                <select name="channel" id="id_repay_channel" class="form-select">
+                                    <option value="cash">Cash</option>
+                                    <option value="mpesa">M-Pesa</option>
+                                    <option value="bank">Bank Transfer</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="field-group">
+                                <label for="id_repay_reference">Reference</label>
+                                <input type="text" name="reference" id="id_repay_reference"
+                                       class="form-control">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="field-group mt-2">
+                        <label for="id_repay_narration">Narration</label>
+                        <input type="text" name="narration" id="id_repay_narration"
+                               class="form-control">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-check-lg me-1"></i> Post Repayment
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

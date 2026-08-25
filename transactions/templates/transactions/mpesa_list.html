@@ -1,0 +1,101 @@
+{% extends "base.html" %}
+{% load humanize %}
+
+{% block title %}M-Pesa Transactions - NODi Lite{% endblock %}
+
+{% block content %}
+<div class="app-toolbar">
+    <div class="app-toolbar-title">
+        <h1>M-Pesa Transactions
+            {% if unmatched_count %}
+            <span class="d365-badge d365-badge-warning">{{ unmatched_count }} unmatched</span>
+            {% endif %}
+        </h1>
+    </div>
+</div>
+
+<div class="d365-card d365-filter-bar">
+    <form method="get" class="d365-form d365-form-inline">
+        <div class="d365-form-group">
+            <label class="d365-label" for="date_from">From</label>
+            <input type="date" id="date_from" name="date_from" class="d365-input" value="{{ request.GET.date_from }}">
+        </div>
+        <div class="d365-form-group">
+            <label class="d365-label" for="date_to">To</label>
+            <input type="date" id="date_to" name="date_to" class="d365-input" value="{{ request.GET.date_to }}">
+        </div>
+        <div class="d365-form-group">
+            <label class="d365-label" for="status">Status</label>
+            <select id="status" name="status" class="d365-select">
+                <option value="">All</option>
+                <option value="matched" {% if request.GET.status == "matched" %}selected{% endif %}>Matched</option>
+                <option value="unmatched" {% if request.GET.status == "unmatched" %}selected{% endif %}>Unmatched</option>
+            </select>
+        </div>
+        <div class="d365-form-group">
+            <button type="submit" class="d365-btn d365-btn-primary">Filter</button>
+        </div>
+    </form>
+</div>
+
+<div class="d365-card">
+    <div class="d365-grid-table-wrapper">
+        <table class="d365-grid-table">
+            <thead>
+                <tr>
+                    <th>Trans ID</th>
+                    <th>Phone</th>
+                    <th>Name</th>
+                    <th class="text-right">Amount</th>
+                    <th>Date</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for tx in transactions %}
+                <tr>
+                    <td>{{ tx.trans_id }}</td>
+                    <td>{{ tx.phone }}</td>
+                    <td>{{ tx.name }}</td>
+                    <td class="text-right">{{ tx.amount|intcomma }}</td>
+                    <td>{{ tx.date|date:"d M Y H:i" }}</td>
+                    <td>
+                        {% if tx.is_matched %}
+                        <span class="d365-badge d365-badge-success">Matched</span>
+                        {% else %}
+                        <span class="d365-badge d365-badge-warning">Unmatched</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if not tx.is_matched %}
+                        <a href="{% url 'transactions:mpesa_match' tx.pk %}" class="d365-btn d365-btn-sm d365-btn-primary">
+                            <i class="fluent-icon">link</i> Match
+                        </a>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="7" class="d365-empty-state">No M-Pesa transactions found.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    {% if page_obj.has_other_pages %}
+    <div class="d365-pagination">
+        {% if page_obj.has_previous %}
+        <a href="?page={{ page_obj.previous_page_number }}" class="d365-btn d365-btn-sm">Previous</a>
+        {% endif %}
+        <span class="d365-pagination-info">
+            Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
+        </span>
+        {% if page_obj.has_next %}
+        <a href="?page={{ page_obj.next_page_number }}" class="d365-btn d365-btn-sm">Next</a>
+        {% endif %}
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

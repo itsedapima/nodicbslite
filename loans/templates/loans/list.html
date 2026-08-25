@@ -1,0 +1,207 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block title %}Loans — NODi Lite{% endblock %}
+
+{% block content %}
+<div class="page-shell">
+
+    {# ── App Toolbar ──────────────────────────────────────────────────── #}
+    <div class="app-toolbar">
+        <div class="app-toolbar-body">
+            <h1 class="toolbar-title">
+                <span class="toolbar-badge"><i class="bi bi-cash-coin"></i></span> Loans
+            </h1>
+            <div class="toolbar-actions">
+                <a href="{% url 'loans:apply' %}" class="btn btn-primary">
+                    <i class="bi bi-plus-lg me-1"></i> Apply for Loan
+                </a>
+                <a href="{% url 'loans:charge_list' %}" class="btn btn-outline-secondary">
+                    <i class="bi bi-tag me-1"></i> Charges
+                </a>
+            </div>
+        </div>
+    </div>
+
+    {# ── Page Hero ────────────────────────────────────────────────────── #}
+    <div class="page-hero"
+         style="background:linear-gradient(135deg,#0E2B4D 0%,#1a3f6f 100%);
+                color:#fff;border-radius:.75rem;padding:2rem 2.5rem;margin-bottom:1.5rem;">
+        <div class="d-flex align-items-center gap-3">
+            <i class="bi bi-cash-stack" style="font-size:2.5rem;opacity:.85;"></i>
+            <div>
+                <h2 class="mb-1" style="color:#fff;font-size:1.5rem;">Loans Register</h2>
+                <p class="mb-0" style="opacity:.8;">
+                    {% if q %}
+                        {{ loans|length }} result{{ loans|length|pluralize }} for "<strong>{{ q }}</strong>"
+                    {% elif page_obj %}
+                        {{ page_obj.paginator.count }} loan{{ page_obj.paginator.count|pluralize }} &middot; Loan management and tracking
+                    {% else %}
+                        Loan management and tracking
+                    {% endif %}
+                </p>
+            </div>
+        </div>
+    </div>
+
+    {# ── Messages ─────────────────────────────────────────────────────── #}
+    {% if messages %}
+    <div class="mb-3">
+        {% for message in messages %}
+        <div class="alert alert-{{ message.tags|default:'info' }} alert-dismissible fade show" role="alert">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    {# ── Filter Bar ───────────────────────────────────────────────────── #}
+    <form method="get" class="filter-bar">
+        <div class="input-group">
+            <span class="input-group-text bg-white border-end-0">
+                <i class="bi bi-search text-muted"></i>
+            </span>
+            <input type="text" name="q" value="{{ q|default:'' }}" class="form-control border-start-0"
+                   placeholder="Search by member name, number or loan no...">
+        </div>
+        <select name="status" class="form-select" onchange="this.form.submit()">
+            <option value="">All Statuses</option>
+            <option value="pending" {% if status_filter == 'pending' %}selected{% endif %}>Pending</option>
+            <option value="approved" {% if status_filter == 'approved' %}selected{% endif %}>Approved</option>
+            <option value="disbursed" {% if status_filter == 'disbursed' %}selected{% endif %}>Disbursed</option>
+            <option value="repaid" {% if status_filter == 'repaid' %}selected{% endif %}>Repaid</option>
+            <option value="defaulted" {% if status_filter == 'defaulted' %}selected{% endif %}>Defaulted</option>
+            <option value="rejected" {% if status_filter == 'rejected' %}selected{% endif %}>Rejected</option>
+        </select>
+        <button type="submit" class="btn btn-outline-primary">
+            <i class="bi bi-search me-1"></i> Search
+        </button>
+        {% if q or status_filter %}
+        <a href="{% url 'loans:list' %}" class="btn btn-outline-secondary">
+            <i class="bi bi-x-lg me-1"></i> Clear
+        </a>
+        {% endif %}
+    </form>
+
+    {# ── Data Card with Table ─────────────────────────────────────────── #}
+    <div class="data-card">
+        <div class="grid-scroll">
+            <table class="grid-table">
+                <thead>
+                    <tr>
+                        <th>Loan No</th>
+                        <th>Member No</th>
+                        <th>Member Name</th>
+                        <th>Date</th>
+                        <th class="num">Principal</th>
+                        <th class="num">Installment</th>
+                        <th>Status</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for loan in page_obj|default:loans %}
+                    <tr>
+                        <td><strong>{{ loan.loan_number }}</strong></td>
+                        <td>{{ loan.member.member_number }}</td>
+                        <td>
+                            <a href="{% url 'members:detail' loan.member.pk %}" class="text-decoration-none">
+                                {{ loan.member.first_name }} {{ loan.member.last_name }}
+                            </a>
+                        </td>
+                        <td>{{ loan.created_at|date:"d M Y" }}</td>
+                        <td class="num">{{ loan.amount|floatformat:2|intcomma }}</td>
+                        <td class="num">{{ loan.installment_amount|floatformat:2|intcomma }}</td>
+                        <td>
+                            {% if loan.status == 'pending' %}
+                                <span class="badge bg-warning text-dark">Pending</span>
+                            {% elif loan.status == 'approved' %}
+                                <span class="badge bg-info">Approved</span>
+                            {% elif loan.status == 'disbursed' %}
+                                <span class="badge bg-primary">Disbursed</span>
+                            {% elif loan.status == 'repaid' %}
+                                <span class="badge bg-success">Repaid</span>
+                            {% elif loan.status == 'defaulted' %}
+                                <span class="badge bg-danger">Defaulted</span>
+                            {% else %}
+                                <span class="badge bg-secondary">{{ loan.status|title }}</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div class="d-flex gap-1">
+                                <a href="{% url 'loans:detail' loan.pk %}" class="btn btn-sm btn-outline-primary"
+                                   title="View Loan">
+                                    <i class="bi bi-eye"></i>
+                                </a>
+                                <a href="{% url 'loans:detail' loan.pk %}" class="btn btn-sm btn-outline-secondary"
+                                   title="Edit Loan">
+                                    <i class="bi bi-pencil"></i>
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="8" class="text-center text-muted py-5">
+                            <i class="bi bi-inbox fs-1 d-block mb-2"></i>
+                            {% if q or status_filter %}
+                                No loans match your search criteria.
+                            {% else %}
+                                No loans found. Click <strong>Apply for Loan</strong> to create one.
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    {# ── Pagination ───────────────────────────────────────────────────── #}
+    {% if page_obj.has_other_pages %}
+    <nav class="d365-pagination" aria-label="Loan pagination">
+        <ul class="pagination justify-content-center mt-3 mb-0">
+            {% if page_obj.has_previous %}
+            <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if q %}&q={{ q }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}">
+                    <i class="bi bi-chevron-left"></i> Previous
+                </a>
+            </li>
+            {% else %}
+            <li class="page-item disabled">
+                <span class="page-link"><i class="bi bi-chevron-left"></i> Previous</span>
+            </li>
+            {% endif %}
+
+            {% for num in page_obj.paginator.page_range %}
+                {% if page_obj.number == num %}
+                <li class="page-item active"><span class="page-link">{{ num }}</span></li>
+                {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ num }}{% if q %}&q={{ q }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}">{{ num }}</a>
+                </li>
+                {% endif %}
+            {% endfor %}
+
+            {% if page_obj.has_next %}
+            <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if q %}&q={{ q }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}">
+                    Next <i class="bi bi-chevron-right"></i>
+                </a>
+            </li>
+            {% else %}
+            <li class="page-item disabled">
+                <span class="page-link">Next <i class="bi bi-chevron-right"></i></span>
+            </li>
+            {% endif %}
+        </ul>
+        <p class="text-center text-muted small mt-2">
+            Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
+            ({{ page_obj.paginator.count }} record{{ page_obj.paginator.count|pluralize }})
+        </p>
+    </nav>
+    {% endif %}
+
+</div>
+{% endblock %}

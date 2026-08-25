@@ -1,0 +1,59 @@
+{% extends "base_generic.html" %}
+
+{% block title %}Sign in — {{ brand_name|default:"NODi Lite" }}{% endblock %}
+
+{% block content %}
+<div class="auth-wrap">
+    <div class="auth-card">
+
+        <div class="auth-brand">
+            <span class="brand-mark"><i class="bi bi-bank2"></i></span>
+            <h1>{{ brand_name|default:"NODi Lite" }}</h1>
+            <p>Sign in to your account</p>
+        </div>
+
+        <div class="auth-body">
+
+            {% if messages %}
+                {% for message in messages %}
+                    <div class="alert alert-{{ message.tags|default:'info' }} alert-dismissible fade show py-2" role="alert">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+
+            <form method="post" action="{{ request.get_full_path }}" class="d365-form" novalidate>
+                {% csrf_token %}
+
+                <input type="hidden" name="next" value="{{ request.GET.next|default:'' }}">
+
+                <div class="field-group">
+                    <label for="{{ form.username.id_for_label }}">Username</label>
+                    {{ form.username }}
+                    {% for error in form.username.errors %}<div class="errorlist">{{ error }}</div>{% endfor %}
+                </div>
+
+                <div class="field-group">
+                    <label for="{{ form.password.id_for_label }}">Password</label>
+                    {{ form.password }}
+                    {% for error in form.password.errors %}<div class="errorlist">{{ error }}</div>{% endfor %}
+                </div>
+
+                {% for error in form.non_field_errors %}
+                    <div class="errorlist mb-2">{{ error }}</div>
+                {% endfor %}
+
+                <button type="submit" class="btn btn-primary w-100 mt-1">
+                    <i class="bi bi-box-arrow-in-right me-1"></i> Sign in
+                </button>
+            </form>
+        </div>
+
+        <div class="auth-foot">
+            <p><a href="{% url 'accounts:password_reset' %}">Forgot your password?</a></p>
+            <p>Need an account? <a href="{% url 'accounts:signup_contact_admin' %}">Contact administrator</a></p>
+        </div>
+    </div>
+</div>
+{% endblock %}

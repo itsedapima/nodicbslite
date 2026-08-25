@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="container my-5">
+    {% include 'customers/includes/customer_quick_actions.html' %}
+    <h2>
+        {% if is_edit %} Edit {% else %} Add {% endif %} 
+        Next of Kin for {{ customer.full_name }}
+    </h2>
+
+    <form method="post">
+        {% csrf_token %}
+        
+        <div class="mb-3">
+            <label class="form-label">Customer</label>
+            <input type="text" class="form-control" value="{{ customer.full_name }}" readonly>
+        </div>
+
+        {{ form.as_p }}
+
+        <button type="submit" class="btn btn-success">
+            {% if is_edit %} Update Changes {% else %} Save {% endif %}
+        </button>
+        <a href="{% url 'customers:list_next_of_kin' customer.id %}" class="btn btn-secondary">Back</a>
+    </form>
+</div>
+{% endblock %}

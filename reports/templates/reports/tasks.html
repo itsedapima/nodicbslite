@@ -1,0 +1,33 @@
+{% extends 'base.html' %}
+{% block title %}Task Report — NODi Lite{% endblock %}
+{% block content %}
+<div class="page-shell">
+    <div class="page-head">
+        <div><h2><i class="bi bi-list-task me-2"></i>Task Report</h2></div>
+        <a href="{% url 'reports:index' %}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left me-1"></i> Reports</a>
+    </div>
+    <div class="grid-scroll">
+        <table class="grid-table">
+            <thead><tr><th>Task</th><th>Type</th><th>Scheduled</th><th>Last Run</th><th>Status</th></tr></thead>
+            <tbody>
+                {% for task in tasks %}
+                <tr>
+                    <td><strong>{{ task.name }}</strong></td>
+                    <td><span class="badge bg-info">{{ task.task_type|default:"-" }}</span></td>
+                    <td>{{ task.scheduled_at|date:"d M Y H:i"|default:"-" }}</td>
+                    <td>{{ task.last_run|date:"d M Y H:i"|default:"Never" }}</td>
+                    <td>
+                        {% if task.status == 'completed' %}<span class="badge bg-success">Completed</span>
+                        {% elif task.status == 'running' %}<span class="badge bg-primary">Running</span>
+                        {% elif task.status == 'failed' %}<span class="badge bg-danger">Failed</span>
+                        {% else %}<span class="badge bg-secondary">Pending</span>{% endif %}
+                    </td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="5" class="text-center text-muted py-4">No scheduled tasks.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

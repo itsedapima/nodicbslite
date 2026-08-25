@@ -1,0 +1,354 @@
+{% extends "base.html" %}
+{% block content %}
+{% include 'transactions/includes/transactions_quick_actions.html' %}
+<style>
+    :root { --primary-brand: #0d6efd; --fintech-success: #198754; }
+    .sticky-panel { top: 24px; z-index: 10; }
+    .fintech-numeric { font-family: 'SF Mono', SFMono-Regular, Consolas, "Liberation Mono", Menlo, monospace; font-weight: 600; }
+    .table-scaled th { background-color: #f8f9fa !important; font-size: 0.78rem; text-transform: uppercase; color: #5c677d; letter-spacing: 0.5px; padding: 12px 14px !important;}
+    .table-scaled td { font-size: 0.84rem; padding: 10px 14px !important; }
+    .account-select-sm { height: 32px; font-size: 0.8rem; font-weight: 500; border-radius: 4px; min-width: 160px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
+    .row-success-fade {
+        transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+        transform: scale(0.97);
+        opacity: 0;
+        background-color: #e8f5e9 !important;
+    }
+</style>
+
+<div class="container-fluid px-4 my-5" style="max-width: 1600px;">
+
+    <span id="table-name" class="d-none">Batch_Review_{{ batch.batch_no }}</span>
+
+    <div class="row g-4">
+
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags }} alert-dismissible fade show border-0 shadow-sm mb-4" role="alert">
+                <i class="bi {% if message.tags == 'success' %}bi-check-circle{% else %}bi-exclamation-triangle{% endif %} me-2"></i>{{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        {% endfor %}
+    {% endif %}
+
+        <div class="col-xl-3 col-lg-4">
+            <div class="card shadow-sm border-0 sticky-panel mb-4">
+                <div class="card-header bg-dark text-white py-3 border-0 d-flex justify-content-between align-items-center">
+                    <span class="small text-uppercase fw-bold">Batch Metadata</span>
+                    <span class="badge bg-secondary font-monospace">v{{ batch.id }}</span>
+                </div>
+                <div class="card-body py-4">
+                    <div class="mb-3">
+                        <label class="text-muted small d-block mb-1">Shared Pool</label>
+                        <h4 class="text-dark fw-bold mb-0 fintech-numeric">KES {{ batch.amount_to_share|floatformat:2 }}</h4>
+                    </div>
+                    <div class="mb-3">
+                        <label class="text-muted small d-block mb-1">Aggregate Weighted Average</label>
+                        <h5 class="text-secondary fw-semibold mb-0 fintech-numeric">{{ total_weighted_avg|floatformat:2 }}</h5>
+                    </div>
+                    <div class="mb-3">
+                        <label class="text-muted small d-block mb-1">Effective Yield/Rate</label>
+                        <h4 class="text-primary fw-bold mb-0 fintech-numeric">{{ effective_rate }}%</h4>
+                    </div>
+                    <div class="mb-3">
+                        <label class="text-muted small d-block mb-1">Net Disbursable</label>
+                        <h4 class="text-success fw-bold mb-0 fintech-numeric">KES {{ batch.total_net_payout|floatformat:2 }}</h4>
+                    </div>
+                    <div class="mb-4">
+                        <label class="text-muted small d-block mb-1">Cut-off Date</label>
+                        <span class="badge bg-light text-dark font-monospace border py-2 px-3 w-100 text-start fs-6">
+                            <i class="bi bi-calendar3 me-2 text-primary"></i>{{ batch.cut_off_date|date:"d M Y" }}
+                        </span>
+                    </div>
+
+                    <hr class="my-3">
+
+                    {% if not batch.is_posted %}
+                    <div class="bg-light p-3 rounded border border-secondary-subtle">
+                        <ul class="nav nav-pills nav-fill bg-white p-1 rounded mb-3 border shadow-sm" id="postTab" role="tablist">
+                            <li class="nav-item">
+                                <button class="nav-link active py-1 small fw-bold" id="bulk-tab" data-bs-toggle="pill" data-bs-target="#bulk-pane"><i class="bi bi-boxes me-1"></i>Bulk Post</button>
+                            </li>
+                            <li class="nav-item">
+                                <button class="nav-link py-1 small fw-bold" id="ind-tab" data-bs-toggle="pill" data-bs-target="#ind-pane"><i class="bi bi-person-check me-1"></i>Individual</button>
+                            </li>
+                        </ul>
+
+                        <div class="tab-content">
+                            <div class="tab-pane fade show active" id="bulk-pane">
+                                <form action="{% url 'transactions:post_interest_batch_unified' batch.id %}" method="POST" id="postForm" onsubmit="return confirm('Are you sure you want to post this entire batch?')">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn btn-primary w-100 btn-sm fw-bold shadow-sm py-2">
+                                        <i class="bi bi-send me-2"></i>Post Full Batch
+                                    </button>
+                                </form>
+                            </div>
+                            <div class="tab-pane fade text-center py-2 text-muted small" id="ind-pane">
+                                <i class="bi bi-info-circle text-primary me-1"></i>Use the inline row controls to post individual members.
+                            </div>
+                        </div>
+                    </div>
+                    {% else %}
+                    <div class="alert alert-success border-0 text-center py-3 mb-0 shadow-sm">
+                        <i class="bi bi-check-circle fs-2 d-block mb-2"></i>
+                        <span class="fw-bold small text-uppercase">Batch Posted</span>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-9 col-lg-8">
+            <div class="card shadow-sm border-0 bg-white">
+                <div class="card-header bg-light border-bottom d-flex flex-wrap gap-3 justify-content-between align-items-center py-3 px-4">
+                    <div class="d-flex align-items-center gap-3">
+                        <nav aria-label="breadcrumb">
+                            <ol class="breadcrumb mb-0 font-monospace small">
+                                <li class="breadcrumb-item"><a href="{% url 'transactions:interest_history' %}" class="text-decoration-none text-muted">Registry</a></li>
+                                <li class="breadcrumb-item active text-dark fw-bold">Batch_{{ batch.batch_no }}</li>
+                            </ol>
+                        </nav>
+                        <div class="btn-group btn-group-sm border bg-white" role="group">
+                            <a href="?view_status=unposted" class="btn btn-sm {% if status_filter == 'unposted' %}btn-dark fw-bold{% else %}btn-white text-muted{% endif %}">Pending</a>
+                            <a href="?view_status=posted" class="btn btn-sm {% if status_filter == 'posted' %}btn-dark fw-bold{% else %}btn-white text-muted{% endif %}">Posted</a>
+                        </div>
+                    </div>
+
+                    <div class="d-flex gap-2">
+                        <button id="exportButton" class="btn btn-sm btn-white text-success border shadow-sm fw-semibold px-3">
+                            <i class="bi bi-file-earmark-spreadsheet me-1"></i>Export Page
+                        </button>
+                        <span class="badge bg-white text-dark border px-3 py-2 d-flex align-items-center gap-2 font-monospace shadow-sm">
+                            <i class="bi bi-people text-primary"></i> {{ page_obj.paginator.count }} rows
+                        </span>
+                    </div>
+                </div>
+
+                <div class="table-responsive" style="max-height: 700px; min-height: 350px;">
+                    <table class="table table-hover align-middle mb-0 table-scaled text-nowrap" id="interestTable">
+                        <thead class="sticky-top bg-light shadow-sm">
+                            <tr>
+                                <th>Member No</th>
+                                <th>Member Name</th>
+                                <th class="text-end">Gross Dividend</th>
+                                <th class="text-end">WHT (Tax)</th>
+                                <th class="text-end">Processing Fee</th>
+                                <th class="text-end">Net Payout</th>
+                                <th class="ind-col d-none text-center">Destination Account</th>
+                                <th class="ind-col d-none text-center">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody class="border-top-0">
+                            {% for detail in page_obj %}
+                            <tr id="row-{{ detail.id }}" data-cust-no="{{ detail.cust_no }}">
+                                <td class="font-monospace fw-bold text-secondary">{{ detail.cust_no }}</td>
+                                <td class="fw-semibold text-dark">{{ detail.member_name }}</td>
+                                <td class="text-end fintech-numeric text-dark">{{ detail.gross_interest|floatformat:2 }}</td>
+                                <td class="text-end fintech-numeric text-danger">-{{ detail.withholding_tax|floatformat:2 }}</td>
+                                <td class="text-end fintech-numeric text-danger">-{{ detail.processing_fee|floatformat:2 }}</td>
+                                <td class="text-end fintech-numeric text-success fw-bold">{{ detail.net_payout|floatformat:2 }}</td>
+
+                                <td class="ind-col d-none text-center">
+                                    <select class="form-select account-select-sm d-inline-block shadow-inner py-0" id="acc-{{ detail.id }}">
+                                        <option value="">Retrieve Options...</option>
+                                    </select>
+                                </td>
+                                <td class="ind-col d-none text-center">
+                                    {% if not detail.is_posted %}
+                                    <button class="btn btn-success btn-sm py-1 px-3 shadow-sm font-monospace fw-bold post-btn" data-id="{{ detail.id }}" style="font-size:0.75rem;">
+                                        Commit
+                                    </button>
+                                    {% else %}
+                                    <span class="badge bg-light text-success border px-3 py-2 fw-bold font-monospace"><i class="bi bi-check me-1"></i>Saved</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="8" class="text-center py-5 text-muted">
+                                    <div class="py-4">
+                                        <i class="bi bi-clipboard-check fs-1 mb-3 opacity-50 text-secondary d-block"></i>
+                                        <p class="mb-0 small fw-semibold">No pending allocations remaining.</p>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+
+                {% if page_obj.has_other_pages %}
+                <div class="card-footer bg-white border-top py-3 d-flex flex-column flex-sm-row align-items-center justify-content-between gap-3">
+                    <div class="text-muted small font-monospace">
+                        Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
+                    </div>
+                    <nav>
+                        <ul class="pagination pagination-sm mb-0 justify-content-center shadow-sm">
+                            {% if page_obj.has_previous %}
+                                <li class="page-item"><a class="page-link" href="?page=1&view_status={{ status_filter }}"><i class="bi bi-chevron-double-left"></i></a></li>
+                                <li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}&view_status={{ status_filter }}">Prev</a></li>
+                            {% else %}
+                                <li class="page-item disabled"><span class="page-link text-muted">Prev</span></li>
+                            {% endif %}
+
+                            {% for num in page_obj.paginator.page_range %}
+                                {% if page_obj.number == num %}
+                                    <li class="page-item active"><span class="page-link fw-bold">{{ num }}</span></li>
+                                {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                                    <li class="page-item"><a class="page-link" href="?page={{ num }}&view_status={{ status_filter }}">{{ num }}</a></li>
+                                {% endif %}
+                            {% endfor %}
+
+                            {% if page_obj.has_next %}
+                                <li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}&view_status={{ status_filter }}">Next</a></li>
+                                <li class="page-item"><a class="page-link" href="?page={{ page_obj.paginator.num_pages }}&view_status={{ status_filter }}"><i class="bi bi-chevron-double-right"></i></a></li>
+                            {% else %}
+                                <li class="page-item disabled"><span class="page-link text-muted">Next</span></li>
+                            {% endif %}
+                        </ul>
+                    </nav>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const indTab = document.getElementById('ind-tab');
+    const bulkTab = document.getElementById('bulk-tab');
+    const indCols = document.querySelectorAll('.ind-col');
+    const cache = {};
+
+    if(indTab) {
+        indTab.addEventListener('shown.bs.tab', () => {
+            indCols.forEach(c => c.classList.remove('d-none'));
+            loadBatchAccounts();
+        });
+    }
+
+    if(bulkTab) {
+        bulkTab.addEventListener('shown.bs.tab', () => {
+            indCols.forEach(c => c.classList.add('d-none'));
+        });
+    }
+
+    function loadBatchAccounts() {
+        document.querySelectorAll('tr[data-cust-no]').forEach(row => {
+            const custNo = row.dataset.custNo;
+            const detailId = row.id.split('-')[1];
+            const select = document.getElementById(`acc-${detailId}`);
+            if (!select || select.options.length > 1) return;
+
+            if (cache[custNo]) {
+                renderOptions(select, cache[custNo]);
+            } else {
+                fetch(`{% url "transactions:get_customer_accounts_api" %}?cust_no=${custNo}`)
+                    .then(res => res.json())
+                    .then(data => {
+                        cache[custNo] = data.results;
+                        renderOptions(select, data.results);
+                    })
+                    .catch(() => {
+                        select.innerHTML = '<option value="">Error</option>';
+                    });
+            }
+        });
+    }
+
+    function renderOptions(select, items) {
+        select.innerHTML = '';
+        if (!items || items.length === 0) {
+            select.innerHTML = '<option value="">No targets found</option>';
+            return;
+        }
+        items.forEach(item => {
+            let opt = new Option(item.text, item.id);
+            select.add(opt);
+        });
+    }
+
+    document.querySelectorAll('.post-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const id = this.dataset.id;
+            const row = document.getElementById(`row-${id}`);
+            const accountSelect = document.getElementById(`acc-${id}`);
+            const account = accountSelect ? accountSelect.value : null;
+
+            if (!account) return alert("Please select a destination account first.");
+
+            this.disabled = true;
+            this.innerHTML = '<span class="spinner-border spinner-border-sm" role="status"></span>';
+
+            fetch(`{% url "transactions:post_interest_individual" detail_id=0 %}`.replace('/0/', `/${id}/`), {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': '{{ csrf_token }}',
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json'
+                },
+                body: JSON.stringify({ target_account: account })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    row.classList.add('row-success-fade');
+                    setTimeout(() => {
+                        row.remove();
+                        if(document.querySelectorAll('tr[data-cust-no]').length === 0){
+                            window.location.reload();
+                        }
+                    }, 500);
+                } else {
+                    alert("Error: " + data.message);
+                    this.disabled = false;
+                    this.innerText = 'Commit';
+                }
+            })
+            .catch(() => {
+                alert("Network error. Please try again.");
+                this.disabled = false;
+                this.innerText = 'Commit';
+            });
+        });
+    });
+
+    const exportButton = document.getElementById('exportButton');
+    if (exportButton) {
+        exportButton.addEventListener('click', function() {
+            const tableElement = document.getElementById('interestTable');
+            const fileName = document.getElementById('table-name').textContent.trim();
+
+            exportButton.disabled = true;
+            exportButton.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Exporting...';
+
+            fetch('{% url "reports:export_to_excel" %}', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token }}' },
+                body: JSON.stringify({ table_html: tableElement.outerHTML, file_name: fileName })
+            })
+            .then(res => {
+                if(!res.ok) throw new Error("Export failed.");
+                return res.blob();
+            })
+            .then(blob => {
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = fileName + '_Extract.xlsx';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+            })
+            .catch(err => alert("Export error: " + err.message))
+            .finally(() => {
+                exportButton.disabled = false;
+                exportButton.innerHTML = '<i class="bi bi-file-earmark-spreadsheet me-1"></i> Export Page';
+            });
+        });
+    }
+});
+</script>
+
+{% endblock %}

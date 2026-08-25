@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block content %}
+{% include 'more_menu_customers.html' %}
+
+<div class="container mt-20">
+<h2>{{ customer|default:"Add Customer" }}</h2>
+<form method="post">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <button type="submit" class="btn btn-success">Save</button>
+    <a href="{% url 'customers:list_customer' %}" class="btn btn-secondary">Back</a>
+</form>
+</div>
+{% endblock %}

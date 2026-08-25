@@ -1,0 +1,139 @@
+{% extends "base.html" %}
+{% block content %}
+ {% include 'customers/includes/customer_quick_actions.html' %}
+
+
+<style>
+    .card { border: 1px solid var(--d365-border); border-radius: var(--d365-radius-lg); box-shadow: var(--d365-shadow-2); }
+    .card-header {
+        background: var(--d365-surface-alt);
+        border-bottom: 1px solid var(--d365-border);
+        font-weight: 600;
+        color: var(--d365-text-secondary);
+        padding: 1rem 1.25rem;
+        font-size: .8125rem;
+    }
+    label { font-weight: 600; color: var(--d365-text-secondary); margin-bottom: 5px; font-size: .8125rem; }
+
+    /* Ensures Django's default inputs look like Bootstrap form-controls */
+    input[type="text"], input[type="number"], input[type="email"], input[type="date"],
+    input[type="tel"], select, .form-control {
+        display: block;
+        width: 100%;
+        padding: 0.4rem 0.65rem;
+        font-size: 0.875rem;
+        border: 1px solid var(--d365-border-strong, #b4b4b4);
+        border-radius: var(--d365-radius-sm, 4px);
+        background-color: var(--d365-surface, #fafafa);
+        color: var(--d365-text, #333);
+        transition: border-color 0.2s;
+    }
+    input:focus, select:focus {
+        border-color: var(--d365-primary, #0078d4);
+        outline: none;
+        box-shadow: 0 0 0 2px var(--d365-primary-tint-40, rgba(0,120,212,.25));
+    }
+    .table th {
+        background: var(--d365-surface-alt);
+        color: var(--d365-text-secondary);
+        font-weight: 600; font-size: 0.85rem; text-transform: uppercase;
+    }
+</style>
+
+<div class="container my-5">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h3 class="mb-0 text-dark"><i class="bi bi-building-add me-2 text-primary"></i>Register New {{ title }}</h3>
+       
+    </div>
+
+    {% if form.errors %}
+    <div class="alert alert-danger alert-dismissible fade show border-0 shadow-sm" role="alert">
+        <strong><i class="bi bi-exclamation-triangle-fill me-2"></i>Entity Details Errors:</strong>
+        <ul class="mb-0 mt-2 small">
+            {% for field, errors in form.errors.items %}
+                {% for error in errors %}
+                    <li>{{ field|capfirst }}: {{ error }}</li>
+                {% endfor %}
+            {% endfor %}
+        </ul>
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+    {% endif %}
+
+    {% if formset.errors %}
+    <div class="alert alert-warning alert-dismissible fade show border-0 shadow-sm" role="alert">
+        <strong><i class="bi bi-people-fill me-2"></i>Official Details Errors:</strong>
+        <p class="small mb-0">Please check the official rows below. Some required fields are missing or invalid.</p>
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+    {% endif %}
+
+    <form method="post" autocomplete="off">
+        {% csrf_token %}
+        
+        <div class="card mb-4">
+            <div class="card-header">
+                <i class="bi bi-info-circle me-2"></i>{{ title }} Basic Information
+            </div>
+            <div class="card-body p-4">
+                <div class="row">
+                    {% for field in form %}
+                        <div class="col-md-6 col-lg-4 mb-3">
+                            <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                            {{ field }}
+                            {% if field.help_text %}
+                                <small class="text-muted d-block mt-1">{{ field.help_text }}</small>
+                            {% endif %}
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <div class="card mb-4">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span><i class="bi bi-people me-2"></i>Officials / Authorized Signatories</span>
+                <span class="badge bg-light text-dark fw-normal">Min 1 Official Required</span>
+            </div>
+            <div class="card-body p-0">
+                {{ formset.management_form }}
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead>
+                            <tr>
+                                <th class="ps-4">Full Name</th>
+                                <th>Designation</th>
+                                <th>Mobile Number</th>
+                                <th class="pe-4">National ID</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for s_form in formset %}
+                                <tr>
+                                    <td class="ps-4 py-3">{{ s_form.name }}</td>
+                                    <td class="py-3">{{ s_form.designation }}</td>
+                                    <td class="py-3">{{ s_form.phone }}</td>
+                                    <td class="pe-4 py-3">
+                                        {{ s_form.national_id }}
+                                        {% for hidden in s_form.hidden_fields %} {{ hidden }} {% endfor %}
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div class="d-flex gap-2 mb-5">
+            <button type="submit" class="btn btn-primary px-4 py-2">
+                <i class="bi bi-check-circle me-2"></i>Complete Registration
+            </button>
+            <a href="{% url 'customers:list_customers' %}" class="btn btn-outline-secondary px-4 py-2">
+                Cancel
+            </a>
+        </div>
+    </form>
+</div>
+
+{% endblock %}

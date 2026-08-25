@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dropdown Menu</title>
+    <!-- Bootstrap CSS -->
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="css/more_menu_styles.css">
+    <!-- jQuery -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <!-- Bootstrap JS -->
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.bundle.min.js"></script>
+	
+<body>
+    <div class="container my-4">
+        <ul class="nav nav-pills justify-content-center">
+            <li class="nav-item">
+                <a class="nav-link" href="{% url 'members:search_member' %}">Edit Member Accounts</a>
+            </li>
+            <li class="nav-item dropdown">
+                <a class="nav-link dropdown-toggle" href="#" id="menu1Dropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                    Member Reports
+                </a>
+                <div class="dropdown-menu" aria-labelledby="menu1Dropdown">
+                    <a class="dropdown-item" href="{% url 'members:mini_statement_form' %}">Generate Account Statement</a>
+                    <a class="dropdown-item" href="{% url 'members:savings_report' %}">Generate Savings Report</a>
+                    <a class="dropdown-item" href="#">Generate Loans Report</a>
+                    <a class="dropdown-item" href="#">Generate S/Capital Report</a>
+                    <a class="dropdown-item" href="#">All Accounts Report</a>
+                </div>
+            </li>
+            <li class="nav-item dropdown">
+                <a class="nav-link dropdown-toggle" href="#" id="menu2Dropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                    Edit Records
+                </a>
+                <div class="dropdown-menu" aria-labelledby="menu2Dropdown">
+                    <a class="dropdown-item" href="{% url 'members:register_member' %}">Add New Members</a>
+                    <a class="dropdown-item" href="#">Edit Personal Details</a>
+                    <a class="dropdown-item" href="#">Edit Next of Kin</a>
+                    <div class="dropdown-submenu">
+                        <a class="dropdown-item dropdown-toggle" href="#">Other</a>
+                        <div class="dropdown-menu">
+                            <a class="dropdown-item" href="#">Deactivate Member</a>
+                        </div>
+                    </div>
+                </div>
+            </li>
+            <li class="nav-item dropdown">
+                <a class="nav-link dropdown-toggle" href="#" id="menu3Dropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                    Member Statistics
+                </a>
+                <div class="dropdown-menu" aria-labelledby="menu3Dropdown">
+                    <a class="dropdown-item" href="#">Membership Stats</a>
+                    <a class="dropdown-item" href="#">Accounts Stats</a>
+                    <a class="dropdown-item" href="#">Member Joining Stats</a>
+                    <a class="dropdown-item" href="#">Dormant Members</a>
+                    <a class="dropdown-item" href="#">Deceased Members</a>
+                    <a class="dropdown-item" href="#">Top Savers</a>
+                    <a class="dropdown-item" href="#">Top Borrowers</a>
+                    <div class="dropdown-submenu">
+                        <a class="dropdown-item dropdown-toggle" href="#">Other</a>
+                        <div class="dropdown-menu">
+                            <a class="dropdown-item" href="#">Non-Member Next of Kins</a>
+                        </div>
+                    </div>
+                </div>
+            </li>
+        </ul>
+    </div>
+
+    <script>
+        $(document).ready(function() {
+            // Show dropdown on hover
+            $('.nav-item.dropdown').hover(function() {
+                $(this).find('.dropdown-menu').first().stop(true, true).delay(250).slideDown();
+            }, function() {
+                $(this).find('.dropdown-menu').first().stop(true, true).delay(100).slideUp();
+            });
+
+            // Handle submenu dropdown click
+            $('.dropdown-submenu a.dropdown-toggle').on("click", function(e) {
+                e.stopPropagation();
+                var $subMenu = $(this).next(".dropdown-menu");
+                if ($subMenu.hasClass('show')) {
+                    $subMenu.removeClass('show').slideUp();
+                } else {
+                    $(this).closest('.dropdown-menu').find('.dropdown-menu.show').removeClass('show').slideUp();
+                    $subMenu.addClass('show').slideDown();
+                }
+            });
+
+            // Prevent closing from click inside dropdown
+            $('.dropdown-menu').on('click', function(e) {
+                e.stopPropagation();
+            });
+        });
+    </script>
+</body>
+</html>

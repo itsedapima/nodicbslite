@@ -1,0 +1,81 @@
+{% extends 'base.html' %}
+
+{% block content %}
+{% include 'accounting/includes/accounting_quick_actions.html' %}
+<div class="container-fluid px-4 py-4">
+
+  {% if messages %}
+  <div class="row justify-content-center">
+    <div class="col-lg-8">
+      {% for message in messages %}
+        <div class="alert {% if message.tags == 'success' %}alert-success{% elif message.tags == 'error' or message.tags == 'danger' %}alert-danger{% elif message.tags == 'warning' %}alert-warning{% else %}alert-info{% endif %} alert-dismissible fade show" role="alert" style="border-radius: .4rem;">
+          {{ message }}
+          <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
+  <div class="row justify-content-center">
+    <div class="col-lg-8">
+
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <h5 class="mb-0" style="font-weight: 700; color: var(--d365-text);">
+          {% if form.instance.pk %}Edit Sacco Account{% else %}Add New Sacco Account{% endif %}
+        </h5>
+        <span style="font-size: .75rem; color: var(--d365-text-secondary); font-family: monospace;">Ledger Context File</span>
+      </div>
+
+      <div style="background: var(--d365-surface); border: 1px solid var(--d365-border); border-radius: .5rem; box-shadow: var(--d365-shadow-2);">
+        <div style="background: var(--d365-surface-alt); border-bottom: 2px solid var(--d365-border); padding: .75rem 1.25rem; border-radius: .5rem .5rem 0 0;">
+          <span style="font-size: .8rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--d365-text-secondary);">
+            Account Details
+          </span>
+        </div>
+        <div class="p-4">
+          <form method="post">
+            {% csrf_token %}
+
+            <div class="row g-3">
+              {% for field in form %}
+                <div class="{% if field.name == 'account_name' %}col-12{% else %}col-md-6{% endif %}">
+                  <label for="{{ field.id_for_label }}" style="font-weight: 600; font-size: .82rem; color: var(--d365-text);" class="form-label">
+                    {{ field.label }}
+                    {% if field.field.required %}<span class="text-danger">*</span>{% endif %}
+                  </label>
+
+                  {% if field.field.widget.input_type == 'select' or field.name == 'account_group' %}
+                    <select name="{{ field.name }}" id="{{ field.id_for_label }}" class="form-select form-select-sm">
+                      {% for choice in field.field.choices %}
+                        <option value="{{ choice.0 }}" {% if choice.0 == field.value %}selected{% endif %}>{{ choice.1 }}</option>
+                      {% endfor %}
+                    </select>
+                  {% else %}
+                    <input type="{{ field.field.widget.input_type|default:'text' }}" name="{{ field.name }}" id="{{ field.id_for_label }}" value="{{ field.value|default:'' }}" class="form-control form-control-sm" placeholder="Enter {{ field.label|lower }}...">
+                  {% endif %}
+
+                  {% if field.errors %}
+                    {% for error in field.errors %}
+                      <div class="text-danger" style="font-size: .75rem; margin-top: .25rem;">{{ error }}</div>
+                    {% endfor %}
+                  {% endif %}
+                </div>
+              {% endfor %}
+            </div>
+
+            <hr class="my-4" style="border-color: var(--d365-border);">
+
+            <div class="d-flex justify-content-end">
+              <button type="submit" style="background: var(--d365-primary); color: #fff; border: 1px solid var(--d365-primary); border-radius: .4rem; font-weight: 600; padding: .45rem 1.5rem; font-size: .85rem;">
+                Save Account
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+{% endblock %}

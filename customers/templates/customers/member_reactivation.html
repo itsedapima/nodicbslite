@@ -1,0 +1,159 @@
+{% extends "base.html" %}
+{% load static %}
+{% block content %}
+    {% include 'customers/includes/customer_quick_actions.html' %}
+
+<div class="container-fluid px-4 py-3">
+
+    <div class="d-flex align-items-center gap-2 mb-4">
+        <span class="toolbar-badge" style="background:var(--d365-success-bg); color:var(--d365-success);">
+            <i class="bi bi-person-check-fill"></i>
+        </span>
+        <h5 class="mb-0" style="color:var(--d365-text); font-weight:600;">Member Reactivation</h5>
+    </div>
+
+    <div class="row g-3">
+        <div class="col-md-5">
+            <div class="card" style="border:1px solid var(--d365-border); border-radius:var(--d365-radius-lg); box-shadow:var(--d365-shadow-2);">
+                <div class="card-header" style="background:var(--d365-surface-alt); border-bottom:1px solid var(--d365-border); font-size:.8125rem; font-weight:600; color:var(--d365-text-secondary);">
+                    <i class="bi bi-search me-1"></i> 1. Search Member Profile
+                </div>
+                <div class="card-body position-relative">
+                    <input type="text" id="memberSearch" class="form-control form-control-sm"
+                           placeholder="Search by name or member number..."
+                           style="border-color:var(--d365-border-strong); border-radius:var(--d365-radius-sm);">
+                    <div id="resultsList" class="list-group shadow"
+                         style="position:absolute; z-index:1000; width:calc(100% - 2rem); display:none;"></div>
+                </div>
+            </div>
+
+            <div id="validationCard" class="card d-none mt-3" style="border:1px solid var(--d365-border); border-radius:var(--d365-radius-lg); box-shadow:var(--d365-shadow-2);">
+                <div class="card-header" style="background:var(--d365-surface-alt); border-bottom:1px solid var(--d365-border); font-size:.8125rem; font-weight:600; color:var(--d365-text-secondary);">
+                    <i class="bi bi-shield-check me-1"></i> 2. Account State Audit
+                </div>
+                <div class="card-body">
+                    <ul class="list-group list-group-flush" style="font-size:.8125rem;">
+                        <li class="list-group-item d-flex justify-content-between" style="border-color:var(--d365-border);">
+                            Current Status: <span id="valStatus" class="badge" style="background:var(--d365-primary-tint-40); color:var(--d365-primary);">Unknown</span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between" style="border-color:var(--d365-border);">
+                            Historical Exit Date: <strong id="valExitDate" style="color:var(--d365-text);">—</strong>
+                        </li>
+                    </ul>
+                    <div id="errorMsg" class="d-none mt-3 px-3 py-2" style="background:var(--d365-warning-bg); border-left:3px solid var(--d365-warning); border-radius:var(--d365-radius-sm); font-size:.8125rem; color:var(--d365-text);"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-7">
+            <div class="card d-none" id="reactivationFormCard" style="border:1px solid var(--d365-border); border-radius:var(--d365-radius-lg); box-shadow:var(--d365-shadow-2);">
+                <div class="card-header" style="background:var(--d365-surface-alt); border-bottom:1px solid var(--d365-border); font-size:.8125rem; font-weight:600; color:var(--d365-text-secondary);">
+                    <i class="bi bi-file-earmark-text me-1"></i> 3. Reactivation Details
+                </div>
+                <div class="card-body">
+                    <form id="reactivationForm">
+                        {% csrf_token %}
+                        <input type="hidden" name="cust_no" id="targetCustNo">
+
+                        <div class="mb-3">
+                            <label class="form-label" style="font-size:.8125rem; font-weight:600; color:var(--d365-text-secondary);">Reactivation Date</label>
+                            <input type="date" name="reactivation_date" class="form-control form-control-sm" value="{% now 'Y-m-d' %}" required
+                                   style="border-color:var(--d365-border-strong); border-radius:var(--d365-radius-sm);">
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label" style="font-size:.8125rem; font-weight:600; color:var(--d365-text-secondary);">Reason / Meeting Minutes Note</label>
+                            <textarea name="reason" class="form-control form-control-sm" rows="4" placeholder="Enter reason for member reinstatement..." required
+                                      style="border-color:var(--d365-border-strong); border-radius:var(--d365-radius-sm);"></textarea>
+                        </div>
+
+                        <div class="px-3 py-2 mb-3" style="background:var(--d365-info-bg); border-left:3px solid var(--d365-info); border-radius:var(--d365-radius-sm); font-size:.78rem; color:var(--d365-text);">
+                            <i class="bi bi-info-circle me-1"></i>
+                            Registration fee status will be reset to trigger re-admission billing.
+                        </div>
+
+                        <button type="submit" id="btnSubmit" class="btn btn-sm w-100 py-2" disabled
+                                style="background:var(--d365-success); color:#fff; border:none; border-radius:var(--d365-radius-sm); font-weight:600;">
+                            <i class="bi bi-check2-circle me-1"></i> Submit Reactivation
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+const searchInput = document.getElementById('memberSearch');
+const resultsList = document.getElementById('resultsList');
+
+searchInput.addEventListener('keyup', function() {
+    if (this.value.length < 2) { resultsList.style.display = 'none'; return; }
+
+    fetch(`/customers/api/search-for-reactivation/?term=${this.value}`)
+        .then(res => res.json())
+        .then(data => {
+            resultsList.innerHTML = '';
+            if (data.length > 0) {
+                data.forEach(item => {
+                    const btn = document.createElement('button');
+                    btn.className = 'list-group-item list-group-item-action';
+                    btn.style.cssText = 'font-size:.8125rem; cursor:pointer; border-color:var(--d365-border);';
+                    btn.innerHTML = `<strong>${item.name}</strong> <small style="color:var(--d365-text-secondary);">(${item.cust_no})</small>`;
+                    btn.onclick = () => selectMember(item.cust_no, item.name);
+                    resultsList.appendChild(btn);
+                });
+                resultsList.style.display = 'block';
+            }
+        });
+});
+
+function selectMember(custNo, name) {
+    searchInput.value = name;
+    resultsList.style.display = 'none';
+    document.getElementById('targetCustNo').value = custNo;
+
+    fetch(`/customers/validate-reactivation/${custNo}/`)
+        .then(res => res.json())
+        .then(data => {
+            if (data.status === "error") { alert(data.message); return; }
+
+            document.getElementById('validationCard').classList.remove('d-none');
+            document.getElementById('reactivationFormCard').classList.remove('d-none');
+
+            document.getElementById('valStatus').innerText = data.current_status;
+            document.getElementById('valExitDate').innerText = data.exit_date;
+
+            const errorMsg = document.getElementById('errorMsg');
+            const btn = document.getElementById('btnSubmit');
+
+            if (!data.can_reactivate) {
+                errorMsg.classList.remove('d-none');
+                errorMsg.innerHTML = "<strong>Ineligible:</strong> Member is already Active.";
+                btn.disabled = true;
+                btn.style.background = 'var(--d365-text-disabled)';
+            } else {
+                errorMsg.classList.add('d-none');
+                btn.disabled = false;
+                btn.style.background = 'var(--d365-success)';
+            }
+        });
+}
+
+document.getElementById('reactivationForm').onsubmit = function(e) {
+    e.preventDefault();
+    if (!confirm("Confirm reactivation? This will set the member to Active and queue registration fee billing.")) return;
+
+    fetch('/customers/process-reactivation/', {
+        method: 'POST',
+        body: new FormData(this)
+    })
+    .then(res => res.json())
+    .then(data => {
+        alert(data.message);
+        if (data.status === "success") window.location.reload();
+    })
+    .catch(() => alert("An unexpected error occurred. Please try again."));
+};
+</script>
+{% endblock %}

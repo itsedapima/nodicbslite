@@ -1,0 +1,93 @@
+{% extends "base.html" %}
+
+{% block title %}Add User — {{ brand_name|default:"NODi Lite" }}{% endblock %}
+
+{% block content %}
+{% include 'administration/includes/administration_quick_actions.html' %}
+
+<div class="page-shell">
+
+    {% if messages or form.non_field_errors %}
+        {% if form.non_field_errors %}
+            <div class="alert alert-danger" role="alert">
+                {% for error in form.non_field_errors %}
+                    <span class="small fw-semibold"><i class="bi bi-exclamation-triangle-fill me-2"></i>{{ error }}</span>
+                {% endfor %}
+            </div>
+        {% endif %}
+        {% if messages %}
+            {% for message in messages %}
+                <div class="alert alert-{{ message.tags|default:'info' }} alert-dismissible fade show" role="alert">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            {% endfor %}
+        {% endif %}
+    {% endif %}
+
+    <div class="page-head">
+        <div>
+            <h2><i class="bi bi-person-plus me-2"></i>Add New User</h2>
+            <p class="page-sub">Create a system user account and assign a role.</p>
+        </div>
+        <a href="{% url 'accounts:view_users' %}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left me-1"></i> Back to Users
+        </a>
+    </div>
+
+    <form method="POST" class="d365-form" novalidate>
+        {% csrf_token %}
+
+        <div class="card mb-3">
+            <div class="card-header"><i class="bi bi-shield-lock me-2"></i>Identity &amp; Access</div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-md-6 field-group">
+                        <label for="{{ form.username.id_for_label }}">Username <span class="req">*</span></label>
+                        {{ form.username }}
+                        {% for error in form.username.errors %}<div class="errorlist">{{ error }}</div>{% endfor %}
+                    </div>
+                    <div class="col-md-6 field-group">
+                        <label for="{{ form.role.id_for_label }}">Role <span class="req">*</span></label>
+                        {{ form.role }}
+                        {% for error in form.role.errors %}<div class="errorlist">{{ error }}</div>{% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card mb-3">
+            <div class="card-header"><i class="bi bi-card-heading me-2"></i>Contact Information</div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-md-6 field-group">
+                        <label for="{{ form.first_name.id_for_label }}">First Name <span class="req">*</span></label>
+                        {{ form.first_name }}
+                        {% for error in form.first_name.errors %}<div class="errorlist">{{ error }}</div>{% endfor %}
+                    </div>
+                    <div class="col-md-6 field-group">
+                        <label for="{{ form.last_name.id_for_label }}">Last Name <span class="req">*</span></label>
+                        {{ form.last_name }}
+                        {% for error in form.last_name.errors %}<div class="errorlist">{{ error }}</div>{% endfor %}
+                    </div>
+                    <div class="col-md-6 field-group">
+                        <label for="{{ form.email.id_for_label }}">Email Address <span class="req">*</span></label>
+                        {{ form.email }}
+                        {% for error in form.email.errors %}<div class="errorlist">{{ error }}</div>{% endfor %}
+                    </div>
+                    <div class="col-md-6 field-group">
+                        <label for="{{ form.phone.id_for_label }}">Phone Number <span class="req">*</span></label>
+                        {{ form.phone }}
+                        {% for error in form.phone.errors %}<div class="errorlist">{{ error }}</div>{% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="d-flex gap-2">
+            <button type="submit" class="btn btn-primary"><i class="bi bi-save me-1"></i> Save User</button>
+            <a href="{% url 'accounts:view_users' %}" class="btn btn-outline-secondary">Cancel</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

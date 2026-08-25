@@ -1,0 +1,244 @@
+{% extends "base.html" %}
+{% load humanize %}
+{% block title %}Guarantor Defaulter Offload – NODi CBS{% endblock %}
+{% block extra_css %}
+<style>
+.page-hero { background: linear-gradient(135deg, #0E2B4D 0%, #1a4170 100%); color: #fff; padding: 1.5rem; border-radius: .75rem; margin-bottom: 1.25rem; }
+.page-hero h1 { font-size: 1.4rem; font-weight: 700; margin: 0 0 .15rem; color: #fff; }
+.page-hero p { margin: 0; opacity: .85; font-size: .85rem; color: #fff; }
+.page-hero i { color: #fff; }
+.detail-card { background: var(--d365-surface, #fff); border: 1px solid var(--d365-border, #EDEBE9); border-radius: .5rem; box-shadow: var(--d365-shadow-2); overflow: hidden; margin-bottom: 1.25rem; }
+.detail-card-header { background: var(--d365-surface-alt, #FAF9F8); border-bottom: 2px solid var(--d365-border, #EDEBE9); padding: .75rem 1rem; font-size: .8rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--d365-text-secondary, #605E5C); }
+.detail-card-body { padding: 1rem; }
+.data-card { background: var(--d365-surface, #fff); border: 1px solid var(--d365-border, #EDEBE9); border-radius: .5rem; box-shadow: var(--d365-shadow-2); overflow: hidden; margin-bottom: 1.25rem; }
+.data-card .table thead { background: var(--d365-surface-alt, #FAF9F8); }
+.data-card .table thead th { font-size: .75rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--d365-text-secondary, #605E5C); border-bottom: 2px solid var(--d365-border, #EDEBE9); padding: .65rem .75rem; }
+.data-card .table tbody td { font-size: .84rem; color: var(--d365-text, #323130); padding: .6rem .75rem; border-bottom: 1px solid var(--d365-border, #EDEBE9); }
+.data-card .table tbody tr:hover { background: var(--d365-primary-tint-40, #DEECF9); }
+.data-card .table tfoot { background: var(--d365-surface-alt, #FAF9F8); }
+.data-card .table tfoot td { font-weight: 700; padding: .65rem .75rem; font-size: .84rem; }
+.balance-tile { border: 1px solid var(--d365-border, #EDEBE9); border-radius: .5rem; padding: 1rem; text-align: center; height: 100%; background: var(--d365-surface, #fff); box-shadow: var(--d365-shadow-2); }
+.balance-tile .label { font-size: .78rem; color: var(--d365-text-secondary, #605E5C); margin-bottom: .25rem; }
+.balance-tile .amount { font-size: 1.1rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+.btn-d365 { font-size: .82rem; padding: .35rem .85rem; border-radius: .4rem; font-weight: 600; transition: all .15s ease; }
+.btn-d365-outline { background: var(--d365-surface, #fff); color: var(--d365-text, #323130); border: 1px solid var(--d365-border-strong, #D2D0CE); }
+.btn-d365-outline:hover { background: var(--d365-primary-tint-40, #DEECF9); color: var(--d365-primary, #0078D4); border-color: var(--d365-primary, #0078D4); }
+.form-label { font-weight: 600; font-size: .82rem; color: var(--d365-text, #323130); }
+.form-text { color: var(--d365-text-secondary, #605E5C); }
+</style>
+{% endblock %}
+{% block content %}
+{% include 'loans/includes/loans_quick_actions.html' %}
+
+{% if messages %}
+{% for message in messages %}
+<div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert" style="border-radius:.4rem;">
+    {{ message }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+{% endfor %}
+{% endif %}
+
+<div class="page-hero">
+    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+        <div>
+            <h1><i class="bi bi-shield-exclamation me-2"></i>Guarantor Defaulter Offload — {{ loan.loan_no }}</h1>
+            <p>{{ loan.customer.full_name }} · {{ loan.loan_type.account_name }}</p>
+        </div>
+        <span class="badge" style="background: rgba(255,255,255,.15); color: #fff; font-size: .78rem; padding: .35rem .75rem; border-radius: .35rem;">
+            Officer confirmation required
+        </span>
+    </div>
+</div>
+
+{# ── Defaulter Info ──────────────────────────────────────── #}
+<div class="detail-card">
+    <div class="detail-card-header">
+        <i class="bi bi-person-x me-1"></i> Defaulter Information
+    </div>
+    <div class="detail-card-body">
+        <div class="row small">
+            <div class="col-md-6">
+                <div class="mb-1"><strong style="color: var(--d365-text-secondary, #605E5C);">Name:</strong> <span style="color: var(--d365-text, #323130);">{{ loan.customer.full_name }}</span></div>
+                <div class="mb-1"><strong style="color: var(--d365-text-secondary, #605E5C);">Member No.:</strong> <span style="color: var(--d365-text, #323130);">{{ loan.customer.cust_no }}</span></div>
+                <div><strong style="color: var(--d365-text-secondary, #605E5C);">Product:</strong> <span style="color: var(--d365-text, #323130);">{{ loan.loan_type.account_name }}</span></div>
+            </div>
+            <div class="col-md-6">
+                <div class="mb-1"><strong style="color: var(--d365-text-secondary, #605E5C);">Loan No.:</strong> <span style="color: var(--d365-text, #323130);">{{ loan.loan_no }}</span></div>
+                <div class="mb-1"><strong style="color: var(--d365-text-secondary, #605E5C);">Loan Date:</strong> <span style="color: var(--d365-text, #323130);">{{ loan.loan_date|date:"d M Y" }}</span></div>
+                <div><strong style="color: var(--d365-text-secondary, #605E5C);">Original Principal:</strong> <span style="color: var(--d365-text, #323130);">KES {{ loan.principal|floatformat:2|intcomma }}</span></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{# ── Balance Breakdown ───────────────────────────────────── #}
+<div class="row g-3 mb-3">
+    <div class="col-md-4">
+        <div class="balance-tile" style="border-color: var(--d365-danger, #D13438);">
+            <div class="label">Total Outstanding</div>
+            <div class="amount" style="color: var(--d365-danger, #D13438);">KES {{ outstanding|floatformat:2|intcomma }}</div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="balance-tile" style="border-color: var(--d365-warning, #FFB900);">
+            <div class="label">Principal Balance (to distribute)</div>
+            <div class="amount" style="color: #B58A3E;">KES {{ principal_balance|floatformat:2|intcomma }}</div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="balance-tile" style="border-color: var(--d365-primary, #0078D4);">
+            <div class="label">Interest / Penalties (to retain)</div>
+            <div class="amount" style="color: var(--d365-primary, #0078D4);">KES {{ interest_balance|floatformat:2|intcomma }}</div>
+        </div>
+    </div>
+</div>
+
+{# ── Distribution Table ──────────────────────────────────── #}
+{% if allocations %}
+<div class="data-card">
+    <div style="background: var(--d365-surface-alt, #FAF9F8); border-bottom: 2px solid var(--d365-border, #EDEBE9); padding: .75rem 1rem; font-size: .8rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--d365-text-secondary, #605E5C);">
+        <i class="bi bi-calculator me-1"></i> Distribution to Guarantors (Live Calculation)
+    </div>
+    <div class="table-responsive">
+        <table class="table table-hover mb-0">
+            <thead>
+                <tr>
+                    <th style="width:3rem;">#</th>
+                    <th>Guarantor</th>
+                    <th>Cust No.</th>
+                    <th class="text-end">Guaranteed (KES)</th>
+                    <th class="text-center">% of Pool</th>
+                    <th class="text-end">Allocated (KES)</th>
+                    <th class="text-end">Monthly Installment</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for a in allocations %}
+                <tr>
+                    <td>{{ forloop.counter }}</td>
+                    <td class="fw-bold">{{ a.guarantor_name }}</td>
+                    <td class="font-monospace">{{ a.guarantor_cust_no }}</td>
+                    <td class="text-end font-monospace">{{ a.guarantee_amount|floatformat:2|intcomma }}</td>
+                    <td class="text-center">
+                        <span class="badge" style="background: var(--d365-surface-alt, #FAF9F8); color: var(--d365-text-secondary, #605E5C); border: 1px solid var(--d365-border, #EDEBE9);">{{ a.percentage|floatformat:2 }}%</span>
+                    </td>
+                    <td class="text-end font-monospace fw-bold" style="color: var(--d365-primary, #0078D4);"
+                        data-allocated="{{ a.allocated_amount|stringformat:'s' }}">
+                        {{ a.allocated_amount|floatformat:2|intcomma }}
+                    </td>
+                    <td class="text-end font-monospace" data-installment-cell="{{ forloop.counter0 }}">—</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+            <tfoot>
+                <tr>
+                    <td colspan="3" class="text-end">TOTALS</td>
+                    <td class="text-end font-monospace">KES {{ total_pool|floatformat:2|intcomma }}</td>
+                    <td class="text-center">100.00%</td>
+                    <td class="text-end font-monospace" style="color: var(--d365-primary, #0078D4);">KES {{ total_allocated|floatformat:2|intcomma }}</td>
+                    <td></td>
+                </tr>
+            </tfoot>
+        </table>
+    </div>
+</div>
+
+{# ── Residual notice ─────────────────────────────────────── #}
+{% if residual_balance > 0 %}
+<div class="alert alert-info small mb-3" style="border-radius:.4rem;">
+    <i class="bi bi-info-circle me-1"></i>
+    After offload, a residual balance of <strong>KES {{ residual_balance|floatformat:2|intcomma }}</strong>
+    (interest + penalties) will remain on the original loan. You may settle this later via inter-account transfer from the defaulter's savings/deposits.
+</div>
+{% endif %}
+
+{# ── Officer Confirmation Form ────────────────────────────── #}
+<div class="detail-card">
+    <div class="detail-card-header">
+        <i class="bi bi-pen me-1"></i> Officer Confirmation
+    </div>
+    <div class="detail-card-body">
+        <form method="post" novalidate id="offloadForm">
+            {% csrf_token %}
+            {% if form.non_field_errors %}
+            <div class="alert alert-danger" style="border-radius:.4rem;">{{ form.non_field_errors }}</div>
+            {% endif %}
+
+            <div class="row g-3">
+                <div class="col-md-3">
+                    <label class="form-label">Recovery Loan Period</label>
+                    {{ form.new_loan_period }}
+                    {% if form.new_loan_period.errors %}<div class="text-danger small">{{ form.new_loan_period.errors|join:", " }}</div>{% endif %}
+                    <div class="form-text">Months</div>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Interest Rate</label>
+                    {{ form.interest_rate }}
+                    {% if form.interest_rate.errors %}<div class="text-danger small">{{ form.interest_rate.errors|join:", " }}</div>{% endif %}
+                    <div class="form-text">% (typically 0)</div>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">Reason / Officer Notes</label>
+                    {{ form.reason }}
+                    {% if form.reason.errors %}<div class="text-danger small">{{ form.reason.errors|join:", " }}</div>{% endif %}
+                </div>
+            </div>
+
+            <div class="form-check my-3">
+                {{ form.confirm }}
+                <label class="form-check-label small" for="{{ form.confirm.id_for_label }}">
+                    {{ form.confirm.label }}
+                </label>
+                {% if form.confirm.errors %}<div class="text-danger small">{{ form.confirm.errors|join:", " }}</div>{% endif %}
+            </div>
+
+            <div class="d-flex justify-content-between border-top pt-3" style="border-color: var(--d365-border, #EDEBE9) !important;">
+                <a href="{% url 'loans:view_loan_details' loan.pk %}" class="btn btn-d365 btn-d365-outline">
+                    <i class="bi bi-x-circle me-1"></i>Cancel
+                </a>
+                <button type="submit" class="btn btn-d365" style="background: var(--d365-danger, #D13438); color: #fff; border: 1px solid var(--d365-danger, #D13438);"
+                        {% if principal_balance <= 0 or not allocations %}disabled{% endif %}
+                        onclick="return confirm('Post this offload? This action creates new defaulter loans for each guarantor and credits the original loan. A PDF summary will be generated.');">
+                    <i class="bi bi-lightning-charge-fill me-1"></i>Execute Offload
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+{% else %}
+<div class="alert alert-warning" style="border-radius:.4rem;">
+    <i class="bi bi-exclamation-triangle me-1"></i>
+    This loan has no guarantors on file, or the principal balance is already zero — nothing to offload.
+</div>
+<a href="{% url 'loans:view_loan_details' loan.pk %}" class="btn btn-d365 btn-d365-outline">
+    <i class="bi bi-arrow-left me-1"></i>Back to Loan Details
+</a>
+{% endif %}
+
+<script>
+(function () {
+  const periodInput = document.querySelector('[name="new_loan_period"]');
+  const rateInput = document.querySelector('[name="interest_rate"]');
+  const cells = document.querySelectorAll('[data-installment-cell]');
+  const allocCells = document.querySelectorAll('[data-allocated]');
+
+  function fmt(v) {
+    return isFinite(v) ? v.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}) : '—';
+  }
+  function update() {
+    const n = parseInt(periodInput.value, 10) || 0;
+    const r = (parseFloat(rateInput.value) || 0) / 100 / 12;
+    cells.forEach((cell, i) => {
+      const alloc = parseFloat(allocCells[i].dataset.allocated) || 0;
+      if (!alloc || !n) { cell.textContent = '—'; return; }
+      const installment = alloc / n + alloc * r;
+      cell.textContent = fmt(installment);
+    });
+  }
+  if (periodInput) periodInput.addEventListener('input', update);
+  if (rateInput)   rateInput.addEventListener('input', update);
+  update();
+})();
+</script>
+{% endblock %}

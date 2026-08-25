@@ -1,0 +1,145 @@
+{% extends 'base.html' %}
+{% block content %}
+{% include 'loans/includes/loans_quick_actions.html' %}
+
+<div style="background: linear-gradient(135deg, #0E2B4D 0%, #1a4170 100%); padding: 2rem 0;">
+    <div class="container">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <h1 class="mb-1" style="color: #fff; font-size: 1.6rem; font-weight: 700;">
+                    <i class="bi bi-calendar3 me-2" style="color: #fff;"></i>Loan Amortization Schedule
+                </h1>
+                <p class="mb-0" style="color: #fff; opacity: .8;">Projected repayment breakdown for {{ loan.loan_no }}</p>
+            </div>
+            <div>
+                <a href="{% url 'loans:view_loan_details' pk=loan.id %}" class="btn me-1" style="background: transparent; border: 1.5px solid var(--d365-border-strong); color: #fff; font-weight: 600;">
+                    <i class="bi bi-arrow-left me-1"></i> Back to Loan
+                </a>
+                <a href="{% url 'loans:loan_amortization_pdf' pk=loan.id %}" target="_blank" class="btn" style="background: var(--d365-primary); color: #fff; border: none; font-weight: 600;">
+                    <i class="bi bi-file-earmark-pdf me-1"></i> Export PDF
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="container" style="margin-top: -1rem; padding-bottom: 3rem;">
+
+    {# -- Loan Summary Card -- #}
+    <div style="background: var(--d365-surface); border: 1px solid var(--d365-border); border-radius: .5rem; box-shadow: var(--d365-shadow-2); margin-bottom: 1.5rem;">
+        <div style="background: var(--d365-surface-alt); border-bottom: 2px solid var(--d365-border); padding: .75rem 1rem; font-size: .8rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--d365-text-secondary); border-radius: .5rem .5rem 0 0;">
+            <i class="bi bi-info-circle me-1"></i> Loan Summary
+        </div>
+        <div style="padding: 1rem;">
+            <div class="row">
+                <div class="col-md-3 mb-2">
+                    <small style="color: var(--d365-text-secondary); display: block;">Member</small>
+                    <strong style="color: var(--d365-text);">{{ loan.customer.full_name }}</strong>
+                    <span style="color: var(--d365-text-secondary);">({{ loan.customer.cust_no }})</span>
+                </div>
+                <div class="col-md-3 mb-2">
+                    <small style="color: var(--d365-text-secondary); display: block;">Loan No</small>
+                    <strong class="font-monospace" style="color: var(--d365-text);">{{ loan.loan_no }}</strong>
+                </div>
+                <div class="col-md-3 mb-2">
+                    <small style="color: var(--d365-text-secondary); display: block;">Product</small>
+                    <strong style="color: var(--d365-text);">{{ loan.loan_type.account_name|default:"—" }}</strong>
+                </div>
+                <div class="col-md-3 mb-2">
+                    <small style="color: var(--d365-text-secondary); display: block;">Calculation Method</small>
+                    <span style="display: inline-block; background: var(--d365-primary-tint-40); color: var(--d365-primary); padding: .15rem .5rem; border-radius: .25rem; font-size: .8rem; font-weight: 600;">{{ calc_method }}</span>
+                </div>
+            </div>
+            <hr style="border-color: var(--d365-border);">
+            <div class="row">
+                <div class="col-md-3 mb-2">
+                    <small style="color: var(--d365-text-secondary); display: block;">Principal</small>
+                    <strong style="color: var(--d365-text);">KES {{ loan.principal|floatformat:2 }}</strong>
+                </div>
+                <div class="col-md-3 mb-2">
+                    <small style="color: var(--d365-text-secondary); display: block;">Interest Rate</small>
+                    <strong style="color: var(--d365-text);">{{ loan.interest_rate }}% p.m.</strong>
+                </div>
+                <div class="col-md-3 mb-2">
+                    <small style="color: var(--d365-text-secondary); display: block;">Loan Period</small>
+                    <strong style="color: var(--d365-text);">{{ loan.loan_period }} months</strong>
+                </div>
+                <div class="col-md-3 mb-2">
+                    <small style="color: var(--d365-text-secondary); display: block;">Monthly Installment</small>
+                    <strong style="color: var(--d365-text);">KES {{ loan.installment|floatformat:2 }}</strong>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {# -- Amortization Schedule Table -- #}
+    <div style="background: var(--d365-surface); border: 1px solid var(--d365-border); border-radius: .5rem; box-shadow: var(--d365-shadow-2);">
+        <div style="background: var(--d365-surface-alt); border-bottom: 2px solid var(--d365-border); padding: .75rem 1rem; border-radius: .5rem .5rem 0 0; display: flex; justify-content: space-between; align-items: center;">
+            <span style="font-size: .8rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--d365-text-secondary);">
+                <i class="bi bi-table me-1"></i> Repayment Schedule
+            </span>
+            <span style="display: inline-block; background: var(--d365-primary-tint-40); color: var(--d365-primary); padding: .15rem .5rem; border-radius: .25rem; font-size: .8rem; font-weight: 600;">{{ loan.loan_period }} installments</span>
+        </div>
+        <div class="table-responsive" style="padding: 0;">
+            <table class="table table-hover mb-0">
+                <thead>
+                    <tr style="background: var(--d365-surface-alt); border-bottom: 2px solid var(--d365-border);">
+                        <th class="text-center" style="width:50px; font-size: .75rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--d365-text-secondary); padding: .6rem .5rem;">#</th>
+                        <th style="font-size: .75rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--d365-text-secondary); padding: .6rem .5rem;">Date</th>
+                        <th style="font-size: .75rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--d365-text-secondary); padding: .6rem .5rem;">Description</th>
+                        <th class="text-end" style="font-size: .75rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--d365-text-secondary); padding: .6rem .5rem;">Payment (KES)</th>
+                        <th class="text-end" style="font-size: .75rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--d365-text-secondary); padding: .6rem .5rem;">Principal (KES)</th>
+                        <th class="text-end" style="font-size: .75rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--d365-text-secondary); padding: .6rem .5rem;">Interest (KES)</th>
+                        <th class="text-end" style="font-size: .75rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--d365-text-secondary); padding: .6rem .5rem;">Balance (KES)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in schedule %}
+                    <tr {% if row.is_disbursement %}style="background: var(--d365-primary-tint-40); font-weight: 700;"{% endif %}>
+                        <td class="text-center">
+                            {% if row.is_disbursement %}
+                                <i class="bi bi-cash-stack" style="color: var(--d365-primary);"></i>
+                            {% else %}
+                                {{ row.month }}
+                            {% endif %}
+                        </td>
+                        <td class="fw-semibold" style="color: var(--d365-text);">{{ row.date_label }}</td>
+                        <td style="color: var(--d365-text);">{{ row.description }}</td>
+                        <td class="text-end" style="color: var(--d365-text);">
+                            {% if row.is_disbursement %}—{% else %}{{ row.payment|floatformat:2 }}{% endif %}
+                        </td>
+                        <td class="text-end" style="color: var(--d365-text);">
+                            {% if row.is_disbursement %}—{% else %}{{ row.principal|floatformat:2 }}{% endif %}
+                        </td>
+                        <td class="text-end" style="color: var(--d365-text);">
+                            {% if row.is_disbursement %}—{% else %}{{ row.interest|floatformat:2 }}{% endif %}
+                        </td>
+                        <td class="text-end fw-bold" style="color: var(--d365-text);">{{ row.balance|floatformat:2 }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+                <tfoot>
+                    <tr style="background: var(--d365-surface-alt); border-top: 2px solid var(--d365-border); font-weight: 700;">
+                        <td></td>
+                        <td colspan="2" style="color: var(--d365-text);">Total</td>
+                        <td class="text-end" style="color: var(--d365-text);">{{ total_payment|floatformat:2 }}</td>
+                        <td class="text-end" style="color: var(--d365-text);">{{ total_principal|floatformat:2 }}</td>
+                        <td class="text-end" style="color: var(--d365-text);">{{ total_interest|floatformat:2 }}</td>
+                        <td class="text-end" style="color: var(--d365-text);">—</td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+    </div>
+
+    <div class="mt-3" style="color: var(--d365-text-secondary); font-size: .85rem;">
+        <i class="bi bi-info-circle me-1"></i>
+        This schedule is indicative and assumes regular monthly payments starting from the month after disbursement. Actual amounts may vary with early/late payments or restructuring.
+    </div>
+
+</div>
+
+<style>
+    .table-hover tbody tr:hover { background: var(--d365-primary-tint-40) !important; }
+</style>
+{% endblock %}

@@ -1,0 +1,326 @@
+{% extends "admin/base_site.html" %}
+{% load i18n admin_urls static %}
+
+{% block extrahead %}
+    <style>
+        :root {
+            --bg-primary: #f9f9f9;
+            --bg-secondary: white;
+            --text-primary: #333;
+            --text-secondary: #666;
+            --border-color: #ddd;
+            --btn-primary-bg: #417690;
+            --btn-primary-hover: #205067;
+            --btn-secondary-bg: #666;
+            --btn-secondary-hover: #444;
+            --accent-color: #417690;
+            --success-bg: #f0f9ff;
+            --success-border: #4caf50;
+            --warning-bg: #fff8f0;
+            --warning-border: #ff9800;
+            --error-bg: #fff5f5;
+            --error-border: #f44336;
+        }
+
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --bg-primary: #1a1a1a;
+                --bg-secondary: #2d2d2d;
+                --text-primary: #e0e0e0;
+                --text-secondary: #b0b0b0;
+                --border-color: #444;
+                --btn-primary-bg: #417690;
+                --btn-primary-hover: #5a8db8;
+                --btn-secondary-bg: #555;
+                --btn-secondary-hover: #777;
+                --accent-color: #5a8db8;
+                --success-bg: #1a3a2a;
+                --success-border: #66bb6a;
+                --warning-bg: #3a2a1a;
+                --warning-border: #ffb74d;
+                --error-bg: #3a1a1a;
+                --error-border: #ef5350;
+            }
+        }
+
+        .results-container {
+            max-width: 800px;
+            margin: 2rem auto;
+            padding: 2rem;
+            color: var(--text-primary);
+        }
+
+        .results-card {
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            border-left: 4px solid;
+        }
+
+        .results-card.success {
+            background-color: var(--success-bg);
+            border-left-color: var(--success-border);
+        }
+
+        .results-card.warning {
+            background-color: var(--warning-bg);
+            border-left-color: var(--warning-border);
+        }
+
+        .results-card.error {
+            background-color: var(--error-bg);
+            border-left-color: var(--error-border);
+        }
+
+        .results-card h3 {
+            margin-top: 0;
+            color: var(--text-primary);
+        }
+
+        .results-list {
+            list-style: none;
+            padding: 0;
+            margin: 1rem 0;
+        }
+
+        .results-list li {
+            padding: 0.5rem 0;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            color: var(--text-primary);
+        }
+
+        .results-list li:last-child {
+            border-bottom: none;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: bold;
+            margin-right: 0.5rem;
+        }
+
+        .badge.success {
+            background-color: #4caf50;
+            color: white;
+        }
+
+        .badge.warning {
+            background-color: #ff9800;
+            color: white;
+        }
+
+        .badge.error {
+            background-color: #f44336;
+            color: white;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-box {
+            background: var(--bg-secondary);
+            padding: 1.5rem;
+            border-radius: 8px;
+            text-align: center;
+            border: 1px solid var(--border-color);
+        }
+
+        .stat-box .number {
+            font-size: 2rem;
+            font-weight: bold;
+            color: var(--accent-color);
+        }
+
+        .stat-box .label {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            margin-top: 0.5rem;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            margin-top: 2rem;
+        }
+
+        .btn {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 4px;
+            font-weight: bold;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-block;
+            transition: background-color 0.2s;
+        }
+
+        .btn-primary {
+            background-color: var(--btn-primary-bg);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background-color: var(--btn-primary-hover);
+        }
+
+        .btn-secondary {
+            background-color: var(--btn-secondary-bg);
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background-color: var(--btn-secondary-hover);
+        }
+
+        .error-message {
+            color: #ef5350;
+            font-family: monospace;
+            font-size: 0.9rem;
+        }
+
+        .success-message {
+            color: #66bb6a;
+        }
+
+        table.error-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1rem;
+        }
+
+        table.error-table th,
+        table.error-table td {
+            padding: 0.75rem;
+            text-align: left;
+            border-bottom: 1px solid var(--border-color);
+            color: var(--text-primary);
+        }
+
+        table.error-table th {
+            background-color: var(--bg-secondary);
+            font-weight: bold;
+        }
+
+        table.error-table tr:hover {
+            background-color: var(--bg-secondary);
+        }
+
+        h1 {
+            color: var(--text-primary);
+        }
+
+        p {
+            color: var(--text-primary);
+        }
+    </style>
+{% endblock %}
+
+{% block content %}
+<div id="content-main">
+    <div class="results-container">
+        <h1>Import Results</h1>
+        
+        <!-- Summary Stats -->
+        <div class="stats">
+            <div class="stat-box">
+                <div class="number">{{ results.created }}</div>
+                <div class="label">Created</div>
+            </div>
+            <div class="stat-box">
+                <div class="number">{{ results.updated }}</div>
+                <div class="label">Updated</div>
+            </div>
+            <div class="stat-box">
+                <div class="number">{{ results.errors|length }}</div>
+                <div class="label">Errors</div>
+            </div>
+            <div class="stat-box">
+                <div class="number">{{ total_processed }}</div>
+                <div class="label">Total Processed</div>
+            </div>
+        </div>
+        
+        <!-- Success Message -->
+        {% if results.created > 0 %}
+            <div class="results-card success">
+                <h3>✓ Successfully Created</h3>
+                <p><strong>{{ results.created }}</strong> customer(s) were created successfully.</p>
+            </div>
+        {% endif %}
+        
+        <!-- Updated Message -->
+        {% if results.updated > 0 %}
+            <div class="results-card warning">
+                <h3>⚡ Updated Records</h3>
+                <p><strong>{{ results.updated }}</strong> customer(s) were updated.</p>
+            </div>
+        {% endif %}
+        
+        <!-- Errors -->
+        {% if results.errors %}
+            <div class="results-card error">
+                <h3>✗ Errors ({{ results.errors|length }})</h3>
+                <p>The following issues occurred during import:</p>
+                <table class="error-table">
+                    <thead>
+                        <tr>
+                            <th>Issue</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for error in results.errors %}
+                            <tr>
+                                <td class="error-message">{{ error }}</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                <p style="margin-top: 1rem; color: #666;">
+                    Please fix the errors above and try importing again. Some records may have been 
+                    partially imported if errors occurred partway through.
+                </p>
+            </div>
+        {% endif %}
+        
+        <!-- Warnings -->
+        {% if results.warnings %}
+            <div class="results-card warning">
+                <h3>⚠ Warnings ({{ results.warnings|length }})</h3>
+                <ul class="results-list">
+                    {% for warning in results.warnings %}
+                        <li>
+                            <span class="badge warning">⚠</span>
+                            {{ warning }}
+                        </li>
+                    {% endfor %}
+                </ul>
+            </div>
+        {% endif %}
+        
+        <!-- Action Buttons -->
+        <div class="button-group">
+            {% if results.errors %}
+                <a href="./" class="btn btn-primary">
+                    Import Again
+                </a>
+            {% endif %}
+            <a href="../" class="btn btn-secondary">
+                View Customers
+            </a>
+            <a href="../../../" class="btn btn-secondary">
+                Back to Admin
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}

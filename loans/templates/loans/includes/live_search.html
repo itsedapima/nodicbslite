@@ -1,0 +1,113 @@
+{% comment %}
+Live table search — debounced AJAX refresh.
+Wrap table+pagination in div#liveResults; add .live-search-input to the input.
+{% endcomment %}
+
+<style>
+    .live-search-input {
+        transition: box-shadow 0.15s ease;
+    }
+    .live-search-input.is-searching {
+        background-image: linear-gradient(90deg, transparent, rgba(51,65,85,0.06), transparent);
+        background-size: 200% 100%;
+        animation: liveSearchShimmer 1.2s linear infinite;
+    }
+    @keyframes liveSearchShimmer {
+        0%   { background-position: 200% 0; }
+        100% { background-position: -200% 0; }
+    }
+    #liveResults.is-stale { opacity: 0.55; transition: opacity 0.15s ease; }
+    /* Hide legacy submit buttons that sit next to a live-search input */
+    .live-search-input ~ button[type="submit"],
+    .live-search-input + button[type="submit"] {
+        display: none !important;
+    }
+</style>
+
+<script>
+(function () {
+    'use strict';
+    var input = document.querySelector('.live-search-input');
+    var region = document.getElementById('liveResults');
+    if (!input || !region) return;
+
+    var form = input.closest('form');
+    if (form) {
+        // Prevent full-page submit on Enter — we handle it live.
+        form.addEventListener('submit', function (e) { e.preventDefault(); triggerSearch(true); });
+    }
+
+    var timer   = null;
+    var lastQ   = input.value;
+    var inflight = null;   // AbortController for in-flight request
+
+    function buildUrl(q) {
+        var url = new URL(window.location.href);
+        if (q) { url.searchParams.set('q', q); }
+        else   { url.searchParams.delete('q'); }
+        url.searchParams.delete('page');   // reset to page 1 on new query
+        return url;
+    }
+
+    function triggerSearch(immediate) {
+        var q = input.value.trim();
+        if (q === lastQ && !immediate) return;
+        lastQ = q;
+
+        var url = buildUrl(q);
+
+        // Abort any in-flight request
+        if (inflight) { try { inflight.abort(); } catch (e) {} }
+        inflight = new AbortController();
+
+        input.classList.add('is-searching');
+        region.classList.add('is-stale');
+
+        fetch(url.toString(), {
+            headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'text/html' },
+            credentials: 'same-origin',
+            signal: inflight.signal,
+        })
+        .then(function (resp) {
+            if (!resp.ok) throw new Error('HTTP ' + resp.status);
+            return resp.text();
+        })
+        .then(function (html) {
+            var doc = new DOMParser().parseFromString(html, 'text/html');
+            var fresh = doc.getElementById('liveResults');
+            if (fresh) {
+                region.replaceWith(fresh);
+                region = fresh;    // rebind — old node is gone
+            }
+            history.replaceState(null, '', url.toString());
+        })
+        .catch(function (err) {
+            if (err.name === 'AbortError') return;
+            console.warn('Live search failed:', err);
+        })
+        .finally(function () {
+            input.classList.remove('is-searching');
+            if (region) region.classList.remove('is-stale');
+        });
+    }
+
+    input.addEventListener('input', function () {
+        if (timer) clearTimeout(timer);
+        timer = setTimeout(triggerSearch, 250);
+    });
+
+    // Instant search on Escape → clear
+    input.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape' && input.value !== '') {
+            e.preventDefault();
+            input.value = '';
+            triggerSearch(true);
+        }
+    });
+
+    // Autofocus to make the intent obvious
+    if (!input.value && !input.matches(':focus')) {
+        setTimeout(function () { input.focus(); }, 50);
+    }
+})();
+</script>

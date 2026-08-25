@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+
+<div class="container my-5">
+    {% include 'accounting/includes/accounting_quick_actions.html' %}
+    <!-- Message display section -->
+    {% if messages %}
+    <div class="container mt-4">
+        {% for message in messages %}
+            <div class="alert {% if message.tags %}alert-{{ message.tags }}{% else %}alert-info{% endif %}" role="alert">
+                {{ message }}
+                <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <h2 class="text-2xl font-bold mb-6">Bank Reconciliation Report</h2>
+
+    <div class="container mt-4">
+        <form method="GET" action="{% url 'accounting:reconciliation_report' %}" class="space-y-4">
+            {% csrf_token %}
+            {{ form.as_p }}
+
+            <button type="submit" class="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded">
+                Generate Report
+            </button>
+        </form>
+    </div>
+</div>
+{% endblock %}

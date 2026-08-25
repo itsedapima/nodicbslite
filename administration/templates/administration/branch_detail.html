@@ -1,0 +1,60 @@
+{% extends 'base.html' %}
+{% block content %}
+ {% include 'administration/includes/administration_quick_actions.html' %}
+<div class="container my-5 mx-auto px-4">
+ 
+    
+    <div class="flex items-center gap-3 mb-4">
+        <h2 class="text-2xl font-bold">Branch Information</h2>
+        <span class="font-mono bg-gray-200 px-2 py-0.5 rounded text-sm font-bold">{{ branch.branch_code }}</span>
+    </div>
+
+    <div class="bg-white shadow-md rounded-lg p-6">
+        <table class="table-auto w-full border-collapse border border-gray-300">
+            <tr class="border border-gray-300">
+                <th class="px-4 py-2 text-left bg-gray-100 w-1/4">Branch Name:</th>
+                <td class="px-4 py-2 font-medium">{{ branch.name }}</td>
+            </tr>
+            <tr class="border border-gray-300">
+                <th class="px-4 py-2 text-left bg-gray-100">Status Type:</th>
+                <td class="px-4 py-2">
+                    {% if branch.is_headquarters %}<strong class="text-purple-700">[Main Headquarters Office]</strong>{% endif %}
+                    {% if branch.is_active %}<span class="text-green-600 font-bold">(Active)</span>{% else %}<span class="text-red-500 font-bold">(Inactive)</span>{% endif %}
+                </td>
+            </tr>
+            <tr class="border border-gray-300">
+                <th class="px-4 py-2 text-left bg-gray-100">Contact Email:</th>
+                <td class="px-4 py-2">{{ branch.email|default:"--" }}</td>
+            </tr>
+            <tr class="border border-gray-300">
+                <th class="px-4 py-2 text-left bg-gray-100">Phone Number:</th>
+                <td class="px-4 py-2">{{ branch.phone_number|default:"--" }}</td>
+            </tr>
+            <tr class="border border-gray-300">
+                <th class="px-4 py-2 text-left bg-gray-100">Full Address:</th>
+                <td class="px-4 py-2">
+                    {{ branch.street_address }}, {{ branch.city }}, 
+                    {% if branch.state_province %}{{ branch.state_province }},{% endif %} 
+                    {{ branch.postal_code }} {{ branch.country }}
+                </td>
+            </tr>
+            <tr class="border border-gray-300">
+                <th class="px-4 py-2 text-left bg-gray-100">Operating Timezone:</th>
+                <td class="px-4 py-2 font-mono text-sm">{{ branch.timezone }}</td>
+            </tr>
+            <tr class="border border-gray-300">
+                <th class="px-4 py-2 text-left bg-gray-100">System Activity:</th>
+                <td class="px-4 py-2 text-gray-500 text-sm">
+                    Registered: {{ branch.created_at|date:"d M Y, H:i A" }} | Updated: {{ branch.updated_at|date:"d M Y, H:i A" }}
+                </td>
+            </tr>
+        </table>
+        
+        <div class="mt-5 flex gap-2">
+            <a href="{% url 'administration:branch_update' branch.pk %}" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded text-sm shadow">Edit Branch</a>
+            <a href="{% url 'administration:branch_list' %}" class="px-4 py-2 bg-gray-500 hover:bg-gray-600 text-white rounded text-sm shadow">Back to List</a>
+            <a href="{% url 'administration:branch_delete' branch.pk %}" class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded text-sm shadow ml-auto">Delete Branch</a>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,266 @@
+{% comment %}
+D365 / Fluent UI-inspired styles for the Journal Voucher pages.
+Include with {% include 'accounting/jv/_theme.html' %} at the top
+of every JV page.
+{% endcomment %}
+<style>
+  :root {
+    --d365-primary:   #0078D4;
+    --d365-primary-h: #106EBE;
+    --d365-navy:      #0B4C81;
+    --d365-bg:        #FAFAFA;
+    --d365-surface:   #FFFFFF;
+    --d365-border:    #E1DFDD;
+    --d365-border-2:  #EDEBE9;
+    --d365-text:      #201F1E;
+    --d365-text-2:    #605E5C;
+    --d365-text-3:    #8A8886;
+    --d365-hover:     #F3F2F1;
+    --d365-selected:  #EDEBE9;
+    --d365-success:   #107C10;
+    --d365-warning:   #FFAA44;
+    --d365-danger:    #A80000;
+    --d365-danger-bg: #FDE7E9;
+    --d365-info-bg:   #EFF6FC;
+  }
+  .d365-shell {
+    background: var(--d365-bg);
+    color: var(--d365-text);
+    font-family: "Segoe UI", -apple-system, BlinkMacSystemFont, sans-serif;
+    min-height: 100vh;
+    padding: 0;
+  }
+  .d365-topbar {
+    background: var(--d365-navy);
+    color: #fff;
+    padding: 10px 20px;
+    display: flex; align-items: center; gap: 12px;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.15);
+  }
+  .d365-topbar h1 {
+    font-size: 16px; font-weight: 600; margin: 0;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .d365-crumbs {
+    font-size: 12px; color: #B3D4EF; margin-left: auto;
+  }
+  .d365-crumbs a { color: #B3D4EF; text-decoration: none; }
+  .d365-crumbs a:hover { color: #fff; }
+
+  .d365-command-bar {
+    background: var(--d365-surface);
+    border-bottom: 1px solid var(--d365-border);
+    padding: 6px 16px;
+    display: flex; align-items: center; gap: 4px;
+    flex-wrap: wrap;
+  }
+  .d365-btn {
+    background: transparent;
+    color: var(--d365-text);
+    border: 1px solid transparent;
+    padding: 6px 12px;
+    font-size: 13px; font-weight: 400;
+    cursor: pointer;
+    display: inline-flex; align-items: center; gap: 6px;
+    border-radius: 2px;
+    line-height: 20px;
+    transition: background .1s;
+    text-decoration: none;
+    font-family: inherit;
+  }
+  .d365-btn:hover { background: var(--d365-hover); color: var(--d365-text); text-decoration: none; }
+  .d365-btn:disabled { color: var(--d365-text-3); cursor: not-allowed; background: transparent; }
+  .d365-btn.primary { background: var(--d365-primary); color: #fff; }
+  .d365-btn.primary:hover { background: var(--d365-primary-h); color: #fff; }
+  .d365-btn.danger { color: var(--d365-danger); }
+  .d365-btn i.bi { font-size: 14px; }
+  .d365-btn-sep {
+    width: 1px; height: 20px;
+    background: var(--d365-border);
+    margin: 0 6px;
+  }
+
+  .d365-page {
+    padding: 16px 20px;
+    max-width: 100%;
+  }
+  .d365-panel {
+    background: var(--d365-surface);
+    border: 1px solid var(--d365-border);
+    border-radius: 2px;
+    margin-bottom: 12px;
+  }
+  .d365-panel-header {
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--d365-border-2);
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .d365-panel-header h2 {
+    font-size: 14px; font-weight: 600; color: var(--d365-navy); margin: 0;
+  }
+  .d365-panel-body { padding: 12px 14px; }
+
+  .d365-field { margin-bottom: 8px; }
+  .d365-field label {
+    display: block; font-size: 12px; font-weight: 600;
+    color: var(--d365-text-2); margin-bottom: 2px;
+  }
+  .d365-field label .req { color: var(--d365-danger); margin-left: 2px; }
+  .d365-input, .d365-select, .d365-textarea {
+    width: 100%; padding: 5px 8px;
+    font-size: 13px; font-family: inherit;
+    color: var(--d365-text);
+    background: var(--d365-surface);
+    border: 1px solid var(--d365-border);
+    border-radius: 2px;
+    line-height: 20px;
+    outline: none;
+    transition: border-color .1s;
+  }
+  .d365-input:focus, .d365-select:focus, .d365-textarea:focus {
+    border-color: var(--d365-primary);
+    box-shadow: 0 0 0 1px var(--d365-primary);
+  }
+  .d365-input.error, .d365-select.error {
+    border-color: var(--d365-danger);
+    background: var(--d365-danger-bg);
+  }
+
+  .d365-grid {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12.5px;
+    background: var(--d365-surface);
+  }
+  .d365-grid thead th {
+    background: var(--d365-surface);
+    color: var(--d365-text-2);
+    font-weight: 600;
+    text-align: left;
+    padding: 6px 8px;
+    border-bottom: 1px solid var(--d365-border);
+    position: sticky; top: 0; z-index: 2;
+    font-size: 11.5px;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+  }
+  .d365-grid tbody td {
+    padding: 3px 4px;
+    border-bottom: 1px solid var(--d365-border-2);
+    vertical-align: top;
+  }
+  .d365-grid tbody tr:hover td { background: var(--d365-hover); }
+  .d365-grid tbody tr.row-error td {
+    background: var(--d365-danger-bg);
+  }
+  .d365-grid tbody tr.row-warning td {
+    background: #FFF4CE;
+  }
+  .d365-grid input, .d365-grid select {
+    width: 100%;
+    border: 1px solid transparent;
+    padding: 4px 6px;
+    font-size: 12.5px;
+    font-family: inherit;
+    background: transparent;
+    color: var(--d365-text);
+    outline: none;
+    border-radius: 2px;
+  }
+  .d365-grid input:hover, .d365-grid select:hover {
+    background: var(--d365-surface);
+    border-color: var(--d365-border);
+  }
+  .d365-grid input:focus, .d365-grid select:focus {
+    background: var(--d365-surface);
+    border-color: var(--d365-primary);
+    box-shadow: 0 0 0 1px var(--d365-primary);
+  }
+  .d365-grid input.amount { text-align: right; font-variant-numeric: tabular-nums; }
+  .d365-grid tfoot td {
+    background: var(--d365-selected);
+    font-weight: 600;
+    padding: 6px 8px;
+    border-top: 2px solid var(--d365-navy);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .d365-status-pill {
+    display: inline-block;
+    padding: 2px 10px;
+    border-radius: 12px;
+    font-size: 11.5px;
+    font-weight: 600;
+  }
+  .d365-status-ok  { background: #DFF6DD; color: var(--d365-success); }
+  .d365-status-err { background: var(--d365-danger-bg); color: var(--d365-danger); }
+  .d365-status-warn { background: #FFF4CE; color: #8A6300; }
+
+  .d365-toast {
+    padding: 8px 14px;
+    border-left: 4px solid var(--d365-info-bg);
+    background: var(--d365-info-bg);
+    color: var(--d365-text);
+    font-size: 13px;
+    margin-bottom: 10px;
+  }
+  .d365-toast.error {
+    border-left-color: var(--d365-danger);
+    background: var(--d365-danger-bg);
+  }
+  .d365-toast.success {
+    border-left-color: var(--d365-success);
+    background: #DFF6DD;
+  }
+  .d365-toast.warning {
+    border-left-color: var(--d365-warning);
+    background: #FFF4CE;
+  }
+
+  .d365-inline-hint {
+    font-size: 11.5px; color: var(--d365-text-3); margin-top: 2px;
+  }
+  .d365-hint-link { color: var(--d365-primary); cursor: pointer; }
+  .d365-hint-link:hover { text-decoration: underline; }
+
+  /* Autocomplete dropdown — rendered at body level to avoid overflow clipping */
+  .d365-suggest {
+    position: fixed;
+    background: var(--d365-surface);
+    border: 1px solid var(--d365-border);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.18);
+    max-height: 220px; overflow-y: auto;
+    z-index: 9999;
+    min-width: 260px;
+    font-size: 12.5px;
+  }
+  .d365-suggest .item {
+    padding: 6px 10px; cursor: pointer;
+    border-bottom: 1px solid var(--d365-border-2);
+  }
+  .d365-suggest .item:hover, .d365-suggest .item.active { background: var(--d365-hover); }
+  .d365-suggest .item .code {
+    font-family: "Cascadia Code", "Consolas", monospace;
+    color: var(--d365-primary);
+    font-weight: 600;
+    margin-right: 8px;
+  }
+  .d365-suggest .item .name { color: var(--d365-text); }
+  .d365-suggest .item .meta { color: var(--d365-text-3); font-size: 11px; margin-left: 6px; }
+
+  .d365-errors {
+    margin-top: 10px;
+  }
+  .d365-errors .item {
+    padding: 6px 10px;
+    background: var(--d365-danger-bg);
+    border-left: 3px solid var(--d365-danger);
+    margin-bottom: 4px;
+    font-size: 12.5px;
+    color: var(--d365-text);
+  }
+  .d365-errors .warn {
+    background: #FFF4CE;
+    border-left-color: var(--d365-warning);
+  }
+</style>

@@ -1,0 +1,160 @@
+{% extends "base.html" %}
+{% load static %}
+{% load humanize %}
+{% block content %}
+{% include 'statements/includes/statements_quick_actions.html' %}
+
+<div class="container-fluid px-md-4 py-3" style="max-width: 1280px;">
+
+    <!-- ── Page heading ─────────────────────────────────────────────── -->
+    <div class="d-flex justify-content-between align-items-start mb-3 flex-wrap gap-2">
+        <div>
+            <h2 class="h5 mb-0 fw-bold" style="color: var(--d365-text);">Member Financial Statements</h2>
+            <p class="mb-0 small" style="color: var(--d365-text-secondary);">Query, inspect, and export member financial statements.</p>
+        </div>
+        {% if tb_verified %}
+            <span style="display:inline-flex;align-items:center;gap:.3rem;font-size:.7rem;font-weight:600;padding:.2rem .55rem;border-radius:999px;background:#d1fae5;color:#065f46;border:1px solid #6ee7b7;text-transform:uppercase;letter-spacing:.03em;" title="All transactions recorded via TigerBeetle — immutable, double-entry verified">
+                <i class="bi bi-shield-check"></i> TB Verified
+            </span>
+        {% elif tb_enabled %}
+            <span style="display:inline-flex;align-items:center;gap:.3rem;font-size:.7rem;font-weight:600;padding:.2rem .55rem;border-radius:999px;background:#fef3c7;color:#92400e;border:1px solid #fcd34d;text-transform:uppercase;letter-spacing:.03em;" title="TigerBeetle enabled but not connected">
+                <i class="bi bi-exclamation-triangle"></i> TB Disconnected
+            </span>
+        {% endif %}
+    </div>
+
+    <!-- ── Controls Card ────────────────────────────────────────────── -->
+    <div class="card mb-3">
+        <div class="card-body p-3 p-md-4">
+            <form id="stmt_form" autocomplete="off">
+
+                <!-- ── Row 1: primary selection (the high-frequency path) ── -->
+                <div class="row g-2 g-md-3 align-items-end">
+
+                    <!-- Customer search -->
+                    <div class="col-12 col-lg-5 position-relative">
+                        <label for="search_input" class="form-label">Member</label>
+                        <div class="input-group">
+                            <span class="input-group-text" style="background:var(--d365-surface-alt); border-color:var(--d365-border-strong);">
+                                <i class="bi bi-search small" style="color:var(--d365-text-secondary);"></i>
+                            </span>
+                            <input id="search_input" type="text" class="form-control"
+                                   placeholder="Name, member no, or ID…" autofocus>
+                        </div>
+                        <input id="cust_no" name="cust_no" type="hidden">
+                        <div id="search_results" class="list-group position-absolute w-100 mt-1"
+                             style="z-index:2200; max-height:260px; overflow-y:auto; display:none;
+                                    box-shadow:var(--d365-shadow-16); border:1px solid var(--d365-border);
+                                    background:var(--d365-surface); border-radius:var(--d365-radius-md);"></div>
+                    </div>
+
+                    <!-- Account selector -->
+                    <div class="col-12 col-lg-4">
+                        <label for="account_code" class="form-label">Account</label>
+                        <select id="account_code" name="account_code" class="form-select">
+                            <option value="">Select account</option>
+                        </select>
+                    </div>
+
+                    <!-- Action buttons -->
+                    <div class="col-12 col-lg-3 d-flex gap-2">
+                        <button id="btn_preview" type="button" class="btn btn-primary flex-grow-1 d-inline-flex align-items-center justify-content-center gap-1">
+                            <i class="bi bi-eye"></i><span>Preview</span>
+                        </button>
+                        <button id="btn_download" type="button"
+                                class="btn btn-outline-secondary d-inline-flex align-items-center justify-content-center px-3"
+                                title="Download PDF" aria-label="Download PDF">
+                            <i class="bi bi-file-earmark-arrow-down-fill"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- ── Row 2: filters strip (toggles grouped together) ────── -->
+                <div class="d-flex flex-wrap align-items-center gap-3 gap-md-4 mt-3 pt-3"
+                     style="border-top:1px solid var(--d365-border);">
+
+                    <!-- Zero / settled toggle -->
+                    <div class="form-check form-switch m-0 d-flex align-items-center gap-2">
+                        <input id="include_zero" class="form-check-input m-0" type="checkbox" role="switch"
+                               style="cursor:pointer;">
+                        <label class="form-check-label small m-0" for="include_zero"
+                               style="color:var(--d365-text-secondary); cursor:pointer;">
+                            Include zero-balance &amp; settled accounts
+                        </label>
+                    </div>
+
+                    <div class="vr d-none d-md-block" style="height:22px; color:var(--d365-border-strong);"></div>
+
+                    <!-- Date range filters -->
+                    <div class="d-flex flex-wrap align-items-end gap-3">
+                        <div>
+                            <div class="d-flex align-items-center gap-2 mb-1">
+                                <label for="from_date" class="form-label mb-0 small">From date</label>
+                                <div class="form-check form-switch m-0 p-0">
+                                    <input id="use_from" class="form-check-input m-0" type="checkbox" role="switch"
+                                           title="Enable From date filter"
+                                           style="cursor:pointer;">
+                                </div>
+                            </div>
+                            <input id="from_date" name="from_date" type="date"
+                                   class="form-control form-control-sm font-monospace" style="width:150px;">
+                        </div>
+
+                        <div>
+                            <div class="d-flex align-items-center gap-2 mb-1">
+                                <label for="to_date" class="form-label mb-0 small">To date</label>
+                                <div class="form-check form-switch m-0 p-0">
+                                    <input id="use_to" class="form-check-input m-0" type="checkbox" role="switch"
+                                           title="Enable To date filter"
+                                           style="cursor:pointer;">
+                                </div>
+                            </div>
+                            <input id="to_date" name="to_date" type="date"
+                                   class="form-control form-control-sm font-monospace" style="width:150px;">
+                        </div>
+                    </div>
+
+                </div>
+            </form>
+        </div>
+
+        <!-- ── Customer info bar (hidden until selected) ────────────── -->
+        <div id="cust_info_bar" class="d-flex flex-wrap align-items-center gap-3 px-3 px-md-4 py-2"
+             style="display:none !important; border-top:1px solid var(--d365-border); background:var(--d365-surface-alt);">
+            <span class="d-inline-flex align-items-center gap-1">
+                <i class="bi bi-person-fill small" style="color:var(--d365-primary);"></i>
+                <strong id="cust_info_name" class="small">—</strong>
+            </span>
+            <span class="d-inline-flex align-items-center gap-1 small" style="color:var(--d365-text-secondary);">
+                <i class="bi bi-hash"></i><span id="cust_info_no" class="font-monospace">—</span>
+            </span>
+            <span class="d-inline-flex align-items-center gap-1 small" style="color:var(--d365-text-secondary);">
+                <i class="bi bi-credit-card-2-front"></i><span id="cust_info_id">—</span>
+            </span>
+            <span class="d-inline-flex align-items-center gap-1 small" style="color:var(--d365-text-secondary);">
+                <i class="bi bi-telephone"></i><span id="cust_info_phone">—</span>
+            </span>
+        </div>
+    </div>
+
+    <!-- ── Statement Display Area ───────────────────────────────────── -->
+    <div class="card">
+        <div id="stm_display" style="min-height:420px; overflow-x:auto; padding:1.25rem;">
+            <div class="d-flex flex-column align-items-center justify-content-center text-center my-5 py-4" style="color:var(--d365-text-secondary);">
+                <div class="d-flex align-items-center justify-content-center mb-3"
+                     style="width:64px; height:64px; border-radius:var(--d365-radius-lg);
+                            background:var(--d365-surface-alt); box-shadow:inset 0 2px 4px rgba(0,0,0,.04);">
+                    <i class="bi bi-journal-text fs-3" style="color:var(--d365-text-disabled);"></i>
+                </div>
+                <h3 class="h6 fw-bold mb-1" style="color:var(--d365-text);">No Statement Loaded</h3>
+                <p class="small mb-0" style="max-width:320px;">Search for a member above, select an account, and click Preview to generate a statement.</p>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<script>
+    {% include "statements/js/statement_logic.js" %}
+</script>
+{% endblock %}

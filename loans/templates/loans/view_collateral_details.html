@@ -1,0 +1,108 @@
+{% extends 'base.html' %}
+{% block content %}
+{% include 'loans/includes/loans_quick_actions.html' %}
+
+<div style="background: linear-gradient(135deg, #0E2B4D 0%, #1a4170 100%); padding: 2rem 0;">
+    <div class="container">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <h1 class="mb-1" style="color: #fff; font-size: 1.6rem; font-weight: 700;">
+                    <i class="bi bi-info-circle me-2" style="color: #fff;"></i>Collateral Asset Details
+                </h1>
+                <p class="mb-0" style="color: #fff; opacity: .8;">Valuation and specification record</p>
+            </div>
+            <a href="{% url 'loans:view_collaterals' %}" class="btn" style="background: transparent; border: 1.5px solid var(--d365-border-strong); color: #fff; font-weight: 600;">
+                <i class="bi bi-arrow-left me-1"></i> Back to List
+            </a>
+        </div>
+    </div>
+</div>
+
+<div class="container" style="margin-top: -1rem; padding-bottom: 3rem;">
+
+    <div class="row">
+        <div class="col-md-4">
+            <div style="background: var(--d365-surface); border: 1px solid var(--d365-border); border-radius: .5rem; box-shadow: var(--d365-shadow-2); margin-bottom: 1.5rem;">
+                <div style="background: var(--d365-surface-alt); border-bottom: 2px solid var(--d365-border); padding: .75rem 1rem; font-size: .8rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--d365-text-secondary); border-radius: .5rem .5rem 0 0;">
+                    Valuation Summary
+                </div>
+                <div style="padding: 1rem;">
+                    <h2 class="text-center mb-3" style="color: var(--d365-primary);">{{ collateral.market_value|floatformat:2 }}</h2>
+                    <ul class="list-group list-group-flush">
+                        <li class="list-group-item d-flex justify-content-between" style="border-color: var(--d365-border);">
+                            <span style="color: var(--d365-text-secondary);">Market Value:</span> <strong style="color: var(--d365-text);">{{ collateral.market_value|floatformat:2 }}</strong>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between" style="border-color: var(--d365-border);">
+                            <span style="color: var(--d365-text-secondary);">Forced Sale Value:</span> <strong style="color: var(--d365-danger);">{{ collateral.forced_sale_value|floatformat:2 }}</strong>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between" style="border-color: var(--d365-border);">
+                            <span style="color: var(--d365-text-secondary);">Insurance Value:</span> <strong style="color: var(--d365-text);">{{ collateral.insurance_value|default:"0.00" }}</strong>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-8">
+            <div style="background: var(--d365-surface); border: 1px solid var(--d365-border); border-radius: .5rem; box-shadow: var(--d365-shadow-2);">
+                <div style="background: var(--d365-surface-alt); border-bottom: 2px solid var(--d365-border); padding: .75rem 1rem; font-size: .8rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--d365-text-secondary); border-radius: .5rem .5rem 0 0;">
+                    Asset Specifications
+                </div>
+                <div style="padding: 1rem;">
+                    <table class="table mb-0" style="border-color: var(--d365-border);">
+                        <tr>
+                            <th style="background: var(--d365-surface-alt); width: 25%; color: var(--d365-text-secondary); font-size: .85rem; font-weight: 600; border-color: var(--d365-border);">Owner</th>
+                            <td style="color: var(--d365-text); border-color: var(--d365-border);">{{ collateral.owner.full_name }} ({{ collateral.owner.cust_no }})</td>
+                        </tr>
+                        <tr>
+                            <th style="background: var(--d365-surface-alt); color: var(--d365-text-secondary); font-size: .85rem; font-weight: 600; border-color: var(--d365-border);">Linked Loan</th>
+                            <td style="border-color: var(--d365-border);"><a href="{% url 'loans:view_loan_details' collateral.loan.id %}" style="color: var(--d365-primary); text-decoration: none; font-weight: 600;">{{ collateral.loan.loan_no }}</a></td>
+                        </tr>
+
+                        {% if collateral.collateral_type == 'land' %}
+                        <tr>
+                            <th style="background: var(--d365-surface-alt); color: var(--d365-text-secondary); font-size: .85rem; font-weight: 600; border-color: var(--d365-border);">Title Deed No</th>
+                            <td style="color: var(--d365-text); border-color: var(--d365-border);">{{ collateral.title_deed_no }}</td>
+                        </tr>
+                        <tr>
+                            <th style="background: var(--d365-surface-alt); color: var(--d365-text-secondary); font-size: .85rem; font-weight: 600; border-color: var(--d365-border);">Location</th>
+                            <td style="color: var(--d365-text); border-color: var(--d365-border);">{{ collateral.location }}</td>
+                        </tr>
+                        <tr>
+                            <th style="background: var(--d365-surface-alt); color: var(--d365-text-secondary); font-size: .85rem; font-weight: 600; border-color: var(--d365-border);">Size</th>
+                            <td style="color: var(--d365-text); border-color: var(--d365-border);">{{ collateral.size }}</td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <th style="background: var(--d365-surface-alt); color: var(--d365-text-secondary); font-size: .85rem; font-weight: 600; border-color: var(--d365-border);">Registration No</th>
+                            <td style="color: var(--d365-text); border-color: var(--d365-border);">{{ collateral.registration_no }}</td>
+                        </tr>
+                        <tr>
+                            <th style="background: var(--d365-surface-alt); color: var(--d365-text-secondary); font-size: .85rem; font-weight: 600; border-color: var(--d365-border);">Chassis No</th>
+                            <td style="color: var(--d365-text); border-color: var(--d365-border);">{{ collateral.chassis_no }}</td>
+                        </tr>
+                        <tr>
+                            <th style="background: var(--d365-surface-alt); color: var(--d365-text-secondary); font-size: .85rem; font-weight: 600; border-color: var(--d365-border);">Make/Model</th>
+                            <td style="color: var(--d365-text); border-color: var(--d365-border);">{{ collateral.model }}</td>
+                        </tr>
+                        {% endif %}
+
+                        <tr>
+                            <th style="background: var(--d365-surface-alt); color: var(--d365-text-secondary); font-size: .85rem; font-weight: 600; border-color: var(--d365-border);">Description</th>
+                            <td style="color: var(--d365-text); border-color: var(--d365-border);">{{ collateral.description|linebreaks }}</td>
+                        </tr>
+                        <tr>
+                            <th style="background: var(--d365-surface-alt); color: var(--d365-text-secondary); font-size: .85rem; font-weight: 600; border-color: var(--d365-border);">Date Recorded</th>
+                            <td style="color: var(--d365-text); border-color: var(--d365-border);">{{ collateral.created_at }}</td>
+                        </tr>
+                        <tr>
+                            <th style="background: var(--d365-surface-alt); color: var(--d365-text-secondary); font-size: .85rem; font-weight: 600; border-color: var(--d365-border);">Captured By</th>
+                            <td style="color: var(--d365-text); border-color: var(--d365-border);">{{ collateral.created_by }}</td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

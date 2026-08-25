@@ -1,0 +1,80 @@
+{% extends 'base.html' %}
+{% block title %}Send Bulk SMS — NODi Lite{% endblock %}
+{% block content %}
+<div class="page-shell">
+    <div class="page-head">
+        <div><h2><i class="bi bi-megaphone me-2"></i>Send Bulk SMS</h2></div>
+        <a href="{% url 'sms:log_list' %}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left me-1"></i> Back</a>
+    </div>
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-body p-4">
+                    <form method="post" class="d365-form">
+                        {% csrf_token %}
+                        <div class="field-group">
+                            <label for="id_recipients">Recipients *</label>
+                            <select name="recipients" id="id_recipients" required onchange="updatePreview(this)">
+                                <option value="all" data-count="{{ all_count|default:0 }}">All Members ({{ all_count|default:0 }})</option>
+                                <option value="active" data-count="{{ active_count|default:0 }}">Active Members Only ({{ active_count|default:0 }})</option>
+                                <option value="custom">Custom List</option>
+                            </select>
+                        </div>
+
+                        <div class="field-group" id="custom-list-group" style="display:none;">
+                            <label for="id_custom_phones">Phone Numbers (one per line)</label>
+                            <textarea name="custom_phones" id="id_custom_phones" rows="3"
+                                      placeholder="0712345678&#10;0723456789"></textarea>
+                        </div>
+
+                        <div class="field-group">
+                            <label for="id_template">Message Template</label>
+                            <select name="template" id="id_template" onchange="applyTemplate(this)">
+                                <option value="">-- Custom Message --</option>
+                                {% for t in templates %}<option value="{{ t.pk }}" data-body="{{ t.body }}">{{ t.name }}</option>{% endfor %}
+                            </select>
+                        </div>
+
+                        <div class="field-group">
+                            <label for="id_message">Message *</label>
+                            <textarea name="message" id="id_message" rows="4" required></textarea>
+                        </div>
+
+                        <div class="alert alert-info mt-3" id="preview-count">
+                            <i class="bi bi-info-circle me-1"></i>
+                            This will send to <strong id="recipient-count">{{ all_count|default:0 }}</strong> recipient(s).
+                        </div>
+
+                        <div class="d-flex gap-2 mt-3">
+                            <button type="submit" class="btn btn-primary"
+                                    onclick="return confirm('Send SMS to selected recipients?')">
+                                <i class="bi bi-send me-1"></i> Send Bulk SMS
+                            </button>
+                            <a href="{% url 'sms:log_list' %}" class="btn btn-outline-secondary">Cancel</a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+{% block extra_js %}
+<script>
+function applyTemplate(sel){
+    var opt=sel.options[sel.selectedIndex];
+    if(opt.dataset.body) document.getElementById('id_message').value=opt.dataset.body;
+}
+function updatePreview(sel){
+    var opt=sel.options[sel.selectedIndex];
+    var customGroup=document.getElementById('custom-list-group');
+    if(sel.value==='custom'){
+        customGroup.style.display='';
+        document.getElementById('recipient-count').textContent='custom';
+    } else {
+        customGroup.style.display='none';
+        document.getElementById('recipient-count').textContent=opt.dataset.count||'0';
+    }
+}
+</script>
+{% endblock %}

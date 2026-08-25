@@ -1,0 +1,104 @@
+{% extends "base.html" %}
+{% load humanize %}
+{% block title %}Voucher {{ voucher.voucher_no }} – NODi CBS{% endblock %}
+{% block content %}
+{% include 'accounting/includes/accounting_quick_actions.html' %}
+
+{% include 'accounting/jv/_theme.html' %}
+
+<div class="d365-shell">
+  <div class="d365-topbar">
+    <h1><i class="bi bi-journal-check"></i> Voucher {{ voucher.voucher_no }}</h1>
+    <div class="d365-crumbs">
+      <a href="{% url 'accounting:jv_list' %}">Journal Vouchers</a>
+      &rsaquo; <span>{{ voucher.voucher_no }}</span>
+    </div>
+  </div>
+
+  <div class="d365-command-bar">
+    <a class="d365-btn" href="{% url 'accounting:jv_list' %}">
+      <i class="bi bi-arrow-left"></i> Back
+    </a>
+    <a class="d365-btn primary" href="{% url 'accounting:jv_pdf' voucher.pk %}" target="_blank">
+      <i class="bi bi-file-earmark-pdf"></i> PDF Summary
+    </a>
+    <a class="d365-btn" href="{% url 'accounting:jv_new' %}">
+      <i class="bi bi-plus-lg"></i> New voucher
+    </a>
+    <div style="margin-left:auto;">
+      <span class="d365-status-pill
+        {% if voucher.status == 'posted' %}d365-status-ok
+        {% elif voucher.status == 'rejected' %}d365-status-err
+        {% else %}d365-status-warn{% endif %}">
+        {{ voucher.get_status_display }}
+      </span>
+    </div>
+  </div>
+
+  <div class="d365-page">
+    <div class="d365-panel">
+      <div class="d365-panel-header">
+        <h2>Voucher Details</h2>
+      </div>
+      <div class="d365-panel-body">
+        <div class="row g-3">
+          <div class="col-md-3"><small class="text-muted">Voucher No.</small><br><strong>{{ voucher.voucher_no }}</strong></div>
+          <div class="col-md-3"><small class="text-muted">Date</small><br><strong>{{ voucher.voucher_date|date:"Y-m-d" }}</strong></div>
+          <div class="col-md-3"><small class="text-muted">Total</small><br><strong>KES {{ voucher.total_amount|floatformat:2|intcomma }}</strong></div>
+          <div class="col-md-3"><small class="text-muted">Posted At</small><br><strong>{{ voucher.posted_at|date:"Y-m-d H:i"|default:"—" }}</strong></div>
+          <div class="col-12"><small class="text-muted">Description</small><br>{{ voucher.description }}</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="d365-panel">
+      <div class="d365-panel-header">
+        <h2>Lines</h2>
+      </div>
+      <div class="d365-panel-body" style="padding:0;">
+        <table class="d365-grid">
+          <thead>
+            <tr>
+              <th style="width:2rem;">#</th>
+              <th>Type</th>
+              <th>Member No.</th>
+              <th>Name</th>
+              <th>Member Account</th>
+              <th>Sacco Account</th>
+              <th>Description</th>
+              <th style="text-align:right;">Debit</th>
+              <th style="text-align:right;">Credit</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for l in lines %}
+              <tr>
+                <td>{{ forloop.counter }}</td>
+                <td>
+                  <span class="d365-status-pill {% if l.entry_type == 'customer' %}d365-status-warn{% else %}d365-status-ok{% endif %}">
+                    {{ l.get_entry_type_display }}
+                  </span>
+                </td>
+                <td>{{ l.customer.cust_no|default:"—" }}</td>
+                <td>{{ l.customer.full_name|default:"—" }}</td>
+                <td>{{ l.member_account_ref|default:"—" }}</td>
+                <td>{% if l.sacco_account %}<span style="color: var(--d365-primary); font-family: monospace;">{{ l.sacco_account.account_code }}</span> — {{ l.sacco_account.account_name }}{% else %}—{% endif %}</td>
+                <td>{{ l.description|default:"—" }}</td>
+                <td style="text-align:right;">{{ l.debit_amount|floatformat:2|intcomma }}</td>
+                <td style="text-align:right;">{{ l.credit_amount|floatformat:2|intcomma }}</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+          <tfoot>
+            <tr>
+              <td colspan="7" style="text-align:right;">TOTALS</td>
+              <td style="text-align:right;">KES {{ voucher.total_amount|floatformat:2|intcomma }}</td>
+              <td style="text-align:right;">KES {{ voucher.total_amount|floatformat:2|intcomma }}</td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

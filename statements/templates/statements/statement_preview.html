@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% load static %}
+{% block content %}
+<div class="container mt-4">
+    <h2>Search Customer</h2>
+    <form method="post" action="{% url 'statements:search_customer' %}">
+        {% csrf_token %}
+
+        <div class="mb-3">
+            <label for="customer" class="form-label">Search by Customer</label>
+            <select id="customer" name="customer" class="form-control" style="width:100%"></select>
+            <small class="form-text text-muted">
+                Start typing a name or phone number to search.
+            </small>
+        </div>
+
+        <div class="text-center my-2">
+            <strong>OR</strong>
+        </div>
+
+        <div class="mb-3">
+            <label for="cust_no" class="form-label">Enter Customer Number</label>
+            <input type="text" name="cust_no" id="cust_no" class="form-control" placeholder="e.g. 10234">
+            <small class="form-text text-muted">Enter the customer number directly if known.</small>
+        </div>
+
+        <button type="submit" class="btn btn-primary">Search</button>
+    </form>
+</div>
+
+<!-- Select2 CSS -->
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet"/>
+
+<!-- jQuery + Select2 JS -->
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+
+<script>
+$(document).ready(function () {
+    $('#customer').select2({
+        placeholder: 'Search customer...',
+        allowClear: true,
+        minimumInputLength: 2,   // start search after typing 2+ chars
+        ajax: {
+            url: "{% url 'statements:ajax_customer_search' %}", // your Django view
+            dataType: 'json',
+            delay: 250,   // debounce for performance
+            data: function (params) {
+                return { q: params.term }; // search query
+            },
+            processResults: function (data) {
+                return {
+                    results: data.results  // expects {id, text}
+                };
+            },
+            cache: true
+        }
+    });
+});
+</script>
+{% endblock %}

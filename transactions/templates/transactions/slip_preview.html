@@ -1,0 +1,123 @@
+{% extends 'base.html' %}
+{% block content %}
+{% include 'transactions/includes/transactions_quick_actions.html' %}
+<div class="container my-5">
+
+    <!-- Header Controls -->
+    <div class="d-print-none mb-4 d-flex justify-content-between align-items-center">
+        <a href="{% url 'transactions:search_dividend_slip' %}?cust_no={{ detail.cust_no }}" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left"></i> Back to Search
+        </a>
+        <div>
+            <button onclick="window.print();" class="btn btn-dark"><i class="fas fa-print"></i> Print Slip</button>
+            <a href="{% url 'transactions:download_dividend_slip_pdf' detail.id %}" class="btn btn-primary"><i class="fas fa-file-pdf"></i> Download PDF</a>
+        </div>
+    </div>
+
+    <!-- The Slip Container -->
+    <div class="card shadow-lg border-0 p-5 mx-auto" style="max-width: 900px; color: #333;">
+        <div class="row mb-4">
+            <div class="col-6">
+                <h2 class="fw-bold text-uppercase mb-0">DIVIDEND ADVICE SLIP</h2>
+                <p class="text-muted small">Batch No: {{ detail.batch.batch_no }} | Type: {{ detail.batch.get_saving_type_display }}</p>
+            </div>
+            <div class="col-6 text-end">
+                <h4 class="fw-bold mb-0">{{ company_info.company_name }}</h4>
+                <p class="small mb-0">Official Dividend Statement</p>
+            </div>
+        </div>
+
+        <div class="row mb-4">
+            <div class="col-6">
+                <div class="small text-muted text-uppercase fw-bold">Member Name</div>
+                <div class="fs-5 fw-bold">{{ detail.member_name }}</div>
+            </div>
+            <div class="col-6 text-end">
+                <div class="small text-muted text-uppercase fw-bold">Member Number</div>
+                <div class="fs-5 fw-bold">{{ detail.cust_no|stringformat:"05d" }}</div>
+            </div>
+        </div>
+
+        <div class="table-responsive">
+            <table class="table table-sm table-bordered align-middle">
+                <thead class="table-light text-center small text-uppercase">
+                    <tr>
+                        <th>Period</th>
+                        <th>Savings</th>
+                        <th>Ratio</th>
+                        <th>Weighted Balance</th>
+                        <th>Gross Int.</th>
+                        <th>WHT</th>
+                        <th>Fee</th>
+                        <th>Net Interest</th>
+                    </tr>
+                </thead>
+                <tbody class="text-end">
+                    {% for item in items %}
+                    <tr>
+                        <td class="text-center">{{ item.period_date|date:"d-m-Y" }}</td>
+                        <td>{{ item.savings_amount|floatformat:2 }}</td>
+                        <td>{{ item.ratio|floatformat:2 }}</td>
+                        <td class="bg-light">{{ item.weighted_balance|floatformat:2 }}</td>
+                        <td>{{ item.gross_interest|floatformat:2 }}</td>
+                        <td class="text-danger">{{ item.wht_amount|floatformat:2 }}</td>
+                        <td class="text-danger">{{ item.fee_amount|floatformat:2 }}</td>
+                        <td class="fw-bold">{{ item.net_interest|floatformat:2 }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+                <tfoot class="table-dark text-end">
+                    <tr>
+                        <td>TOTALS</td>
+                        <td>{{ totals.total_savings|floatformat:2 }}</td>
+                        <td>-</td>
+                        <td>{{ totals.total_weighted|floatformat:2 }}</td>
+                        <td>{{ totals.total_gross|floatformat:2 }}</td>
+                        <td>{{ totals.total_tax|floatformat:2 }}</td>
+                        <td>{{ totals.total_fee|floatformat:2 }}</td>
+                        <td>{{ totals.total_net|floatformat:2 }}</td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+
+        <!-- Summary Footer -->
+        <div class="row mt-4">
+            <div class="col-md-6 offset-md-6">
+                <table class="table table-borderless table-sm">
+                    <tr>
+                        <td class="fw-bold">Total Gross Interest:</td>
+                        <td class="text-end">KES {{ detail.gross_interest|floatformat:2 }}</td>
+                    </tr>
+                    <tr>
+                        <td class="fw-bold">Withholding Tax ({{ detail.batch.wht_rate }}%):</td>
+                        <td class="text-end text-danger">- {{ detail.withholding_tax|floatformat:2 }}</td>
+                    </tr>
+                    <tr>
+                        <td class="fw-bold">Processing Fee:</td>
+                        <td class="text-end text-danger">- {{ detail.processing_fee|floatformat:2 }}</td>
+                    </tr>
+                    <tr class="border-top">
+                        <td class="fw-bold fs-5">NET INTEREST PAYOUT:</td>
+                        <td class="text-end fs-5 fw-bold text-success">KES {{ detail.net_payout|floatformat:2 }}</td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+
+        <div class="mt-5 pt-4 border-top text-center text-muted small">
+            <p>This is a computer-generated document. No signature is required. <br>
+            Cut-off Date for this calculation was: {{ detail.batch.cut_off_date|date:"F d, Y" }}</p>
+        </div>
+    </div>
+</div>
+
+<style>
+    @media print {
+        body { background: white !important; }
+        .container { max-width: 100% !important; margin: 0 !important; }
+        .card { box-shadow: none !important; border: 1px solid #eee !important; }
+        .d-print-none { display: none !important; }
+    }
+</style>
+{% endblock %}

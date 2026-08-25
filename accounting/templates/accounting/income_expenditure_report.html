@@ -1,0 +1,20 @@
+{% extends 'base.html' %}
+{% block content %}
+{% include 'accounting/includes/accounting_quick_actions.html' %}
+{% load custom_filters %}
+<div class="container my-5">
+
+    <h2 class="text-2xl font-bold mb-4">Income & Expenditure Report</h2>
+    <p>Enter dates to filter Report, Leave blank to fetch all</p>
+    <!-- Filter Form -->
+    <form method="GET">
+        <label>Start Date:</label>
+        <input type="date" name="start_date" value="{{ start_date }}">
+        <label>End Date:</label>
+        <input type="date" name="end_date" value="{{ end_date }}">
+        <button type="submit" name="filter" value="true" class="btn btn-success">Filter</button>
+    </form>
+
+    
+</div>
+{% endblock %}

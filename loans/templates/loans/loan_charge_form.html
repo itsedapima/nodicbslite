@@ -1,0 +1,131 @@
+{% extends 'base.html' %}
+{% block content %}
+{% include 'loans/includes/loans_quick_actions.html' %}
+<div class="container-fluid px-4 py-4">
+    <div class="row justify-content-center">
+        <div class="col-md-8 col-lg-6">
+            <div class="card" style="background: var(--d365-surface); border: 1px solid var(--d365-border); border-radius: .5rem; box-shadow: var(--d365-shadow-2);">
+                <div class="card-header py-3" style="background: var(--d365-surface-alt); border-bottom: 2px solid var(--d365-border); font-size: .8rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--d365-text-secondary);">
+                    {{ title }}
+                </div>
+                <div class="card-body p-4">
+                    <form method="post" novalidate>
+                        {% csrf_token %}
+
+                        <div class="mb-3">
+                            <label for="{{ form.loan_products.id_for_label }}" class="form-label" style="font-weight: 600; font-size: .82rem; color: var(--d365-text);">Target Loan Product(s)</label>
+                            {{ form.loan_products }}
+                            <small class="form-text" style="color: var(--d365-text-secondary);">Hold Ctrl/Cmd to select multiple products.</small>
+                            {% if form.loan_products.errors %}
+                                <div class="text-danger small mt-1">{{ form.loan_products.errors|join:", " }}</div>
+                            {% endif %}
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="{{ form.name.id_for_label }}" class="form-label" style="font-weight: 600; font-size: .82rem; color: var(--d365-text);">Charge Name</label>
+                            {{ form.name }}
+                            {% if form.name.errors %}
+                                <div class="text-danger small mt-1">{{ form.name.errors|join:", " }}</div>
+                            {% endif %}
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="{{ form.description.id_for_label }}" class="form-label" style="font-weight: 600; font-size: .82rem; color: var(--d365-text);">Description</label>
+                            {{ form.description }}
+                            {% if form.description.errors %}
+                                <div class="text-danger small mt-1">{{ form.description.errors|join:", " }}</div>
+                            {% endif %}
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.charge_type.id_for_label }}" class="form-label" style="font-weight: 600; font-size: .82rem; color: var(--d365-text);">Charge Type</label>
+                                {{ form.charge_type }}
+                                {% if form.charge_type.errors %}
+                                    <div class="text-danger small mt-1">{{ form.charge_type.errors|join:", " }}</div>
+                                {% endif %}
+                            </div>
+
+                            <div class="col-md-6 mb-3">
+                                <label id="amount-label" for="{{ form.amount.id_for_label }}" class="form-label" style="font-weight: 600; font-size: .82rem; color: var(--d365-text);">Amount / Rate</label>
+                                {{ form.amount }}
+                                {% if form.amount.errors %}
+                                    <div class="text-danger small mt-1">{{ form.amount.errors|join:", " }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.min_amount.id_for_label }}" class="form-label" style="font-weight: 600; font-size: .82rem; color: var(--d365-text);">
+                                    Minimum Amount (Floor)
+                                </label>
+                                {{ form.min_amount }}
+                                <small class="form-text" style="color: var(--d365-text-secondary);">
+                                    Calculated charge will not fall below this. Set 0 to disable.
+                                </small>
+                                {% if form.min_amount.errors %}
+                                    <div class="text-danger small mt-1">{{ form.min_amount.errors|join:", " }}</div>
+                                {% endif %}
+                            </div>
+
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.max_amount.id_for_label }}" class="form-label" style="font-weight: 600; font-size: .82rem; color: var(--d365-text);">
+                                    Maximum Amount (Cap)
+                                </label>
+                                {{ form.max_amount }}
+                                <small class="form-text" style="color: var(--d365-text-secondary);">
+                                    Calculated charge will not exceed this. Set 0 to disable.
+                                </small>
+                                {% if form.max_amount.errors %}
+                                    <div class="text-danger small mt-1">{{ form.max_amount.errors|join:", " }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label d-block" style="font-weight: 600; font-size: .82rem; color: var(--d365-text);">Is this charge mandatory?</label>
+                            {% for radio in form.is_mandatory %}
+                                <div class="form-check form-check-inline mt-1">
+                                    {{ radio.tag }}
+                                    <label class="form-check-label" for="{{ radio.id_for_label }}">
+                                        {{ radio.choice_label }}
+                                    </label>
+                                </div>
+                            {% endfor %}
+                            {% if form.is_mandatory.errors %}
+                                <div class="text-danger small d-block mt-1">{{ form.is_mandatory.errors|join:", " }}</div>
+                            {% endif %}
+                        </div>
+
+                        <div class="d-flex justify-content-end gap-2 mt-4">
+                            <a href="{% url 'loans:loan_charge_list' %}" class="btn" style="background: var(--d365-surface); color: var(--d365-text); border: 1px solid var(--d365-border-strong); border-radius: .4rem; font-weight: 600;">Cancel</a>
+                            <button type="submit" class="btn px-4" style="background: var(--d365-primary); color: #fff; border: 1px solid var(--d365-primary); border-radius: .4rem; font-weight: 600;">Save Configuration</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        const typeSelect = document.getElementById("{{ form.charge_type.id_for_label }}");
+        const amountLabel = document.getElementById("amount-label");
+
+        function updateLabel() {
+            if (typeSelect.value === "percentage") {
+                amountLabel.textContent = "Rate (%)";
+            } else {
+                amountLabel.textContent = "Amount (Value)";
+            }
+        }
+
+        if (typeSelect && amountLabel) {
+            typeSelect.addEventListener("change", updateLabel);
+            updateLabel();
+        }
+    });
+</script>
+{% endblock %}

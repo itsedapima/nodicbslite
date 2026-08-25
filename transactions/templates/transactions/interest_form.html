@@ -1,0 +1,133 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block content %}
+{% include 'transactions/includes/transactions_quick_actions.html' %}
+<div class="container my-5">
+
+    <div class="row justify-content-center">
+        <div class="col-lg-8 col-md-10">
+            <div class="card shadow-sm border-0 rounded-3">
+                <div class="card-header bg-primary text-white py-3 rounded-top">
+                    <h5 class="mb-0">
+                        <i class="bi bi-calculator me-2"></i>
+                        Calculate Interest &amp; Dividends
+                    </h5>
+                </div>
+
+                <div class="card-body p-4 p-md-5">
+                    <p class="text-muted mb-4">Set the distribution parameters below to generate a draft of the dividend/interest payouts. Deductions will be calculated automatically.</p>
+
+                    <form method="POST" id="dividendCalculationForm">
+                        {% csrf_token %}
+
+                        <h6 class="fw-bold text-primary mb-3 border-bottom pb-2">Distribution Configuration</h6>
+                        <div class="row g-3 mb-4">
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">Saving Type <span class="text-danger">*</span></label>
+                                <select name="saving_type" class="form-select bg-light" required>
+                                    <option value="" disabled selected>Select Account Type...</option>
+                                    {% for account in savings_accounts %}
+                                        <option value="{{ account.account_type }}">{{ account.account_name }} ({{ account.acc_initials }})</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">Calculation Type <span class="text-danger">*</span></label>
+                                <select name="calculation_type" class="form-select bg-light" required>
+                                    <option value="" disabled selected>Select Rule...</option>
+                                    <option value="flat_rate">Flat Rate</option>
+                                    <option value="prorata">Pro Rata</option>
+                                </select>
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">Allocation Strategy <span class="text-danger">*</span></label>
+                                <select name="allocation_type" id="allocation_type" class="form-select bg-light" required>
+                                    <option value="fixed_pool">Fixed Pool Amount (Share Allocation)</option>
+                                    <option value="percentage">Predetermined Yield Percentage</option>
+                                </select>
+                            </div>
+
+                            <div class="col-md-6" id="container_amount_to_share">
+                                <label class="form-label fw-semibold">Total Amount to Share <span class="text-danger">*</span></label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-light text-muted">KES</span>
+                                    <input type="number" step="0.01" name="amount_to_share" id="amount_to_share" class="form-control" placeholder="0.00">
+                                </div>
+                            </div>
+
+                            <div class="col-md-6 d-none" id="container_dividend_percentage">
+                                <label class="form-label fw-semibold">Dividend Percentage Yield <span class="text-danger">*</span></label>
+                                <div class="input-group">
+                                    <input type="number" step="0.01" name="dividend_percentage" id="dividend_percentage" class="form-control" value="7.00">
+                                    <span class="input-group-text bg-light text-muted">%</span>
+                                </div>
+                            </div>
+
+                            <div class="col-md-12">
+                                <label class="form-label fw-semibold">Cut-Off Date <span class="text-danger">*</span></label>
+                                <input type="date" name="cut_off_date" class="form-control" required>
+                                <div class="form-text">System will run processing formulas up to the close of this date.</div>
+                            </div>
+                        </div>
+
+                        <h6 class="fw-bold text-primary mb-3 border-bottom pb-2 mt-4">Deductions &amp; Fees</h6>
+                        <div class="row g-3 mb-4">
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">Withholding Tax <span class="text-danger">*</span></label>
+                                <div class="input-group">
+                                    <input type="number" step="0.01" name="wht_rate" class="form-control" value="15.00" required>
+                                    <span class="input-group-text bg-light text-muted">%</span>
+                                </div>
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">Processing Fee <span class="text-danger">*</span></label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-light text-muted">KES</span>
+                                    <input type="number" step="0.01" name="processing_fee" class="form-control" value="100.00" required>
+                                </div>
+                                <div class="form-text">Flat amount deducted per member payout.</div>
+                            </div>
+                        </div>
+
+                        <div class="d-flex justify-content-end gap-2 mt-5">
+                            <a href="{% url 'transactions:interest_history' %}" class="btn btn-light border px-4">Cancel</a>
+                            <button type="submit" class="btn btn-primary px-4 shadow-sm">
+                                <i class="bi bi-cpu me-1"></i> Run Calculation Engine
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        const allocationSelect = document.getElementById("allocation_type");
+        const poolContainer = document.getElementById("container_amount_to_share");
+        const percentContainer = document.getElementById("container_dividend_percentage");
+        const poolInput = document.getElementById("amount_to_share");
+        const percentInput = document.getElementById("dividend_percentage");
+
+        function toggleInputs() {
+            if (allocationSelect.value === "fixed_pool") {
+                poolContainer.classList.remove("d-none");
+                percentContainer.classList.add("d-none");
+                poolInput.setAttribute("required", "required");
+                percentInput.removeAttribute("required");
+            } else {
+                poolContainer.classList.add("d-none");
+                percentContainer.classList.remove("d-none");
+                percentInput.setAttribute("required", "required");
+                poolInput.removeAttribute("required");
+            }
+        }
+
+        allocationSelect.addEventListener("change", toggleInputs);
+        toggleInputs();
+    });
+</script>
+{% endblock %}

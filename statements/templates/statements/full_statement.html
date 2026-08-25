@@ -1,0 +1,134 @@
+{% extends "base.html" %}
+{% load humanize %}
+
+{% block content %}
+<div class="container my-5">
+<div class="d-flex justify-content-between align-items-center mb-4 d-print-none">
+    <a href="{% url 'statements:panel' %}" class="btn btn-outline-secondary">
+        <i class="fas fa-arrow-left"></i> Back to Panel
+    </a>
+    <div>
+        <a href="{% url 'statements:full_statement_pdf' customer.pk %}" class="btn btn-danger">
+            <i class="fas fa-file-pdf"></i> Download PDF
+        </a>
+        <button onclick="window.print()" class="btn btn-success">
+            <i class="fas fa-print"></i> Print View
+        </button>
+    </div>
+</div>
+
+    <div class="card mb-4 border-0 shadow-sm">
+        <div class="card-body text-center">
+            <h2 class="fw-bold mb-1">
+                CONSOLIDATED MEMBER STATEMENT
+                {% if tb_verified %}
+                    <span style="display:inline-flex;align-items:center;gap:.25rem;font-size:.6rem;font-weight:600;padding:.15rem .45rem;border-radius:999px;background:#d1fae5;color:#065f46;border:1px solid #6ee7b7;text-transform:uppercase;letter-spacing:.03em;vertical-align:middle;margin-left:.5rem;" title="All transactions recorded via TigerBeetle — immutable, double-entry verified">
+                        <i class="bi bi-shield-check"></i> TB Verified
+                    </span>
+                {% endif %}
+            </h2>
+            <p class="text-muted mb-0">Generated on: {{ now|date:"D, d M Y H:i" }}</p>
+            <hr class="mx-auto" style="width: 100px; border-top: 3px solid #0d6efd;">
+            
+            <div class="row mt-4 text-start">
+                <div class="col-md-6">
+                    <p class="mb-1"><strong>Member Name:</strong> {{ customer.full_name }}</p>
+                    <p class="mb-1"><strong>Member No:</strong> {{ customer.cust_no }}</p>
+                </div>
+                <div class="col-md-6 text-md-end">
+                    <p class="mb-1"><strong>ID Number:</strong> {{ customer.national_id }}</p>
+                    <p class="mb-1"><strong>Mobile:</strong> {{ customer.mobile }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="mb-4 d-print-none">
+        <h6 class="text-uppercase text-muted small fw-bold">Jump to Account:</h6>
+        <div class="d-flex flex-wrap gap-2">
+            {% for section in sections %}
+                <a href="#section-{{ forloop.index }}" class="btn btn-sm btn-light border">
+                    {{ section.name }}
+                </a>
+            {% endfor %}
+        </div>
+    </div>
+
+    {% for section in sections %}
+    <div id="section-{{ forloop.index }}" class="card mb-5 border-0 shadow-sm">
+        <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">{{ section.name }}</h5>
+            <span class="badge bg-primary">Account Summary</span>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-striped table-hover mb-0" style="font-size: 0.9rem;">
+                    <thead class="table-light">
+                        <tr>
+                            <th style="width: 15%;">Date</th>
+                            <th style="width: 45%;">Description</th>
+                            <th style="width: 13%;" class="text-end">Debit</th>
+                            <th style="width: 13%;" class="text-end">Credit</th>
+                            <th style="width: 14%;" class="text-end">Running Balance</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for txn in section.txns %}
+                        <tr>
+                            <td>{{ txn.date|date:"Y-m-d" }}</td>
+                            <td>{{ txn.desc }}</td>
+                            <td class="text-end text-danger">
+                                {% if txn.debit > 0 %}{{ txn.debit|floatformat:2|intcomma }}{% else %}-{% endif %}
+                            </td>
+                            <td class="text-end text-success">
+                                {% if txn.credit > 0 %}{{ txn.credit|floatformat:2|intcomma }}{% else %}-{% endif %}
+                            </td>
+                            <td class="text-end fw-bold">
+                                {{ txn.bal|floatformat:2|intcomma }}
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="5" class="text-center text-muted py-4">No transactions found for this account.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+
+    <div class="mt-5 pt-5 d-none d-print-block">
+        <div class="row">
+            <div class="col-6">
+                <hr>
+                <p class="text-center small">Member Signature</p>
+            </div>
+            <div class="col-6">
+                <hr>
+                <p class="text-center small">Authorized Officer & Stamp</p>
+            </div>
+        </div>
+        <p class="text-center text-muted small mt-4">
+            <em>This is a computer-generated statement and does not require a physical signature unless stamped.</em>
+        </p>
+        {% if tb_verified %}
+        <p class="text-center small mt-2" style="color:#065f46;">
+            <i class="bi bi-shield-check"></i>
+            <strong>TigerBeetle Verified</strong> — This statement is backed by an immutable, double-entry ledger engine.
+        </p>
+        {% endif %}
+    </div>
+</div>
+
+<style>
+    @media print {
+        body { background-color: white !important; }
+        .container { max-width: 100% !important; width: 100% !important; margin: 0 !important; padding: 0 !important; }
+        .card { border: 1px solid #dee2e6 !important; box-shadow: none !important; margin-bottom: 2rem !important; }
+        .table-dark { background-color: #333 !important; color: white !important; }
+        .btn, .d-print-none { display: none !important; }
+    }
+</style>
+{% endblock %}

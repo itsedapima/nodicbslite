@@ -1,0 +1,137 @@
+{% extends "base.html" %}
+{% block title %}Preview Import · NODi Lite{% endblock %}
+{% block content %}
+<div class="container my-4">
+
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb small">
+            <li class="breadcrumb-item"><a href="{% url 'data_imports:hub' %}">Bulk Imports</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'data_imports:upload' imp.slug %}">{{ imp.title }}</a></li>
+            <li class="breadcrumb-item active" aria-current="page">Preview</li>
+        </ol>
+    </nav>
+
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags|default:'info' }} py-2 small">{{ message }}</div>
+        {% endfor %}
+    {% endif %}
+
+    <div class="card shadow-sm border-0 mb-3">
+        <div class="card-header bg-white border-bottom py-3 d-flex justify-content-between align-items-center">
+            <div>
+                <h5 class="mb-0"><i class="bi {{ imp.icon }} text-primary me-2"></i>{{ imp.title }} — Preview</h5>
+                <small class="text-muted">Step 2 of 3 — Review before committing · File: <code>{{ state.filename }}</code></small>
+            </div>
+            <a href="{% url 'data_imports:upload' imp.slug %}" class="btn btn-sm btn-outline-secondary">
+                <i class="bi bi-x-lg"></i> Discard & Re-upload
+            </a>
+        </div>
+        <div class="card-body">
+
+            <div class="row g-3 mb-3">
+                <div class="col-md-3">
+                    <div class="border rounded p-3 text-center">
+                        <div class="text-muted small text-uppercase" style="letter-spacing:.05em;">Total rows</div>
+                        <div class="fs-3 fw-bold">{{ state.total }}</div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="border rounded p-3 text-center bg-success-subtle">
+                        <div class="text-success small text-uppercase" style="letter-spacing:.05em;">Valid</div>
+                        <div class="fs-3 fw-bold text-success">{{ state.valid_count }}</div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="border rounded p-3 text-center bg-danger-subtle">
+                        <div class="text-danger small text-uppercase" style="letter-spacing:.05em;">Invalid</div>
+                        <div class="fs-3 fw-bold text-danger">{{ state.invalid_count }}</div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="border rounded p-3 text-center">
+                        <div class="text-muted small text-uppercase" style="letter-spacing:.05em;">Ready to commit</div>
+                        <div class="fs-3 fw-bold text-primary">{{ state.valid_count }}</div>
+                    </div>
+                </div>
+            </div>
+
+            {% if state.invalid_count %}
+            <div class="alert alert-warning small">
+                <i class="bi bi-exclamation-triangle-fill me-1"></i>
+                {{ state.invalid_count }} row(s) failed validation and <strong>will not be imported</strong>.
+                Fix them in your source file and re-upload if needed. The remaining
+                {{ state.valid_count }} valid row(s) can still be committed now.
+            </div>
+
+            <h6 class="mt-3">Invalid rows (showing first {{ state.invalid_preview|length }})</h6>
+            <div class="table-responsive" style="max-height: 380px;">
+                <table class="table table-sm table-bordered small">
+                    <thead class="table-light sticky-top">
+                        <tr>
+                            <th style="width:60px;">Excel row</th>
+                            <th>Errors</th>
+                            <th>Raw values (first 4 columns)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for r in state.invalid_preview %}
+                        <tr>
+                            <td class="text-center fw-bold">{{ r.row }}</td>
+                            <td>
+                                {% for e in r.errors %}
+                                    <div class="text-danger">• {{ e }}</div>
+                                {% endfor %}
+                            </td>
+                            <td class="text-muted font-monospace" style="font-size:.72rem;">
+                                {% for k, v in r.raw.items %}{% if forloop.counter <= 4 %}<span class="me-2"><em>{{ k }}=</em>{{ v|default:"—" }}</span>{% endif %}{% endfor %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% endif %}
+
+            <hr class="my-4">
+
+            <form method="post" action="{% url 'data_imports:commit' batch_id %}">
+                {% csrf_token %}
+
+                {% if imp.options %}
+                <h6>Import options</h6>
+                <div class="mb-3">
+                    {% for opt in imp.options %}
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="opt_{{ opt.name }}" name="{{ opt.name }}"
+                               {% if opt.default %}checked{% endif %}>
+                        <label class="form-check-label" for="opt_{{ opt.name }}">
+                            <strong>{{ opt.label }}</strong>
+                            <div class="text-muted small">{{ opt.help }}</div>
+                        </label>
+                    </div>
+                    {% endfor %}
+                </div>
+                <hr>
+                {% endif %}
+
+                <div class="d-flex justify-content-between align-items-center">
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="confirm" required>
+                        <label class="form-check-label small" for="confirm">
+                            I have reviewed the preview and confirm the <strong>{{ state.valid_count }}</strong> valid row(s) should be committed to the database.
+                        </label>
+                    </div>
+                    <div class="d-flex gap-2">
+                        <a href="{% url 'data_imports:hub' %}" class="btn btn-outline-secondary">Cancel</a>
+                        <button type="submit" class="btn btn-primary" {% if not state.valid_count %}disabled{% endif %}>
+                            <i class="bi bi-check2-square me-1"></i> Commit {{ state.valid_count }} row(s)
+                        </button>
+                    </div>
+                </div>
+            </form>
+
+        </div>
+    </div>
+</div>
+{% endblock %}

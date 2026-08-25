@@ -1,0 +1,206 @@
+{% extends "base.html" %}
+{% load humanize %}
+
+{% block title %}M-Pesa Reconciliation | NODi Lite{% endblock %}
+
+{% block extra_css %}
+<style>
+  .recon-hero {
+    background: linear-gradient(135deg, #0E2B4D 0%, #1a4170 100%);
+    color: #fff; padding: 1.5rem; border-radius: .75rem; margin-bottom: 1.25rem;
+  }
+  .recon-hero h1 { font-size: 1.5rem; font-weight: 700; margin: 0 0 .15rem; color: #fff; }
+  .recon-hero p  { margin: 0; opacity: .85; font-size: .85rem; color: #fff; }
+  .section-pill { font-size: .82rem; }
+  .section-pill .badge { font-size: .7rem; vertical-align: middle; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-3">
+
+  {% if messages %}
+    {% for message in messages %}
+    <div class="alert alert-{{ message.tags|default:'info' }} alert-dismissible fade show" role="alert">
+      {{ message }}
+      <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+    {% endfor %}
+  {% endif %}
+
+  <div class="recon-hero">
+    <h1><i class="bi bi-phone-vibrate me-2"></i>M-Pesa Statement Reconciliation</h1>
+    <p>Compare C2B notifications in the system vs uploaded Safaricom M-Pesa statement records</p>
+  </div>
+
+  {# ── Upload + Date Filter Row ────────────────────────────────── #}
+  <div class="row g-3 mb-3">
+    <div class="col-lg-5">
+      <div class="card shadow-sm h-100">
+        <div class="card-header py-2 bg-light">
+          <i class="bi bi-cloud-arrow-up me-1"></i>
+          <strong class="small">Upload Safaricom M-Pesa Statement</strong>
+        </div>
+        <div class="card-body py-2">
+          <form method="POST" enctype="multipart/form-data" class="d-flex align-items-end gap-2">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="upload_mpesa">
+            <div class="flex-grow-1">
+              <input type="file" name="mpesa_file" class="form-control form-control-sm" accept=".xlsx,.xls,.csv" required>
+            </div>
+            <button type="submit" class="btn btn-success btn-sm text-nowrap">
+              <i class="bi bi-upload"></i> Upload
+            </button>
+          </form>
+          <small class="text-muted">Excel columns: ReceiptNo, CompletionTime, Details, CreditAmount, DebitAmount, Account</small>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-lg-7">
+      <div class="card shadow-sm h-100">
+        <div class="card-header py-2 bg-light">
+          <i class="bi bi-funnel me-1"></i>
+          <strong class="small">Date Range</strong>
+        </div>
+        <div class="card-body py-2">
+          <form method="GET" class="row g-2 align-items-end">
+            <div class="col-md-4">
+              <label class="form-label small mb-0">From</label>
+              <input type="date" name="start_date" value="{{ start_date|date:'Y-m-d' }}" class="form-control form-control-sm">
+            </div>
+            <div class="col-md-4">
+              <label class="form-label small mb-0">To</label>
+              <input type="date" name="end_date" value="{{ end_date|date:'Y-m-d' }}" class="form-control form-control-sm">
+            </div>
+            <div class="col-md-4">
+              <button class="btn btn-primary btn-sm w-100"><i class="bi bi-arrow-repeat"></i> Reconcile</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  {# ── Summary badges ─────────────────────────────────────────── #}
+  <div class="d-flex flex-wrap gap-3 mb-3 small">
+    <span class="text-muted">Notifications: <strong>{{ notif_count }}</strong></span>
+    <span class="text-muted">Statement Records: <strong>{{ record_count }}</strong></span>
+    <span class="text-success">Matched: <strong>{{ section_counts.matched }}</strong></span>
+    <span class="text-warning">Statement Only: <strong>{{ section_counts.stmt_only }}</strong></span>
+    <span class="text-danger">System Only: <strong>{{ section_counts.system_only }}</strong></span>
+  </div>
+
+  {# ── Section tabs ────────────────────────────────────────────── #}
+  <ul class="nav nav-pills mb-3 section-pill">
+    <li class="nav-item">
+      <a class="nav-link {% if section == 'stmt_only' %}active{% endif %}"
+         href="?start_date={{ start_date|date:'Y-m-d' }}&end_date={{ end_date|date:'Y-m-d' }}&section=stmt_only">
+        Statement Only <span class="badge bg-warning text-dark ms-1">{{ section_counts.stmt_only }}</span>
+      </a>
+    </li>
+    <li class="nav-item">
+      <a class="nav-link {% if section == 'system_only' %}active{% endif %}"
+         href="?start_date={{ start_date|date:'Y-m-d' }}&end_date={{ end_date|date:'Y-m-d' }}&section=system_only">
+        System Only <span class="badge bg-danger ms-1">{{ section_counts.system_only }}</span>
+      </a>
+    </li>
+    <li class="nav-item">
+      <a class="nav-link {% if section == 'matched' %}active{% endif %}"
+         href="?start_date={{ start_date|date:'Y-m-d' }}&end_date={{ end_date|date:'Y-m-d' }}&section=matched">
+        Matched <span class="badge bg-success ms-1">{{ section_counts.matched }}</span>
+      </a>
+    </li>
+  </ul>
+
+  {# ── Data table ──────────────────────────────────────────────── #}
+  <div class="card shadow-sm">
+    <div class="card-header d-flex justify-content-between align-items-center py-2">
+      <span class="fw-bold small">
+        <span class="badge {{ section_badge }} me-1">{{ section_title }}</span>
+        {{ row_count }} record{{ row_count|pluralize }} &middot; Total: KES {{ total }}
+      </span>
+      {% if section == 'stmt_only' and table_rows %}
+      <button type="submit" form="pushForm" class="btn btn-warning btn-sm">
+        <i class="bi bi-arrow-up-right-circle"></i> Push Selected to Notifications
+      </button>
+      {% endif %}
+    </div>
+    <div class="card-body p-0">
+      {% if section == 'stmt_only' and table_rows %}
+      <form method="post" action="{% url 'accounting:mpesa_reconciliation_push' %}" id="pushForm">
+        {% csrf_token %}
+        <input type="hidden" name="redirect_query"
+               value="start_date={{ start_date|date:'Y-m-d' }}&end_date={{ end_date|date:'Y-m-d' }}&section=stmt_only">
+      {% endif %}
+
+      <div class="table-responsive">
+        <table class="table table-hover table-sm align-middle mb-0 text-nowrap">
+          <thead class="table-light">
+            <tr>
+              {% if section == 'stmt_only' %}
+              <th style="width:2rem;"><input type="checkbox" id="chkAll" title="Select all"></th>
+              {% endif %}
+              {% for h in table_headers %}
+                {% if not forloop.first or section != 'stmt_only' %}
+                <th class="{% if h == 'Amount' %}text-end{% endif %} small">{{ h }}</th>
+                {% endif %}
+              {% endfor %}
+            </tr>
+          </thead>
+          <tbody>
+            {% for row in table_rows %}
+            <tr>
+              {% if section == 'stmt_only' %}
+              <td><input type="checkbox" form="pushForm" name="receipts" value="{{ row.receipt }}"></td>
+              {% endif %}
+              <td class="fw-semibold small">{{ row.receipt }}</td>
+              <td class="small">{{ row.date }}</td>
+              <td class="text-end font-monospace small fw-bold">{{ row.amount }}</td>
+              <td class="small">{{ row.account }}</td>
+              <td class="small text-truncate" style="max-width:200px;">{{ row.notes }}</td>
+              {% if section == 'system_only' %}
+              <td class="small">
+                {% if row.posted == "Yes" %}
+                  <span class="badge bg-success-subtle text-success border">Posted</span>
+                {% else %}
+                  <span class="badge bg-warning-subtle text-warning border">Pending</span>
+                {% endif %}
+              </td>
+              {% endif %}
+            </tr>
+            {% empty %}
+            <tr>
+              <td colspan="8" class="text-center text-muted py-4">
+                <i class="bi bi-check-circle text-success fs-2 d-block mb-2"></i>
+                No records in this section for the selected date range.
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+      {% if section == 'stmt_only' and table_rows %}
+      </form>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  var chkAll = document.getElementById('chkAll');
+  if (chkAll) {
+    chkAll.addEventListener('change', function() {
+      document.querySelectorAll('#pushForm input[type=checkbox][name=receipts]').forEach(function(c) {
+        c.checked = chkAll.checked;
+      });
+    });
+  }
+});
+</script>
+{% endblock %}

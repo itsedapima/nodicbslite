@@ -1,0 +1,31 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="container my-5">
+    {% include 'accounting/includes/accounting_quick_actions.html' %}
+     <!-- Message display section -->
+ {% if messages %}
+ <div class="container mt-4">
+     {% for message in messages %}
+         <div class="alert {% if message.tags %}alert-{{ message.tags }}{% else %}alert-info{% endif %}" role="alert">
+             {{ message }}
+             <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                 <span aria-hidden="true">&times;</span>
+             </button>
+         </div>
+     {% endfor %}
+ </div>
+ {% endif %}
+    <h2>Reconcile Income</h2>
+    <p><strong>Date:</strong> {{ income.date_added }}</p>
+    <p><strong>Amount:</strong> {{ income.amount }}</p>
+    <p><strong>Description:</strong> {{ income.description }}</p>
+    <form method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+        {{ form.as_p }}
+        <button type="submit" class="btn btn-success">Submit</button>
+        <a href="{% url 'accounting:income_list' %}" class="btn btn-secondary">Back</a>
+    </form>
+</div>
+{% endblock %}

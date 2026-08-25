@@ -1,0 +1,45 @@
+{% extends 'base.html' %}
+{% block title %}Account Categories — NODi Lite{% endblock %}
+{% block content %}
+<div class="page-shell">
+    <div class="app-toolbar">
+        <div class="app-toolbar-body">
+            <h1 class="toolbar-title"><span class="toolbar-badge"><i class="bi bi-tags"></i></span> Account Categories</h1>
+            <div class="toolbar-actions">
+                <a href="{% url 'accounting:category_add' %}" class="btn btn-primary"><i class="bi bi-plus-lg me-1"></i> Add Category</a>
+            </div>
+        </div>
+    </div>
+
+    <div class="grid-scroll">
+        <table class="grid-table">
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Type</th>
+                    <th>Description</th>
+                    <th>Active</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for c in categories %}
+                <tr>
+                    <td><strong>{{ c.name }}</strong></td>
+                    <td>
+                        {% if c.type == 'income' %}<span class="badge bg-success">Income</span>
+                        {% else %}<span class="badge bg-danger">Expense</span>{% endif %}
+                    </td>
+                    <td>{{ c.description|default:"-" }}</td>
+                    <td>
+                        {% if c.is_active %}<span class="badge bg-success">Active</span>
+                        {% else %}<span class="badge bg-secondary">Inactive</span>{% endif %}
+                    </td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="4" class="text-center text-muted py-4">No categories configured.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

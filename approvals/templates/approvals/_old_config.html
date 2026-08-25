@@ -1,0 +1,62 @@
+{% extends 'base.html' %}
+{% block title %}Approval Configuration — NODi Lite{% endblock %}
+{% block content %}
+<div class="page-shell">
+    <div class="page-head">
+        <div>
+            <h2><i class="bi bi-gear me-2"></i>Approval Configuration</h2>
+            <p class="page-sub">Set approval rules and thresholds</p>
+        </div>
+        <a href="{% url 'approvals:list' %}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left me-1"></i> Back</a>
+    </div>
+
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-body p-4">
+                    <form method="post" class="d365-form">
+                        {% csrf_token %}
+                        <div class="field-group">
+                            <label for="id_min_approvers">Minimum Approvers *</label>
+                            <input type="number" name="min_approvers" id="id_min_approvers" min="1"
+                                   value="{{ config.min_approvers|default:2 }}" required>
+                        </div>
+                        <div class="field-group">
+                            <label for="id_auto_approve_threshold">Auto-Approve Threshold (KES)</label>
+                            <input type="number" name="auto_approve_threshold" id="id_auto_approve_threshold"
+                                   step="0.01" min="0"
+                                   value="{{ config.auto_approve_threshold|default:'0' }}"
+                                   placeholder="Amounts below this auto-approve">
+                            <span class="form-text">Transactions below this amount will be auto-approved. Set to 0 to disable.</span>
+                        </div>
+
+                        <div class="field-group mt-3">
+                            <label class="mb-2">Approval Required For</label>
+                            <div class="form-check mb-2">
+                                <input class="form-check-input" type="checkbox" name="require_loans"
+                                       id="id_require_loans" {% if config.require_loans %}checked{% endif %}>
+                                <label class="form-check-label" for="id_require_loans">Loans</label>
+                            </div>
+                            <div class="form-check mb-2">
+                                <input class="form-check-input" type="checkbox" name="require_withdrawals"
+                                       id="id_require_withdrawals" {% if config.require_withdrawals %}checked{% endif %}>
+                                <label class="form-check-label" for="id_require_withdrawals">Withdrawals</label>
+                            </div>
+                            <div class="form-check mb-2">
+                                <input class="form-check-input" type="checkbox" name="require_expenses"
+                                       id="id_require_expenses" {% if config.require_expenses %}checked{% endif %}>
+                                <label class="form-check-label" for="id_require_expenses">Expenses</label>
+                            </div>
+                        </div>
+
+                        <div class="d-flex gap-2 mt-4">
+                            <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg me-1"></i> Save Configuration</button>
+                            <a href="{% url 'approvals:list' %}" class="btn btn-outline-secondary">Cancel</a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

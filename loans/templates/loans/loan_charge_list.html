@@ -1,0 +1,218 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block title %}Loan Charges | NODi CBS{% endblock %}
+
+{% block extra_css %}
+<style>
+  .page-hero {
+    background: linear-gradient(135deg, #0E2B4D 0%, #1a4170 100%);
+    color: #fff;
+    padding: 1.5rem 1.5rem;
+    border-radius: .75rem;
+    margin-bottom: 1.25rem;
+  }
+  .page-hero h1 { font-size: 1.4rem; font-weight: 700; margin: 0 0 .15rem; color: #fff; }
+  .page-hero p  { margin: 0; opacity: .85; font-size: .85rem; color: #fff; }
+  .page-hero i   { color: #fff; }
+
+  .filter-bar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: .5rem;
+    margin-bottom: 1.25rem;
+  }
+  .filter-bar .form-control {
+    max-width: 280px;
+    font-size: .85rem;
+    border: 1px solid var(--d365-border-strong, #D2D0CE);
+    border-radius: .4rem;
+  }
+  .filter-bar .form-control:focus {
+    border-color: var(--d365-primary, #0078D4);
+    box-shadow: 0 0 0 2px var(--d365-primary-tint-40, #DEECF9);
+  }
+  .btn-d365 {
+    font-size: .82rem;
+    padding: .35rem .85rem;
+    border-radius: .4rem;
+    font-weight: 600;
+    transition: all .15s ease;
+  }
+  .btn-d365-primary {
+    background: var(--d365-primary, #0078D4);
+    color: #fff;
+    border: 1px solid var(--d365-primary, #0078D4);
+  }
+  .btn-d365-primary:hover {
+    background: var(--d365-primary-hover, #106EBE);
+    border-color: var(--d365-primary-hover, #106EBE);
+    color: #fff;
+  }
+
+  .data-card {
+    background: var(--d365-surface, #fff);
+    border: 1px solid var(--d365-border, #EDEBE9);
+    border-radius: .5rem;
+    box-shadow: var(--d365-shadow-2);
+    overflow: hidden;
+  }
+  .data-card .table thead {
+    background: var(--d365-surface-alt, #FAF9F8);
+  }
+  .data-card .table thead th {
+    font-size: .75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+    color: var(--d365-text-secondary, #605E5C);
+    border-bottom: 2px solid var(--d365-border, #EDEBE9);
+    padding: .65rem .75rem;
+  }
+  .data-card .table tbody td {
+    font-size: .84rem;
+    color: var(--d365-text, #323130);
+    padding: .6rem .75rem;
+    border-bottom: 1px solid var(--d365-border, #EDEBE9);
+  }
+  .data-card .table tbody tr:hover {
+    background: var(--d365-primary-tint-40, #DEECF9);
+  }
+
+  .type-pill {
+    display: inline-block;
+    font-size: .72rem;
+    font-weight: 600;
+    padding: .18rem .5rem;
+    border-radius: .3rem;
+    line-height: 1.4;
+  }
+  .type-pill-flat { background: var(--d365-info-bg, #DEECF9); color: var(--d365-primary, #0078D4); }
+  .type-pill-pct  { background: var(--d365-warning-bg, #FFF4CE); color: #6B4D00; }
+
+  .action-btn-edit {
+    font-size: .75rem;
+    padding: .2rem .55rem;
+    border-radius: .3rem;
+    font-weight: 600;
+    background: var(--d365-primary-tint-40, #DEECF9);
+    color: var(--d365-primary, #0078D4);
+    border: 1px solid var(--d365-primary-tint-30, #C7E0F4);
+    transition: all .12s ease;
+    text-decoration: none;
+  }
+  .action-btn-edit:hover {
+    background: var(--d365-primary, #0078D4);
+    color: #fff;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+{% include 'loans/includes/loans_quick_actions.html' %}
+
+<!-- Page hero -->
+<div class="page-hero">
+    <h1><i class="bi bi-cash-coin me-2"></i>Predefined Loan Charges</h1>
+    <p>Manage charge templates applied during loan dispatch.</p>
+</div>
+
+{% if messages %}
+    {% for message in messages %}
+        <div class="alert alert-success alert-dismissible fade show mb-3" role="alert" style="border-radius:.4rem;">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    {% endfor %}
+{% endif %}
+
+<!-- Filter bar -->
+<div class="filter-bar">
+    <div class="input-group" style="max-width:280px;">
+        <span class="input-group-text" style="background:var(--d365-surface-alt);border-color:var(--d365-border-strong);"><i class="bi bi-search" style="font-size:.85rem;color:var(--d365-text-secondary);"></i></span>
+        <input type="text" id="liveSearch" class="form-control" placeholder="Search charges..." style="border-left:0;">
+    </div>
+    <div class="ms-auto">
+        <a href="{% url 'loans:loan_charge_add' %}" class="btn btn-d365 btn-d365-primary">
+            <i class="bi bi-plus-lg me-1"></i> Add New Charge
+        </a>
+    </div>
+</div>
+
+<!-- Data table card -->
+<div class="data-card">
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0" id="dataTable">
+            <thead>
+                <tr>
+                    <th class="ps-3">Charge Name</th>
+                    <th>Description</th>
+                    <th>Type</th>
+                    <th class="text-end">Value / Rate</th>
+                    <th class="text-end">Min</th>
+                    <th class="text-end">Max</th>
+                    <th class="text-center pe-3">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for charge in charges %}
+                <tr>
+                    <td class="ps-3 fw-bold">{{ charge.name }}</td>
+                    <td style="color:var(--d365-text-secondary);font-size:.82rem;">{{ charge.description|default:"-" }}</td>
+                    <td>
+                        {% if charge.charge_type == 'flat_amount' %}
+                            <span class="type-pill type-pill-flat">Flat Amount</span>
+                        {% else %}
+                            <span class="type-pill type-pill-pct">Percentage</span>
+                        {% endif %}
+                    </td>
+                    <td class="text-end fw-semibold font-monospace">
+                        {% if charge.charge_type == 'percentage' %}
+                            {{ charge.amount }}%
+                        {% else %}
+                            {{ charge.amount }}
+                        {% endif %}
+                    </td>
+                    <td class="text-end font-monospace">
+                        {% if charge.min_amount > 0 %}
+                            {{ charge.min_amount|floatformat:2 }}
+                        {% else %}
+                            <span style="color:var(--d365-text-disabled);">—</span>
+                        {% endif %}
+                    </td>
+                    <td class="text-end font-monospace">
+                        {% if charge.max_amount > 0 %}
+                            {{ charge.max_amount|floatformat:2 }}
+                        {% else %}
+                            <span style="color:var(--d365-text-disabled);">—</span>
+                        {% endif %}
+                    </td>
+                    <td class="text-center pe-3">
+                        <a href="{% url 'loans:loan_charge_edit' charge.pk %}" class="action-btn-edit">
+                            <i class="bi bi-pencil-square me-1"></i> Edit
+                        </a>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="7" class="text-center py-5" style="color:var(--d365-text-disabled);">
+                        <i class="bi bi-inbox d-block mb-2" style="font-size:1.75rem;"></i>
+                        No predefined loan charges found. Click "Add New Charge" to get started.
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+document.getElementById('liveSearch').addEventListener('input', function() {
+    const q = this.value.toLowerCase();
+    document.querySelectorAll('#dataTable tbody tr').forEach(function(row) {
+        row.style.display = row.textContent.toLowerCase().includes(q) ? '' : 'none';
+    });
+});
+</script>
+{% endblock %}

@@ -1,0 +1,77 @@
+
+<ul class="nav nav-pills" role="menubar">
+
+    <li class="nav-item dropdown" role="none">
+        <a class="nav-link dropdown-toggle" href="#" id="menuDashboardDropdown" role="menuitem"
+           data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+            <i class="bi bi-speedometer2" aria-hidden="true"></i> Dashboard
+        </a>
+        <div class="dropdown-menu" aria-labelledby="menuDashboardDropdown">
+            <a class="dropdown-item" href="{% url 'dashboard:dashboard' %}">Dashboard</a>
+        </div>
+    </li>
+
+    <li class="nav-item dropdown" role="none">
+        <a class="nav-link dropdown-toggle" href="#" id="menuMembersDropdown" role="menuitem"
+           data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+            <i class="bi bi-people" aria-hidden="true"></i> Members
+        </a>
+        <div class="dropdown-menu" aria-labelledby="menuMembersDropdown">
+            <a class="dropdown-item" href="{% url 'customers:list_customers' %}">Members Management</a>
+        </div>
+    </li>
+
+    <li class="nav-item dropdown" role="none">
+        <a class="nav-link dropdown-toggle" href="#" id="menuTransactionsDropdown" role="menuitem"
+           data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+            <i class="bi bi-arrow-left-right" aria-hidden="true"></i> Transactions
+        </a>
+        <div class="dropdown-menu" aria-labelledby="menuTransactionsDropdown">
+            <a class="dropdown-item" href="{% url 'transactions:bulk_post_transaction' %}">Transactions Management</a>
+        </div>
+    </li>
+
+    <li class="nav-item dropdown" role="none">
+        <a class="nav-link dropdown-toggle" href="#" id="menuLoansDropdown" role="menuitem"
+           data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+            <i class="bi bi-cash-coin" aria-hidden="true"></i> Loans
+        </a>
+        <div class="dropdown-menu" aria-labelledby="menuLoansDropdown">
+            <a class="dropdown-item" href="{% url 'loans:loan_dashboard' %}">Loans Management</a>
+        </div>
+    </li>
+
+    <li class="nav-item dropdown" role="none">
+        <a class="nav-link dropdown-toggle" href="#" id="menuStatementsDropdown" role="menuitem"
+           data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+            <i class="bi bi-file-earmark-text" aria-hidden="true"></i> Statements
+        </a>
+        <div class="dropdown-menu" aria-labelledby="menuStatementsDropdown">
+            <a class="dropdown-item" href="{% url 'statements:panel' %}">Member Statements</a>
+        </div>
+    </li>
+
+    <li class="nav-item dropdown" role="none">
+        <a class="nav-link dropdown-toggle" href="#" id="menuFinanceDropdown" role="menuitem"
+           data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+            <i class="bi bi-bank" aria-hidden="true"></i> Finance
+        </a>
+        <div class="dropdown-menu" aria-labelledby="menuFinanceDropdown">
+            <a class="dropdown-item" href="{% url 'accounting:sacco_account_list' %}">Finance Management</a>
+        </div>
+    </li>
+
+
+    <li class="nav-item dropdown" role="none">
+        <a class="nav-link dropdown-toggle" href="#" id="menuReportsDropdown" role="menuitem"
+           data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+            <i class="bi bi-file-earmark-bar-graph" aria-hidden="true"></i> Reports
+        </a>
+        <div class="dropdown-menu" aria-labelledby="menuReportsDropdown">
+            <a class="dropdown-item" href="{% url 'reports:reports_dashboard' %}">
+                <i class="bi bi-file-earmark-excel"></i>Reports Hub
+            </a>
+        </div>
+    </li>
+
+</ul>

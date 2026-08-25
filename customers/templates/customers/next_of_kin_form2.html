@@ -1,0 +1,124 @@
+{% extends "base.html" %}
+{% load widget_tweaks %}
+
+{% block title %}{% if is_edit %}Edit{% else %}Add{% endif %} Next of Kin{% endblock %}
+
+{% block content %}
+<div class="container my-4">
+    {% include 'customers/includes/customer_quick_actions.html' %}
+    
+    <div class="row justify-content-center">
+        <div class="col-xl-9 col-lg-10">
+            
+            <div class="d-flex align-items-center gap-2 mb-4">
+                <a href="{% url 'customers:list_next_of_kin' customer.id %}" class="btn btn-sm btn-icon btn-light border">
+                    <i class="bi bi-arrow-left"></i>
+                </a>
+                <div>
+                    <nav aria-label="breadcrumb" class="mb-0">
+                        <ol class="breadcrumb small text-muted mb-0 bg-transparent p-0">
+                            <li class="breadcrumb-item"><a href="#" class="text-decoration-none">Customers</a></li>
+                            <li class="breadcrumb-item"><a href="#" class="text-decoration-none">{{ customer.full_name }}</a></li>
+                            <li class="breadcrumb-item active" aria-current="page">Next of Kin</li>
+                        </ol>
+                    </nav>
+                    <h2 class="h4 fw-bold text-dark mb-0">
+                        {% if is_edit %}Modify{% else %}Register{% endif %} Next of Kin Relationships
+                    </h2>
+                </div>
+            </div>
+
+            <div class="card shadow-sm border-0 bg-white">
+                <div class="card-body p-4 p-md-5">
+                    
+                    <form method="post" novalidate>
+                        {% csrf_token %}
+                        
+                        {% if form.non_field_errors %}
+                            <div class="alert alert-danger shadow-sm border-0 mb-4" role="alert">
+                                {% for error in form.non_field_errors %}<div class="small fw-semibold">{{ error }}</div>{% endfor %}
+                            </div>
+                        {% endif %}
+
+                        <div class="row mb-4 pb-4 border-bottom">
+                            <div class="col-md-4">
+                                <h5 class="h6 fw-bold text-secondary text-uppercase tracking-wider">Primary Account</h5>
+                                <p class="text-muted small">The registered core member this relationship tie directly belongs to.</p>
+                            </div>
+                            <div class="col-md-8">
+                                <label class="form-label small fw-bold text-uppercase text-muted">Connected Member Profile</label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-light border-end-0 text-muted"><i class="bi bi-person-badge"></i></span>
+                                    <input type="text" class="form-control bg-light border-start-0 fw-semibold" value="{{ customer.full_name }}" readonly disabled>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-4">
+                                <h5 class="h6 fw-bold text-secondary text-uppercase tracking-wider">Kinship Specifics</h5>
+                                <p class="text-muted small">Please verify all identifying information matching valid local legal documents.</p>
+                            </div>
+                            
+                            <div class="col-md-8">
+                                <div class="row g-3">
+                                    
+                                    <div class="col-12">
+                                        <label class="form-label small fw-bold text-muted" for="{{ form.kin_name.id_for_label }}">Full Legal Name</label>
+                                        {{ form.kin_name|add_class:"form-control shadow-none" }}
+                                        {% for error in form.kin_name.errors %}<div class="text-danger small mt-1 font-monospace" style="font-size: 0.75rem;">{{ error }}</div>{% endfor %}
+                                    </div>
+
+                                    <div class="col-md-6">
+                                        <label class="form-label small fw-bold text-muted" for="{{ form.kin_relationship.id_for_label }}">Relationship Type</label>
+                                        {{ form.kin_relationship|add_class:"form-select shadow-none" }}
+                                        {% for error in form.kin_relationship.errors %}<div class="text-danger small mt-1 font-monospace" style="font-size: 0.75rem;">{{ error }}</div>{% endfor %}
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label small fw-bold text-muted" for="{{ form.gender.id_for_label }}">Gender Context</label>
+                                        {{ form.gender|add_class:"form-select shadow-none" }}
+                                        {% for error in form.gender.errors %}<div class="text-danger small mt-1 font-monospace" style="font-size: 0.75rem;">{{ error }}</div>{% endfor %}
+                                    </div>
+
+                                    <div class="col-md-6">
+                                        <label class="form-label small fw-bold text-muted" for="{{ form.kin_dob.id_for_label }}">Date of Birth</label>
+                                        {{ form.kin_dob|add_class:"form-control shadow-none" }}
+                                        {% for error in form.kin_dob.errors %}<div class="text-danger small mt-1 font-monospace" style="font-size: 0.75rem;">{{ error }}</div>{% endfor %}
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label small fw-bold text-muted" for="{{ form.kin_phone.id_for_label }}">Mobile Contact Number</label>
+                                        {{ form.kin_phone|add_class:"form-control shadow-none"|attr:"placeholder:e.g. 07XXXXXXXX" }}
+                                        {% for error in form.kin_phone.errors %}<div class="text-danger small mt-1 font-monospace" style="font-size: 0.75rem;">{{ error }}</div>{% endfor %}
+                                    </div>
+
+                                    <div class="col-12">
+                                        <label class="form-label small fw-bold text-muted" for="{{ form.kin_national_id.id_for_label }}">National ID / Passport ID No.</label>
+                                        {{ form.kin_national_id|add_class:"form-control shadow-none" }}
+                                        {% for error in form.kin_national_id.errors %}<div class="text-danger small mt-1 font-monospace" style="font-size: 0.75rem;">{{ error }}</div>{% endfor %}
+                                    </div>
+
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="d-flex justify-content-between align-items-center pt-4 mt-5 border-top">
+                            <a href="{% url 'customers:list_next_of_kin' customer.id %}" class="btn btn-light px-4 border text-secondary fw-semibold">
+                                Cancel
+                            </a>
+                            <button type="submit" class="btn btn-primary px-4 fw-semibold shadow-sm">
+                                {% if is_edit %}
+                                    <i class="bi bi-save me-1"></i> Commit Modifications
+                                {% else %}
+                                    <i class="bi bi-check-circle me-1"></i> Finalize Association
+                                {% endif %}
+                            </button>
+                        </div>
+
+                    </form>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+{% endblock %}

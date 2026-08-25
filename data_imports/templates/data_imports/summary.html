@@ -1,0 +1,132 @@
+{% extends "base.html" %}
+{% block title %}Import Complete · NODi Lite{% endblock %}
+{% block content %}
+<div class="container my-4" style="max-width: 960px;">
+
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb small">
+            <li class="breadcrumb-item"><a href="{% url 'data_imports:hub' %}">Bulk Imports</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'data_imports:upload' imp.slug %}">{{ imp.title }}</a></li>
+            <li class="breadcrumb-item active" aria-current="page">Summary</li>
+        </ol>
+    </nav>
+
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags|default:'info' }} py-2 small">{{ message }}</div>
+        {% endfor %}
+    {% endif %}
+
+    <div class="card shadow-sm border-0 mb-3">
+        <div class="card-header bg-white border-bottom py-3">
+            <div class="d-flex align-items-center justify-content-between">
+                <div>
+                    <h5 class="mb-0"><i class="bi bi-check-circle-fill text-success me-2"></i>Import Complete — {{ imp.title }}</h5>
+                    <small class="text-muted">Step 3 of 3 — Results · File: <code>{{ state.filename }}</code></small>
+                </div>
+                <a href="{% url 'data_imports:summary_pdf' batch_id %}" target="_blank" class="btn btn-sm btn-outline-danger">
+                    <i class="bi bi-file-earmark-pdf me-1"></i> Download Summary PDF
+                </a>
+            </div>
+        </div>
+        <div class="card-body">
+
+            {# ── KPI band ─────────────────────────────────────────── #}
+            <div class="row g-3 mb-4">
+                <div class="col-6 col-md-3">
+                    <div class="border rounded p-3 text-center bg-success-subtle">
+                        <div class="text-success small text-uppercase fw-bold" style="letter-spacing:.05em;">Created</div>
+                        <div class="fs-2 fw-bold text-success">{{ summary.created|default:"0" }}</div>
+                    </div>
+                </div>
+                <div class="col-6 col-md-3">
+                    <div class="border rounded p-3 text-center bg-info-subtle">
+                        <div class="text-info small text-uppercase fw-bold" style="letter-spacing:.05em;">Updated</div>
+                        <div class="fs-2 fw-bold text-info">{{ summary.updated|default:"0" }}</div>
+                    </div>
+                </div>
+                <div class="col-6 col-md-3">
+                    <div class="border rounded p-3 text-center">
+                        <div class="text-muted small text-uppercase fw-bold" style="letter-spacing:.05em;">Skipped</div>
+                        <div class="fs-2 fw-bold">{{ summary.skipped|default:"0" }}</div>
+                    </div>
+                </div>
+                <div class="col-6 col-md-3">
+                    <div class="border rounded p-3 text-center {% if summary.problems %}bg-danger-subtle{% endif %}">
+                        <div class="{% if summary.problems %}text-danger{% else %}text-muted{% endif %} small text-uppercase fw-bold" style="letter-spacing:.05em;">Errors</div>
+                        <div class="fs-2 fw-bold {% if summary.problems %}text-danger{% endif %}">{{ summary.problems|length|default:"0" }}</div>
+                    </div>
+                </div>
+            </div>
+
+            {# ── Meta info ───────────────────────────────────────── #}
+            <div class="table-responsive mb-3">
+                <table class="table table-sm small mb-0">
+                    <tbody>
+                        <tr><th style="width:160px;" class="bg-light">Import type</th><td>{{ imp.title }}</td></tr>
+                        <tr><th class="bg-light">Ran by</th><td>{{ meta.user }}</td></tr>
+                        <tr><th class="bg-light">Ran at</th><td>{{ meta.when }}</td></tr>
+                        <tr><th class="bg-light">Total rows</th><td>{{ meta.total_rows }}</td></tr>
+                        <tr><th class="bg-light">Valid rows</th><td>{{ meta.valid_rows }}</td></tr>
+                        <tr><th class="bg-light">Invalid rows</th><td>{{ meta.invalid_rows }}</td></tr>
+                        {% if state.options %}
+                        <tr>
+                            <th class="bg-light">Options</th>
+                            <td>
+                                {% for k, v in state.options.items %}
+                                    <span class="badge {% if v %}bg-primary{% else %}bg-secondary{% endif %} me-1">{{ k }}={{ v }}</span>
+                                {% endfor %}
+                            </td>
+                        </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+
+            {# ── Problems list ───────────────────────────────────── #}
+            {% if summary.problems %}
+            <div class="alert alert-danger small">
+                <i class="bi bi-exclamation-triangle-fill me-1"></i>
+                <strong>{{ summary.problems|length }} row(s) could not be committed.</strong>
+                Fix them in your source file and re-upload. Already-imported rows will be
+                safely skipped as duplicates (where applicable).
+            </div>
+            <div class="table-responsive" style="max-height:400px;">
+                <table class="table table-sm table-bordered small">
+                    <thead class="table-light sticky-top">
+                        <tr>
+                            <th style="width:40px;">#</th>
+                            <th>Message</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for p in summary.problems %}
+                        <tr>
+                            <td class="text-center">{{ forloop.counter }}</td>
+                            <td class="text-danger">{{ p }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="alert alert-success small mb-3">
+                <i class="bi bi-check-lg me-1"></i>
+                All committed rows imported successfully with no errors.
+            </div>
+            {% endif %}
+
+            <hr>
+
+            <div class="d-flex justify-content-between">
+                <a href="{% url 'data_imports:hub' %}" class="btn btn-outline-secondary">
+                    <i class="bi bi-arrow-left me-1"></i> Back to Import Hub
+                </a>
+                <a href="{% url 'data_imports:upload' imp.slug %}" class="btn btn-primary">
+                    <i class="bi bi-cloud-arrow-up me-1"></i> Import More {{ imp.title }}
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

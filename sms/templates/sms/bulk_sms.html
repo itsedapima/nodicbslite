@@ -1,0 +1,322 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="page-shell">
+    {% include 'administration/includes/administration_quick_actions.html' %}
+
+    <div class="page-head mb-3">
+        <div>
+            <h2>Compose & Send Bulk SMS</h2>
+            <p class="page-sub">Schedule SMS messages for delivery</p>
+        </div>
+        <a href="{% url 'sms:view_sms' %}" class="btn btn-outline-secondary btn-sm">
+            <i class="bi bi-arrow-left me-1"></i> View SMS Logs
+        </a>
+    </div>
+
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-{% if message.tags %}{{ message.tags }}{% else %}info{% endif %} alert-dismissible fade show">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        {% endfor %}
+    {% endif %}
+
+    {# Render non-field errors only — we manually render each input for speed #}
+    {% if form.non_field_errors %}
+        <div class="alert alert-danger">{{ form.non_field_errors }}</div>
+    {% endif %}
+
+    <form method="post" enctype="multipart/form-data" novalidate>
+        {% csrf_token %}
+
+        <!-- Step 1: Recipients -->
+        <div class="card mb-3">
+            <div class="card-header"><h5 class="mb-0">1. Select Recipients</h5></div>
+            <div class="card-body">
+
+                <!-- Recipient type — plain HTML radios -->
+                <div class="mb-3">
+                    <label class="fw-600 d-block mb-2">Recipient Type</label>
+                    <div class="d-flex flex-wrap gap-3">
+                        <div class="form-check">
+                            <input class="form-check-input recipient-type" type="radio" name="recipient_type"
+                                   value="single" id="rt_single"
+                                   {% if form.recipient_type.value == 'single' or not form.recipient_type.value %}checked{% endif %}>
+                            <label class="form-check-label" for="rt_single">Single Phone Number</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input recipient-type" type="radio" name="recipient_type"
+                                   value="customer_group" id="rt_group"
+                                   {% if form.recipient_type.value == 'customer_group' %}checked{% endif %}>
+                            <label class="form-check-label" for="rt_group">Selected Customers</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input recipient-type" type="radio" name="recipient_type"
+                                   value="all_customers" id="rt_all"
+                                   {% if form.recipient_type.value == 'all_customers' %}checked{% endif %}>
+                            <label class="form-check-label" for="rt_all">All Customers</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input recipient-type" type="radio" name="recipient_type"
+                                   value="file_upload" id="rt_file"
+                                   {% if form.recipient_type.value == 'file_upload' %}checked{% endif %}>
+                            <label class="form-check-label" for="rt_file">Upload File (CSV/Excel)</label>
+                        </div>
+                    </div>
+                    {% if form.recipient_type.errors %}
+                        <div class="text-danger small mt-1">{{ form.recipient_type.errors.0 }}</div>
+                    {% endif %}
+                </div>
+
+                <!-- Single phone -->
+                <div id="sect-single" class="recipient-section">
+                    <label for="id_phone_number" class="fw-600">Phone Number</label>
+                    <input type="text" name="phone_number" id="id_phone_number" class="form-control"
+                           placeholder="+254712345678"
+                           value="{{ form.phone_number.value|default:'' }}">
+                    <small class="helptext">Enter one phone number (international format preferred)</small>
+                    {% if form.phone_number.errors %}
+                        <div class="text-danger small mt-1">{{ form.phone_number.errors.0 }}</div>
+                    {% endif %}
+                </div>
+
+                <!-- Selected customers -->
+                <div id="sect-group" class="recipient-section">
+                    <label class="fw-600">Search Customers</label>
+                    <input type="text" id="cust-search" class="form-control"
+                           placeholder="Type at least 2 characters: name, mobile, or customer number..."
+                           autocomplete="off">
+                    
+                    <div id="cust-results" class="border rounded p-2 mt-2 bg-light"
+                         style="max-height: 240px; overflow-y: auto; min-height: 60px;">
+                        <p class="text-muted small text-center m-0">Start typing to search...</p>
+                    </div>
+                    
+                    <div class="mt-3">
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                            <span class="fw-600 small text-secondary">SELECTED (<span id="sel-count">0</span>)</span>
+                            <button type="button" id="clear-sel" class="btn btn-link btn-sm p-0" style="display:none;">Clear all</button>
+                        </div>
+                        <div id="sel-list" class="d-flex flex-wrap gap-1">
+                            <span class="text-muted small">None selected.</span>
+                        </div>
+                    </div>
+                    
+                    <input type="hidden" name="customer_ids" id="id_customer_ids" value="{{ form.customer_ids.value|default:'' }}">
+                    {% if form.customer_ids.errors %}
+                        <div class="text-danger small mt-1">{{ form.customer_ids.errors.0 }}</div>
+                    {% endif %}
+                </div>
+
+                <!-- All customers -->
+                <div id="sect-all" class="recipient-section">
+                    <div class="alert alert-info mb-0">
+                        <i class="bi bi-info-circle me-2"></i>
+                        SMS will be sent to <strong>all customers</strong> with a mobile number.
+                    </div>
+                </div>
+
+                <!-- File upload -->
+                <div id="sect-file" class="recipient-section">
+                    <label for="id_phone_file" class="fw-600">Upload File</label>
+                    <input type="file" name="phone_file" id="id_phone_file" class="form-control"
+                           accept=".csv,.xlsx,.xls">
+                    <small class="helptext">CSV or Excel file with a <code>mobile</code> column (and optionally <code>first_name</code>)</small>
+                    {% if form.phone_file.errors %}
+                        <div class="text-danger small mt-1">{{ form.phone_file.errors.0 }}</div>
+                    {% endif %}
+                </div>
+
+            </div>
+        </div>
+
+        <!-- Step 2: Message -->
+        <div class="card mb-3">
+            <div class="card-header"><h5 class="mb-0">2. Compose Message</h5></div>
+            <div class="card-body">
+
+                <div class="mb-3">
+                    <label for="id_salutation" class="fw-600">Salutation</label>
+                    <input type="text" name="salutation" id="id_salutation" class="form-control"
+                           value="{{ form.salutation.value|default:'Dear {first_name},' }}"
+                           placeholder="Dear {first_name},">
+                    <small class="helptext">Use <code>{first_name}</code> for personalization, or a static greeting</small>
+                    {% if form.salutation.errors %}
+                        <div class="text-danger small mt-1">{{ form.salutation.errors.0 }}</div>
+                    {% endif %}
+                </div>
+
+                <div class="mb-3">
+                    <label for="id_message_content" class="fw-600">Message Content</label>
+                    <textarea name="message_content" id="id_message_content" class="form-control" rows="4"
+                              placeholder="Type your message here...">{{ form.message_content.value|default:'' }}</textarea>
+                    <small class="helptext">Body of the SMS (excluding salutation)</small>
+                    {% if form.message_content.errors %}
+                        <div class="text-danger small mt-1">{{ form.message_content.errors.0 }}</div>
+                    {% endif %}
+                </div>
+
+                <div class="mt-2">
+                    <strong class="small text-secondary">PREVIEW (with sample name 'John'):</strong>
+                    <div id="preview" class="border rounded p-2 mt-1 bg-light small"
+                         style="min-height: 40px; white-space: pre-wrap;">—</div>
+                </div>
+
+            </div>
+        </div>
+
+        <div class="d-flex gap-2">
+            <button type="submit" class="btn btn-primary">
+                <i class="bi bi-send me-1"></i> Schedule SMS
+            </button>
+            <a href="{% url 'sms:view_sms' %}" class="btn btn-outline-secondary">Cancel</a>
+        </div>
+
+    </form>
+</div>
+
+<script>
+(function() {
+    // --- State ---
+    const selected = new Map(); // id => text
+
+    // --- Elements ---
+    const $ = (id) => document.getElementById(id);
+    const sections = {
+        single: $('sect-single'),
+        customer_group: $('sect-group'),
+        all_customers: $('sect-all'),
+        file_upload: $('sect-file'),
+    };
+    const hiddenIds = $('id_customer_ids');
+    const selList = $('sel-list');
+    const selCount = $('sel-count');
+    const clearBtn = $('clear-sel');
+    const searchInput = $('cust-search');
+    const resultsBox = $('cust-results');
+    const sal = $('id_salutation');
+    const msg = $('id_message_content');
+    const preview = $('preview');
+
+    // --- Show only the active section ---
+    function showSection() {
+        const checked = document.querySelector('.recipient-type:checked');
+        const val = checked ? checked.value : 'single';
+        Object.entries(sections).forEach(([k, el]) => {
+            el.style.display = (k === val) ? 'block' : 'none';
+        });
+    }
+    document.querySelectorAll('.recipient-type').forEach(r => {
+        r.addEventListener('change', showSection);
+    });
+
+    // --- Selected customers ---
+    function syncHidden() {
+        hiddenIds.value = Array.from(selected.keys()).join(',');
+    }
+    function renderSelected() {
+        selCount.textContent = selected.size;
+        clearBtn.style.display = selected.size > 0 ? 'inline' : 'none';
+        if (selected.size === 0) {
+            selList.innerHTML = '<span class="text-muted small">None selected.</span>';
+            return;
+        }
+        selList.innerHTML = '';
+        selected.forEach((text, id) => {
+            const tag = document.createElement('span');
+            tag.className = 'badge bg-primary-subtle text-primary border';
+            tag.style.cursor = 'pointer';
+            tag.title = 'Click to remove';
+            tag.innerHTML = `${escapeHtml(text)} <i class="bi bi-x ms-1"></i>`;
+            tag.addEventListener('click', () => {
+                selected.delete(id);
+                syncHidden();
+                renderSelected();
+                // Also uncheck if visible in results
+                const cb = document.querySelector(`.cust-cb[value="${id}"]`);
+                if (cb) cb.checked = false;
+            });
+            selList.appendChild(tag);
+        });
+    }
+    function escapeHtml(s) {
+        return String(s).replace(/[&<>"']/g, c => ({
+            '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;'
+        }[c]));
+    }
+
+    clearBtn.addEventListener('click', () => {
+        selected.clear();
+        syncHidden();
+        renderSelected();
+        document.querySelectorAll('.cust-cb').forEach(cb => cb.checked = false);
+    });
+
+    // --- AJAX search with debounce ---
+    let searchTimer = null;
+    async function doSearch(q) {
+        if (q.length < 2) {
+            resultsBox.innerHTML = '<p class="text-muted small text-center m-0">Type at least 2 characters...</p>';
+            return;
+        }
+        resultsBox.innerHTML = '<p class="text-muted small text-center m-0">Searching...</p>';
+        try {
+            const r = await fetch(`{% url 'sms:search_customers' %}?q=${encodeURIComponent(q)}`);
+            const data = await r.json();
+            if (!data.length) {
+                resultsBox.innerHTML = '<p class="text-muted small text-center m-0">No matches found.</p>';
+                return;
+            }
+            resultsBox.innerHTML = '';
+            data.forEach(c => {
+                const id = String(c.id);
+                const isSel = selected.has(id);
+                const div = document.createElement('div');
+                div.className = 'form-check';
+                div.innerHTML = `
+                    <input class="form-check-input cust-cb" type="checkbox" value="${id}" id="cb-${id}" ${isSel?'checked':''}>
+                    <label class="form-check-label" for="cb-${id}">${escapeHtml(c.text)}</label>`;
+                const cb = div.querySelector('input');
+                cb.addEventListener('change', () => {
+                    if (cb.checked) selected.set(id, c.text);
+                    else selected.delete(id);
+                    syncHidden();
+                    renderSelected();
+                });
+                resultsBox.appendChild(div);
+            });
+        } catch (e) {
+            resultsBox.innerHTML = '<p class="text-danger small text-center m-0">Search error. Try again.</p>';
+        }
+    }
+    searchInput.addEventListener('input', e => {
+        clearTimeout(searchTimer);
+        searchTimer = setTimeout(() => doSearch(e.target.value.trim()), 250);
+    });
+
+    // --- Message preview ---
+    function updatePreview() {
+        const s = (sal.value || '').replace('{first_name}', 'John');
+        const m = msg.value || '';
+        const out = `${s} ${m}`.trim();
+        preview.textContent = out || '—';
+    }
+    sal.addEventListener('input', updatePreview);
+    msg.addEventListener('input', updatePreview);
+
+    // --- Init ---
+    showSection();
+    renderSelected();
+    updatePreview();
+
+    // Restore selected IDs on form re-render (validation error case)
+    const initialIds = hiddenIds.value;
+    if (initialIds) {
+        // Just keep them in the hidden field; user will see them after re-search if needed.
+        // (We don't have the text labels server-side without an extra fetch.)
+    }
+})();
+</script>
+{% endblock %}

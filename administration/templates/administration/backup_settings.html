@@ -1,0 +1,50 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block content %}
+{% include 'administration/includes/administration_quick_actions.html' %}
+<div class="container my-5">
+
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-md-5">
+            <div class="card shadow-sm border-0">
+                <div class="card-header bg-primary text-white p-3">
+                    <h5 class="mb-0 fw-bold">
+                        <i class="bi bi-gear-fill me-2"></i> {{ title }}
+                    </h5>
+                </div>
+                <div class="card-body p-4">
+                    <form method="post" novalidate>
+                        {% csrf_token %}
+                        
+                        {% for field in form %}
+                            <div class="mb-3 {% if field.name == 'is_active' %}form-check{% endif %}">
+                                {% if field.name != 'is_active' %}
+                                    <label class="form-label small fw-bold text-muted">{{ field.label }}</label>
+                                {% endif %}
+                                
+                                {{ field }}
+                                
+                                {% if field.name == 'is_active' %}
+                                    <label class="form-check-label small fw-bold">Enable Schedule</label>
+                                {% endif %}
+                                
+                                {% if field.errors %}
+                                    <div class="text-danger extra-small">{{ field.errors|striptags }}</div>
+                                {% endif %}
+                            </div>
+                        {% endfor %}
+
+                        <div class="d-grid gap-2 mt-4">
+                            <button type="submit" class="btn btn-primary">
+                                {% if is_update %}Save Changes{% else %}Initialize Settings{% endif %}
+                            </button>
+                            <a href="{% url 'administration:backup_dashboard' %}" class="btn btn-light border">Cancel</a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

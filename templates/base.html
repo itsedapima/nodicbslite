@@ -1,0 +1,830 @@
+{# --- base.html --- #}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#0E2B4D">
+    <title>{% block title %}{{ brand_name|default:"NODi Lite" }}{% endblock %}</title>
+    {% load static %}
+
+    {# --- CSS IMPORTS --- #}
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="{% static 'css/app.css' %}">
+
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+
+    {% include 'header.html' %}
+
+    <div class="d-flex w-100">
+        <div class="main-content w-100">
+            {% block content %}
+            {% endblock %}
+        </div>
+    </div>
+
+    {% include 'footer.html' %}
+
+    {# ══════════════════════════════════════════════════════════════════ #}
+    {#  GLOBAL ASYNC INTERCEPTOR — Loading Modal + Background Tasks     #}
+    {# ══════════════════════════════════════════════════════════════════ #}
+    {% if user.is_authenticated %}
+
+    {# --- Loading / Background Modal --- #}
+    <div class="modal fade" id="asyncModal" tabindex="-1"
+         aria-labelledby="asyncModalLabel" aria-hidden="true"
+         data-bs-backdrop="static" data-bs-keyboard="false">
+      <div class="modal-dialog modal-dialog-centered modal-sm">
+        <div class="modal-content async-modal-content">
+
+          {# ─ Phase 1: Fetching spinner (3–40 s) ─ #}
+          <div id="asyncPhaseLoading" class="async-phase text-center p-4">
+            <div class="async-spinner-ring mb-3">
+              <div></div><div></div><div></div><div></div>
+            </div>
+            <h6 class="mb-1 fw-semibold text-dark">Fetching items</h6>
+            <p class="text-muted small mb-2">Please wait…</p>
+            <button type="button" class="btn btn-outline-secondary btn-sm px-3"
+                    id="asyncCancelBtn">
+              <i class="bi bi-x-lg me-1"></i> Cancel
+            </button>
+          </div>
+
+          {# ─ Phase 2: Background promotion (>40 s) ─ #}
+          <div id="asyncPhaseBackground" class="async-phase text-center p-4 d-none">
+            <div class="async-bg-icon mb-3">
+              <i class="bi bi-cloud-arrow-up-fill"></i>
+            </div>
+            <h6 class="mb-1 fw-semibold text-dark">
+                You can continue working
+            </h6>
+            <p class="text-muted small mb-2">
+              Let's execute this in the background.<br>
+              We shall let you know once done.
+            </p>
+            <button type="button" class="btn btn-primary btn-sm px-4"
+                    id="asyncBgOkBtn">
+              OK
+            </button>
+          </div>
+
+          {# ─ Phase 3: Error ─ #}
+          <div id="asyncPhaseError" class="async-phase text-center p-4 d-none">
+            <div class="async-err-icon mb-3">
+              <i class="bi bi-exclamation-triangle-fill"></i>
+            </div>
+            <h6 class="mb-1 fw-semibold text-danger">Something went wrong</h6>
+            <p class="text-muted small mb-2" id="asyncErrorMsg"></p>
+            <button type="button" class="btn btn-outline-secondary btn-sm px-4"
+                    data-bs-dismiss="modal">Close</button>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    {# --- Notification Modal (results ready — center screen, can't miss it) --- #}
+    <div class="modal fade" id="asyncNagModal" tabindex="-1"
+         aria-labelledby="asyncNagModalLabel" aria-hidden="true"
+         data-bs-backdrop="static" data-bs-keyboard="false">
+      <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content async-modal-content">
+          <div class="async-nag-modal-header">
+            <div class="async-nag-bell-icon">
+              <i class="bi bi-bell-fill"></i>
+            </div>
+            <h6 class="fw-semibold mb-0 text-dark">Background Reports Ready</h6>
+            <p class="text-muted small mb-0">The following reports have finished processing</p>
+          </div>
+          <div class="async-nag-modal-body" id="asyncNagList">
+            {# JS will populate links here #}
+          </div>
+          <div class="async-nag-modal-footer">
+            <button class="btn btn-sm btn-outline-secondary" id="asyncNagDismissAll">
+              <i class="bi bi-check2-all me-1"></i> Dismiss All
+            </button>
+            <button class="btn btn-sm btn-primary" id="asyncNagClose">
+              <i class="bi bi-x-lg me-1"></i> Close
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    {# --- Download Complete Toast --- #}
+    <div id="asyncDownloadToast" class="async-download-toast">
+      <i class="bi bi-check-circle-fill me-2"></i>
+      <span>Download complete — check your downloads</span>
+    </div>
+
+    {% endif %}
+
+    {# ── Session-expiring warning modal ─── #}
+    <div class="modal fade" id="logoutModal" tabindex="-1" aria-labelledby="logoutModalLabel" aria-hidden="true" data-bs-backdrop="static">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="logoutModalLabel">Session Expiring Soon</h5>
+                </div>
+                <div class="modal-body">
+                    You have been inactive for a while. You will be automatically logged out in
+                    <span id="timer-seconds" class="fw-bold">60</span> seconds to protect your data.
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-primary" onclick="stayLoggedIn()">I'm Still Here</button>
+                    <a href="{% url 'accounts:logout' %}" class="btn btn-outline-secondary">Logout Now</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {# JS — jQuery + Chart.js + Bootstrap 5 bundle #}
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+
+    {% if user.is_authenticated %}
+    <script>
+        // ════════════════════════════════════════════════════════════════
+        //  SESSION TIMEOUT — aware of async interceptor
+        // ════════════════════════════════════════════════════════════════
+        const sessionTotalTime = 900;
+        const warningTime = 60;
+        let warningTimer, logoutTimer, countdownInterval;
+        const logoutModal = new bootstrap.Modal(document.getElementById('logoutModal'));
+
+        // Shared flag: when true, session warning is suppressed
+        // (the async interceptor sets this while a fetch is in progress)
+        window._asyncBusy = false;
+
+        function resetTimers() {
+            clearTimeout(warningTimer);
+            clearTimeout(logoutTimer);
+            clearInterval(countdownInterval);
+            logoutModal.hide();
+            warningTimer = setTimeout(() => { showWarning(); }, (sessionTotalTime - warningTime) * 1000);
+            logoutTimer = setTimeout(() => {
+                window.location.href = "{% url 'accounts:logout' %}?reason=expired";
+            }, sessionTotalTime * 1000);
+        }
+        function showWarning() {
+            // Don't show session warning while async interceptor is working
+            if (window._asyncBusy) {
+                resetTimers();  // push the timer forward — user is active
+                return;
+            }
+            logoutModal.show();
+            let timeLeft = warningTime;
+            const timerSpan = document.getElementById('timer-seconds');
+            countdownInterval = setInterval(() => {
+                timeLeft--;
+                timerSpan.innerText = timeLeft;
+                if (timeLeft <= 0) clearInterval(countdownInterval);
+            }, 1000);
+        }
+        function stayLoggedIn() {
+            // Use a lightweight API endpoint to refresh the session
+            fetch('/reports/api/notifications/', { credentials: 'same-origin' })
+                .then(() => { resetTimers(); })
+                .catch(() => { resetTimers(); });
+        }
+        const activityEvents = ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart'];
+        activityEvents.forEach(event => {
+            document.addEventListener(event, () => {
+                const modalVisible = document.getElementById('logoutModal').classList.contains('show');
+                if (!modalVisible) { resetTimers(); }
+            }, { passive: true });
+        });
+        resetTimers();
+    </script>
+
+    <script>
+    // ════════════════════════════════════════════════════════════════════
+    //  GLOBAL ASYNC INTERCEPTOR
+    //  Monitors all internal navigations (link clicks + form submits).
+    //  < 3 s  →  no modal, fast navigate
+    //  3–40 s →  "Fetching items. Please wait…" spinner
+    //  > 40 s →  abort, schedule background task, "We'll let you know"
+    // ════════════════════════════════════════════════════════════════════
+    (function() {
+        'use strict';
+
+        const FAST_THRESHOLD_MS   = 3000;   // 3 s — show spinner
+        const BG_THRESHOLD_MS     = 40000;  // 40 s — promote to background
+        const NAG_INTERVAL_MS     = 600000; // 10 min — poll for notifications
+        const POLL_INTERVAL_MS    = 2000;   // 2 s — poll individual task status (snappy)
+
+        // Endpoints known to be heavy: skip the 40 s wait and promote to
+        // the background worker immediately on the very first click, so
+        // officers never watch a spinner for a large reconciliation export.
+        const HEAVY_EXPORT_HINTS = ['/accounting/cash-book/',
+                                    '/accounting/general-ledger/',
+                                    '/accounting/ledger-export/'];
+        function _isHeavyExport(url) {
+            try {
+                const u = new URL(url, window.location.origin);
+                const isDl = /format=(excel|pdf|csv)/i.test(u.search);
+                return isDl && HEAVY_EXPORT_HINTS.some(h => u.pathname.startsWith(h));
+            } catch { return false; }
+        }
+
+        const modalEl    = document.getElementById('asyncModal');
+        const bsModal    = new bootstrap.Modal(modalEl, { backdrop: 'static', keyboard: false });
+        const phaseLoad  = document.getElementById('asyncPhaseLoading');
+        const phaseBg    = document.getElementById('asyncPhaseBackground');
+        const phaseErr   = document.getElementById('asyncPhaseError');
+        const errMsg     = document.getElementById('asyncErrorMsg');
+        const bgOkBtn    = document.getElementById('asyncBgOkBtn');
+
+        let _activeAbort   = null;
+        let _activeTimer3  = null;
+        let _activeTimer40 = null;
+        let _keepaliveInterval = null;
+
+        // ── Helpers ────────────────────────────────────────────────────
+        function _getCookie(name) {
+            const v = document.cookie.match('(^|;)\\s*' + name + '\\s*=\\s*([^;]+)');
+            return v ? v.pop() : '';
+        }
+
+        function _isInternalUrl(url) {
+            try {
+                const u = new URL(url, window.location.origin);
+                return u.origin === window.location.origin;
+            } catch { return false; }
+        }
+
+        function _isExcluded(url) {
+            const path = new URL(url, window.location.origin).pathname;
+            const excluded = ['/accounts/logout', '/accounts/login', '/admin/',
+                              '/reports/api/', '/androidapi/', '/media/'];
+            return excluded.some(e => path.startsWith(e));
+        }
+
+        function _isDownloadUrl(url) {
+            const lower = url.toLowerCase();
+            return lower.includes('format=excel') || lower.includes('format=pdf') ||
+                   lower.includes('format=csv')   || lower.includes('export-excel');
+        }
+
+        function _showPhase(phase) {
+            [phaseLoad, phaseBg, phaseErr].forEach(p => p.classList.add('d-none'));
+            phase.classList.remove('d-none');
+        }
+
+        function _hideModal() {
+            bsModal.hide();
+            setTimeout(() => {
+                document.querySelectorAll('.modal-backdrop').forEach(b => b.remove());
+                document.body.classList.remove('modal-open');
+                document.body.style.removeProperty('overflow');
+                document.body.style.removeProperty('padding-right');
+            }, 300);
+        }
+
+        function _cleanup() {
+            clearTimeout(_activeTimer3);
+            clearTimeout(_activeTimer40);
+            clearInterval(_keepaliveInterval);
+            _activeTimer3 = null;
+            _activeTimer40 = null;
+            _activeAbort = null;
+            _keepaliveInterval = null;
+            window._asyncBusy = false;
+        }
+
+        // ════════════════════════════════════════════════════════════════
+        //  PATH A: HTML pages — browser navigates naturally.
+        //  _pageArrived flag prevents the modal from flashing if the
+        //  page loads right around the 3 s mark.
+        // ════════════════════════════════════════════════════════════════
+        function _overlayTimers(url) {
+            _cleanup();
+
+            window._asyncBusy = true;
+            resetTimers();
+
+            // Track whether we've promoted to background so the 40s
+            // timer doesn't fire twice if there's a race.
+            let _promoted = false;
+
+            _keepaliveInterval = setInterval(() => {
+                fetch('/reports/api/notifications/', { credentials: 'same-origin' })
+                    .catch(() => {});
+                resetTimers();
+            }, 120000);
+
+            // 3 s: show "Fetching items. Please wait…" spinner.
+            // No guard needed — if the new page arrives before 3s, this
+            // entire JS context is destroyed and the timer never fires.
+            _activeTimer3 = setTimeout(() => {
+                _showPhase(phaseLoad);
+                bsModal.show();
+            }, FAST_THRESHOLD_MS);
+
+            // 40 s: stop the browser request, promote to background
+            _activeTimer40 = setTimeout(() => {
+                if (!_promoted) {
+                    _promoted = true;
+                    window.stop();
+                    _promoteToBackground(url, false);
+                }
+            }, BG_THRESHOLD_MS);
+        }
+
+        // ════════════════════════════════════════════════════════════════
+        //  PATH B: File downloads (Excel / PDF / CSV)
+        //  _done flag prevents the modal from flashing if the download
+        //  completes right around the 3 s mark.
+        // ════════════════════════════════════════════════════════════════
+        function _fetchDownload(url) {
+            _cleanup();
+
+            window._asyncBusy = true;
+            resetTimers();
+
+            const controller = new AbortController();
+            _activeAbort = controller;
+
+            let _done = false;
+
+            _keepaliveInterval = setInterval(() => {
+                fetch('/reports/api/notifications/', { credentials: 'same-origin' })
+                    .catch(() => {});
+                resetTimers();
+            }, 120000);
+
+            // 3 s: show spinner ONLY if download hasn't finished yet
+            _activeTimer3 = setTimeout(() => {
+                if (!_done) {
+                    _showPhase(phaseLoad);
+                    bsModal.show();
+                }
+            }, FAST_THRESHOLD_MS);
+
+            // 40 s: abort ONLY if download hasn't finished yet
+            _activeTimer40 = setTimeout(() => {
+                if (!_done) {
+                    _done = true;
+                    controller.abort();
+                    _promoteToBackground(url, true);
+                }
+            }, BG_THRESHOLD_MS);
+
+            fetch(url, {
+                signal: controller.signal,
+                credentials: 'same-origin',
+                headers: { 'X-Requested-With': 'AsyncInterceptor' },
+            })
+            .then(response => {
+                _done = true;       // ← guard BEFORE cleanup
+                _cleanup();
+                const ct = response.headers.get('Content-Type') || '';
+                const cd = response.headers.get('Content-Disposition') || '';
+
+                // Detect a file response: either explicit Content-Disposition
+                // with a filename, or a non-HTML content-type
+                const hasFilename = /filename\s*=/i.test(cd);
+                const isFile = hasFilename ||
+                               cd.includes('attachment') ||
+                               ct.includes('spreadsheet') ||
+                               ct.includes('excel') ||
+                               ct.includes('pdf') ||
+                               ct.includes('octet-stream') ||
+                               ct.includes('csv') ||
+                               ct.includes('zip');
+
+                if (isFile) {
+                    _hideModal();
+                    return response.blob().then(blob => {
+                        const fname = _extractFilename(cd) || 'download';
+                        _triggerBlobDownload(blob, fname);
+                        _showDownloadToast();
+                    });
+                }
+
+                _hideModal();
+                window.location.href = url;
+            })
+            .catch(err => {
+                _done = true;       // ← guard on error too
+                if (err.name === 'AbortError') return;
+                _cleanup();
+                _showPhase(phaseErr);
+                errMsg.textContent = 'Download failed. Please try again.';
+                bsModal.show();
+            });
+        }
+
+        function _extractFilename(cd) {
+            if (!cd) return '';
+            const match = cd.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/);
+            if (match) return match[1].replace(/['"]/g, '').trim();
+            return '';
+        }
+
+        // ── Shared: trigger a blob download ──────────────────────────────
+        function _triggerBlobDownload(blob, filename) {
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            setTimeout(() => { a.remove(); URL.revokeObjectURL(a.href); }, 1000);
+        }
+
+        // ── "Download complete" toast ──────────────────────────────────
+        function _showDownloadToast() {
+            const toast = document.getElementById('asyncDownloadToast');
+            toast.classList.add('visible');
+            setTimeout(() => { toast.classList.remove('visible'); }, 5000);
+        }
+
+        // ── Promote to Background ──────────────────────────────────────
+        function _promoteToBackground(url, isDownload) {
+            clearInterval(_keepaliveInterval);
+            _keepaliveInterval = null;
+
+            _showPhase(phaseBg);
+            bsModal.show();
+
+            const path = new URL(url, window.location.origin).pathname;
+            const parts = path.replace(/\/$/, '').split('/').filter(Boolean);
+            const title = parts.slice(-2).join(' / ')
+                               .replace(/-/g, ' ')
+                               .replace(/\b\w/g, c => c.toUpperCase());
+
+            fetch('/reports/api/schedule/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': _getCookie('csrftoken'),
+                },
+                credentials: 'same-origin',
+                body: JSON.stringify({ url: url, title: title }),
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.task_id) {
+                    _pollTaskUntilDone(data.task_id, isDownload);
+                }
+            })
+            .catch(err => {
+                console.error('Failed to schedule background task:', err);
+            });
+        }
+
+        // Cancel button — abort fetch / stop navigation, hide modal
+        const cancelBtn = document.getElementById('asyncCancelBtn');
+        cancelBtn.addEventListener('click', () => {
+            if (_activeAbort) _activeAbort.abort();
+            window.stop();
+            _cleanup();
+            _hideModal();
+        });
+
+        // OK button — close modal, user continues working
+        bgOkBtn.addEventListener('click', () => {
+            _hideModal();
+            window._asyncBusy = false;
+            resetTimers();
+        });
+
+        // ── Poll individual task ───────────────────────────────────────
+        function _pollTaskUntilDone(taskId, isDownload) {
+            const poll = setInterval(() => {
+                fetch(`/reports/api/status/${taskId}/`, { credentials: 'same-origin' })
+                    .then(r => r.json())
+                    .then(data => {
+                        if (data.status === 'COMPLETED') {
+                            clearInterval(poll);
+                            if (isDownload && data.download_url) {
+                                // Auto-download the file — no nag notification needed
+                                _autoDownloadFromUrl(data.download_url, data.file_name);
+                                // Auto-dismiss so it doesn't nag later
+                                fetch(`/reports/api/dismiss/${taskId}/`, {
+                                    method: 'POST',
+                                    headers: { 'X-CSRFToken': _getCookie('csrftoken') },
+                                    credentials: 'same-origin',
+                                });
+                            } else {
+                                _checkNotifications();
+                            }
+                        } else if (data.status === 'FAILED') {
+                            clearInterval(poll);
+                            _checkNotifications();
+                        }
+                    })
+                    .catch(() => {});
+            }, POLL_INTERVAL_MS);
+        }
+
+        // ── Auto-download a file from URL and show toast ───────────────
+        function _autoDownloadFromUrl(url, filename) {
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename || 'download';
+            a.style.display = 'none';
+            document.body.appendChild(a);
+            a.click();
+            setTimeout(() => a.remove(), 1000);
+            _showDownloadToast();
+        }
+
+        // ── Link Interception ──────────────────────────────────────────
+        document.addEventListener('click', function(e) {
+            const link = e.target.closest('a[href]');
+            if (!link) return;
+
+            const href = link.getAttribute('href');
+            if (!href || href.startsWith('#') || href.startsWith('javascript:'))
+                return;
+
+            const fullUrl = new URL(href, window.location.href).href;
+
+            if (!_isInternalUrl(fullUrl) || _isExcluded(fullUrl)) return;
+            if (link.target === '_blank' || e.ctrlKey || e.metaKey || e.shiftKey)
+                return;
+            if (link.hasAttribute('download')) return;
+
+            // ═══ CACHED PAGE MODE ═══
+            // If we're viewing a cached background-task result, ALL clicks
+            // that would trigger slow queries go straight to the async
+            // scheduler — no 3s/40s wait. This preserves the "fast" feeling
+            // of the cached page.
+            if (window.__CACHED_PAGE__) {
+                // "Reload live" link is explicit — respect it
+                if (link.href === window.__CACHED_SOURCE_URL__ ||
+                    href === window.__CACHED_SOURCE_URL__) {
+                    return;  // let it navigate normally
+                }
+                if (_isDownloadUrl(fullUrl)) {
+                    e.preventDefault();
+                    _fastTrackToBackground(fullUrl, true);   // isDownload=true
+                    return;
+                }
+                // Filter changes / pagination on cached page → also async
+                e.preventDefault();
+                _fastTrackToBackground(fullUrl, false);
+                return;
+            }
+
+            if (_isDownloadUrl(fullUrl)) {
+                e.preventDefault();
+                // Known-heavy exports skip the 40 s wait entirely.
+                if (_isHeavyExport(fullUrl)) {
+                    _fastTrackToBackground(fullUrl, true);
+                } else {
+                    _fetchDownload(fullUrl);
+                }
+            } else {
+                _overlayTimers(fullUrl);
+            }
+        }, true);
+
+        // ── Form Interception ──────────────────────────────────────────
+        document.addEventListener('submit', function(e) {
+            const form = e.target;
+            if (!form || form.tagName !== 'FORM') return;
+
+            const action = form.action || window.location.href;
+            if (!_isInternalUrl(action) || _isExcluded(action)) return;
+            if (form.method.toUpperCase() !== 'GET') return;
+
+            const formData = new FormData(form);
+            const params = new URLSearchParams(formData).toString();
+            const url = action.split('?')[0] + (params ? '?' + params : '');
+
+            // Cached page: all filter forms → async
+            if (window.__CACHED_PAGE__) {
+                e.preventDefault();
+                _fastTrackToBackground(url, _isDownloadUrl(url));
+                return;
+            }
+
+            if (_isDownloadUrl(url)) {
+                e.preventDefault();
+                if (_isHeavyExport(url)) {
+                    _fastTrackToBackground(url, true);
+                } else {
+                    _fetchDownload(url);
+                }
+            } else {
+                _overlayTimers(url);
+            }
+        }, true);
+
+        // ── Fast-track: skip the 3s/40s wait, go straight to background ──
+        // Used from cached pages where we know the endpoint is slow.
+        // Immediately shows "we'll run it in the background" and schedules.
+        function _fastTrackToBackground(url, isDownload) {
+            _cleanup();
+            window._asyncBusy = true;
+            resetTimers();
+
+            // Show spinner IMMEDIATELY (user gave us the click, they know
+            // it's async — no need to wait 3s for the modal to appear)
+            _showPhase(phaseLoad);
+            bsModal.show();
+
+            const path = new URL(url, window.location.origin).pathname;
+            const parts = path.replace(/\/$/, '').split('/').filter(Boolean);
+            const title = parts.slice(-2).join(' / ')
+                               .replace(/-/g, ' ')
+                               .replace(/\b\w/g, c => c.toUpperCase());
+
+            fetch('/reports/api/schedule/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': _getCookie('csrftoken'),
+                },
+                credentials: 'same-origin',
+                body: JSON.stringify({ url: url, title: title }),
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.task_id) {
+                    // Switch to "continue working" phase
+                    _showPhase(phaseBg);
+                    _pollTaskUntilDone(data.task_id, isDownload);
+                }
+            })
+            .catch(err => {
+                console.error('Failed to schedule task:', err);
+                _hideModal();
+            });
+        }
+
+        // ══════════════════════════════════════════════════════════════
+        //  NOTIFICATION NAG — polls every 10 minutes, shows CENTER MODAL
+        // ══════════════════════════════════════════════════════════════
+        const nagModalEl  = document.getElementById('asyncNagModal');
+        const nagBsModal  = new bootstrap.Modal(nagModalEl, { backdrop: 'static', keyboard: false });
+        const nagList     = document.getElementById('asyncNagList');
+        const nagClose    = document.getElementById('asyncNagClose');
+        const nagDismiss  = document.getElementById('asyncNagDismissAll');
+        let   _nagVisible = false;
+
+        function _checkNotifications() {
+            // Don't re-check if the notification modal is already open
+            if (_nagVisible) return;
+
+            fetch('/reports/api/notifications/', { credentials: 'same-origin' })
+                .then(r => r.json())
+                .then(data => {
+                    if (!data.tasks || data.tasks.length === 0) {
+                        return;
+                    }
+                    // Don't show again if already visible (race condition guard)
+                    if (_nagVisible) return;
+
+                    // Build link list with proper file icons
+                    nagList.innerHTML = data.tasks.map(t => {
+                        const icon = t.is_html
+                            ? 'bi-box-arrow-up-right text-primary'
+                            : _fileIcon(t.file_name);
+                        const label = t.is_html ? 'Open Page' : 'Download';
+                        // HTML results: open in same tab (full session)
+                        // File results: open in new tab (download)
+                        const target = t.is_html ? '_self' : '_blank';
+                        return `
+                        <a href="${t.download_url}" class="async-nag-link"
+                           target="${target}" data-task-id="${t.task_id}"
+                           data-is-html="${t.is_html}">
+                          <div class="async-nag-link-icon">
+                            <i class="bi ${icon}"></i>
+                          </div>
+                          <div class="async-nag-link-text">
+                            <span class="async-nag-link-title">${_escHtml(t.title)}</span>
+                            <small class="text-muted">${label} · ${_timeAgo(t.completed_at)}</small>
+                          </div>
+                          <i class="bi bi-${t.is_html ? 'arrow-right' : 'download'} ms-auto text-primary"></i>
+                        </a>`;
+                    }).join('');
+
+                    // Show the modal ONCE
+                    _nagVisible = true;
+                    nagBsModal.show();
+
+                    // Attach dismiss-on-click to each download link
+                    nagList.querySelectorAll('.async-nag-link').forEach(a => {
+                        a.addEventListener('click', function _handler() {
+                            const tid = this.dataset.taskId;
+                            // Remove listener to prevent duplicates
+                            this.removeEventListener('click', _handler);
+                            fetch(`/reports/api/dismiss/${tid}/`, {
+                                method: 'POST',
+                                headers: { 'X-CSRFToken': _getCookie('csrftoken') },
+                                credentials: 'same-origin',
+                            }).then(() => {
+                                this.remove();
+                                // If no more links, close modal
+                                if (!nagList.querySelector('.async-nag-link')) {
+                                    nagBsModal.hide();
+                                    _nagVisible = false;
+                                }
+                            });
+                        });
+                    });
+                })
+                .catch(() => { /* silent */ });
+        }
+
+        nagClose.addEventListener('click', () => {
+            nagBsModal.hide();
+            _nagVisible = false;
+        });
+
+        nagDismiss.addEventListener('click', () => {
+            fetch('/reports/api/dismiss-all/', {
+                method: 'POST',
+                headers: { 'X-CSRFToken': _getCookie('csrftoken') },
+                credentials: 'same-origin',
+            }).then(() => {
+                nagBsModal.hide();
+                _nagVisible = false;
+            });
+        });
+
+        // Reset flag whenever the modal closes (by any method)
+        nagModalEl.addEventListener('hidden.bs.modal', () => {
+            _nagVisible = false;
+        });
+
+        function _fileIcon(fname) {
+            if (!fname) return 'bi-file-earmark';
+            const ext = fname.split('.').pop().toLowerCase();
+            const icons = {
+                xlsx: 'bi-file-earmark-excel-fill text-success',
+                xls:  'bi-file-earmark-excel-fill text-success',
+                csv:  'bi-file-earmark-spreadsheet-fill text-success',
+                pdf:  'bi-file-earmark-pdf-fill text-danger',
+                html: 'bi-file-earmark-code-fill text-info',
+            };
+            return icons[ext] || 'bi-file-earmark-arrow-down-fill text-primary';
+        }
+
+        function _escHtml(s) {
+            const d = document.createElement('div');
+            d.textContent = s;
+            return d.innerHTML;
+        }
+
+        function _timeAgo(isoStr) {
+            if (!isoStr) return '';
+            const diff = Math.floor((Date.now() - new Date(isoStr).getTime()) / 60000);
+            if (diff < 1) return 'just now';
+            if (diff < 60) return diff + 'm ago';
+            return Math.floor(diff / 60) + 'h ago';
+        }
+
+        // Initial check + periodic nag
+        setTimeout(_checkNotifications, 3000);
+        setInterval(_checkNotifications, NAG_INTERVAL_MS);
+
+    })();
+    </script>
+    {% endif %}
+
+    <script>
+        $(document).ready(function(){
+            $(".group-header").click(function(){
+                $(this).next(".group-links").slideToggle();
+            });
+        });
+    </script>
+
+    <!-- Touch-friendly toggle for .ql-dropdown on mobile -->
+    <script>
+    (function(){
+        var isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+        if (!isTouchDevice) return;
+
+        document.addEventListener('click', function(e){
+            var toggle = e.target.closest('.ql-dropdown > button, .ql-dropdown > .ql-dropdown-toggle');
+            if (toggle) {
+                e.preventDefault();
+                e.stopPropagation();
+                var dd = toggle.closest('.ql-dropdown');
+                var wasOpen = dd.classList.contains('open');
+                // close all other open dropdowns
+                document.querySelectorAll('.ql-dropdown.open').forEach(function(el){ el.classList.remove('open'); });
+                if (!wasOpen) dd.classList.add('open');
+                return;
+            }
+            // close all if tapping outside
+            if (!e.target.closest('.ql-dropdown')) {
+                document.querySelectorAll('.ql-dropdown.open').forEach(function(el){ el.classList.remove('open'); });
+            }
+        });
+    })();
+    </script>
+
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

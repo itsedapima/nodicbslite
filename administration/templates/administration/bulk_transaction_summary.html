@@ -1,0 +1,146 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Bulk Transaction Summary{% endblock %}
+{% block content %}
+
+<style>
+  .summary-stat {
+    border: 1px solid var(--d365-border);
+    border-radius: .5rem;
+    padding: 1.25rem;
+    background: var(--d365-surface);
+    text-align: center;
+  }
+  .summary-stat .value {
+    font-size: 1.75rem; font-weight: 700; line-height: 1;
+  }
+  .summary-stat .label {
+    font-size: .8125rem; color: var(--d365-text-secondary); margin-top: .375rem;
+  }
+  .posted-table { font-size: .8125rem; }
+  .posted-table th {
+    background: var(--d365-surface-alt, #f3f2f1);
+    position: sticky; top: 0; z-index: 2;
+    font-weight: 600; white-space: nowrap;
+  }
+  .posted-table td, .posted-table th { padding: .5rem .625rem; vertical-align: middle; }
+  .type-badge {
+    padding: .15rem .5rem; border-radius: .25rem;
+    font-size: .75rem; font-weight: 600;
+  }
+  .type-savings { background: #cff4fc; color: #055160; }
+  .type-loan    { background: #e2d9f3; color: #432874; }
+</style>
+
+<div class="container my-4">
+  <div class="row justify-content-center">
+    <div class="col-lg-11 col-xl-10">
+
+      <!-- ── Header ── -->
+      <div class="d-flex align-items-center justify-content-between mb-4">
+        <div>
+          <h1 class="fs-3 fw-bold mb-1">
+            <i class="bi bi-check-circle-fill text-success me-2"></i>Batch posted successfully
+          </h1>
+          <p class="text-secondary mb-0" style="font-size:.875rem;">
+            {{ batch_desc }} &nbsp;·&nbsp; Ref: <code>{{ batch_ref }}</code>
+          </p>
+        </div>
+        <div class="d-flex gap-2">
+          <a href="{% url 'administration:bulk_transaction_summary_pdf' %}" class="btn btn-outline-primary btn-sm">
+            <i class="bi bi-file-earmark-pdf me-1"></i> Download PDF
+          </a>
+          <a href="{% url 'administration:bulk_transaction_upload' %}" class="btn btn-primary btn-sm">
+            <i class="bi bi-plus-lg me-1"></i> New batch
+          </a>
+        </div>
+      </div>
+
+      <!-- ── Messages ── -->
+      {% if messages %}
+      {% for msg in messages %}
+      <div class="alert alert-{{ msg.tags }} alert-dismissible fade show" role="alert">
+        {{ msg }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+      </div>
+      {% endfor %}
+      {% endif %}
+
+      <!-- ── Stats ── -->
+      <div class="row g-3 mb-4">
+        <div class="col-6 col-md-3">
+          <div class="summary-stat">
+            <div class="value">{{ total_count }}</div>
+            <div class="label">Total transactions</div>
+          </div>
+        </div>
+        <div class="col-6 col-md-3">
+          <div class="summary-stat">
+            <div class="value text-info">{{ savings_count }}</div>
+            <div class="label">Savings deposits</div>
+          </div>
+        </div>
+        <div class="col-6 col-md-3">
+          <div class="summary-stat">
+            <div class="value" style="color:#6f42c1;">{{ loan_count }}</div>
+            <div class="label">Loan repayments</div>
+          </div>
+        </div>
+        <div class="col-6 col-md-3">
+          <div class="summary-stat">
+            <div class="value text-success">KES {{ total_amount|floatformat:2 }}</div>
+            <div class="label">Total amount</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── Detail table ── -->
+      <div class="card p-3">
+        <div class="table-responsive" style="max-height: 32rem; overflow-y: auto;">
+          <table class="table table-sm posted-table mb-0">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Date</th>
+                <th>Bank</th>
+                <th>Cust No</th>
+                <th>Customer name</th>
+                <th>Account</th>
+                <th>Type</th>
+                <th class="text-end">Amount (KES)</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for row in posted %}
+              <tr>
+                <td>{{ forloop.counter }}</td>
+                <td>{{ row.date }}</td>
+                <td>{{ row.receiving_bank }}</td>
+                <td>{{ row.customer_no }}</td>
+                <td>{{ row.customer_name }}</td>
+                <td><code>{{ row.account }}</code></td>
+                <td>
+                  {% if row.type == "Savings Deposit" %}
+                    <span class="type-badge type-savings">Savings</span>
+                  {% else %}
+                    <span class="type-badge type-loan">Loan</span>
+                  {% endif %}
+                </td>
+                <td class="text-end">{{ row.credit_amount }}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+            <tfoot>
+              <tr style="font-weight:700; border-top: 2px solid var(--d365-border-strong);">
+                <td colspan="7" class="text-end">Total</td>
+                <td class="text-end">{{ total_amount|floatformat:2 }}</td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+{% endblock %}

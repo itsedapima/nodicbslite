@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container my-5">
+    {% include 'transactions/includes/transactions_quick_actions.html' %}
+<div class="container my-5">
+    <div class="card shadow-sm border-0">
+        <div class="card-header bg-primary text-white py-3">
+            <h4 class="mb-0"><i class="fas fa-percentage me-2"></i>Calculate Interest / Dividends</h4>
+        </div>
+        <div class="card-body p-4">
+            <form method="POST">
+                {% csrf_token %}
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        <label class="form-label fw-bold">Savings Type</label>
+                        <select name="saving_type" class="form-select" required>
+                            <option value="savings_deposit">Savings Deposit</option>
+                            <option value="share_capital">Share Capital</option>
+                            <option value="fixed_deposit">Fixed Deposit</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label fw-bold">Annual Rate (%)</label>
+                        <div class="input-group">
+                            <input type="number" name="rate" step="0.01" class="form-control" placeholder="e.g. 8.5" required>
+                            <span class="input-group-text">%</span>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label fw-bold">Cut-off Date</label>
+                        <input type="date" name="cut_off_date" class="form-control" required>
+                    </div>
+                    <div class="col-md-2 d-flex align-items-end">
+                        <button type="submit" class="btn btn-primary w-100">
+                            Calculate
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

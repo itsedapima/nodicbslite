@@ -1,0 +1,184 @@
+{% extends 'base.html' %}
+{% load humanize %}
+{% block content %}
+{% include 'loans/includes/loans_quick_actions.html' %}
+<div class="container-fluid px-4 py-4">
+  {% if messages %}
+  <div class="row mb-4">
+    <div class="col-12">
+      {% for message in messages %}
+      <div class="alert {% if message.tags %}alert-{{ message.tags }}{% else %}alert-info{% endif %} alert-dismissible fade show" role="alert" style="border-radius: .4rem;">
+        {{ message }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
+  <div class="row">
+    <!-- LEFT: parameters -->
+    <div class="col-lg-4 mb-4">
+      <div class="card" style="background: var(--d365-surface); border: 1px solid var(--d365-border); border-radius: .5rem; box-shadow: var(--d365-shadow-2);">
+        <div class="card-header py-3" style="background: var(--d365-surface-alt); border-bottom: 2px solid var(--d365-border); font-size: .8rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--d365-text-secondary);">
+          <i class="bi bi-sliders me-2"></i>Interest Generation Parameters
+        </div>
+        <div class="card-body">
+          <form method="POST" id="interestForm">
+            {% csrf_token %}
+            {{ form.as_p }}
+            <div class="d-grid gap-2 mt-4">
+              <button type="submit" name="action" value="calculate" class="btn" style="background: var(--d365-primary); color: #fff; border: 1px solid var(--d365-primary); border-radius: .4rem; font-weight: 600;">
+                <i class="bi bi-calculator me-1"></i> Run calculations
+              </button>
+
+              {% if active_draft_batch %}
+              <div class="alert alert-warning my-2 py-2 text-center small" style="border-radius: .4rem;">
+                <i class="bi bi-exclamation-triangle-fill me-1"></i>
+                Draft pending: <strong>Batch #{{ active_draft_batch.id }}</strong>
+              </div>
+              <button type="submit" name="action" value="post" class="btn" style="background: var(--d365-success); color: #fff; border: 1px solid var(--d365-success); border-radius: .4rem; font-weight: 600;"
+                      onclick="return confirm('Finalize and post this interest batch permanently?');">
+                <i class="bi bi-cloud-arrow-up me-1"></i> Post verified batch
+              </button>
+              {% endif %}
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <!-- Live progress panel (shown only while a stream runs) -->
+      <div class="card mt-3 d-none" id="progressCard" style="background: var(--d365-surface); border: 1px solid var(--d365-border); border-radius: .5rem; box-shadow: var(--d365-shadow-2);">
+        <div class="card-header py-2" style="background: var(--d365-surface-alt); border-bottom: 2px solid var(--d365-border); font-size: .8rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--d365-text-secondary);">
+          <i class="bi bi-activity me-2"></i>Posting in Progress
+        </div>
+        <div class="card-body">
+          <div class="progress mb-2" style="height: 20px;">
+            <div id="progressBar" class="progress-bar progress-bar-striped progress-bar-animated"
+                 role="progressbar" style="width: 0%; background: var(--d365-primary);">0%</div>
+          </div>
+          <p class="small mb-1" style="color: var(--d365-text-secondary);" id="progressStage">Connecting…</p>
+          <p class="small mb-0" id="progressDetail"></p>
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT: history -->
+    <div class="col-lg-8">
+      <div class="card" style="background: var(--d365-surface); border: 1px solid var(--d365-border); border-radius: .5rem; box-shadow: var(--d365-shadow-2);">
+        <div class="card-header py-3 d-flex justify-content-between align-items-center" style="background: var(--d365-surface-alt); border-bottom: 2px solid var(--d365-border);">
+          <h5 class="m-0 fw-bold" style="color: var(--d365-text); font-size: .8rem; text-transform: uppercase; letter-spacing: .04em;"><i class="bi bi-history me-2" style="color: var(--d365-text-secondary);"></i>Calculation Run History</h5>
+          <a href="{% url 'loans:interest_batch_list' %}" class="btn btn-sm" style="background: transparent; color: var(--d365-primary); border: 1px solid var(--d365-primary); border-radius: .4rem; font-weight: 600;">View full archive</a>
+        </div>
+        <div class="card-body p-0">
+          <div class="table-responsive">
+            <table class="table table-hover table-striped align-middle mb-0" style="font-size: 0.875rem;">
+              <thead style="background: var(--d365-surface-alt);">
+                <tr>
+                  <th class="ps-3" style="font-size: .75rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--d365-text-secondary);">Batch ID</th>
+                  <th style="font-size: .75rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--d365-text-secondary);">Loan classification</th>
+                  <th style="font-size: .75rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--d365-text-secondary);">Target period</th>
+                  <th class="text-end" style="font-size: .75rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--d365-text-secondary);">Rate used</th>
+                  <th class="text-end" style="font-size: .75rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--d365-text-secondary);">Total yield</th>
+                  <th class="text-center" style="font-size: .75rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--d365-text-secondary);">Status</th>
+                  <th class="pe-3 text-center" style="font-size: .75rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--d365-text-secondary);">Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for batch in recent_batches %}
+                <tr>
+                  <td class="ps-3"><code>#{{ batch.id }}</code></td>
+                  <td class="fw-semibold">{{ batch.loan_type|title }}</td>
+                  <td>{{ batch.target_date|date:"M Y" }}</td>
+                  <td class="text-end" style="color: var(--d365-text-secondary);">{{ batch.interest_rate }}%</td>
+                  <td class="text-end fw-bold" style="color: var(--d365-text);">KES {{ batch.total_interest|floatformat:2|intcomma }}</td>
+                  <td class="text-center">
+                    {% if batch.status == 'posted' %}
+                    <span class="badge bg-success-subtle text-success border border-success-subtle px-2">Posted</span>
+                    {% else %}
+                    <span class="badge bg-warning-subtle text-warning border border-warning-subtle px-2">Draft</span>
+                    {% endif %}
+                  </td>
+                  <td class="pe-3 text-center">
+                    <a href="{% url 'loans:interest_batch_detail' batch.id %}" class="btn btn-sm py-1 px-2" style="background: transparent; color: var(--d365-text-secondary); border: 1px solid var(--d365-border-strong); border-radius: .4rem;">
+                      <i class="bi bi-eye"></i> View detail
+                    </a>
+                  </td>
+                </tr>
+                {% empty %}
+                <tr>
+                  <td colspan="7" class="text-center py-5" style="color: var(--d365-text-secondary);">
+                    <i class="bi bi-folder-x display-6 d-block mb-2" style="color: var(--d365-border-strong);"></i>
+                    No interest calculation records found.
+                  </td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% if stream_batch_id %}
+<script>
+(function () {
+  const batchId = "{{ stream_batch_id }}";
+  const url = "{% url 'loans:interest_charge_stream' 0 %}".replace("/0/", "/" + batchId + "/");
+
+  const card = document.getElementById("progressCard");
+  const bar = document.getElementById("progressBar");
+  const stage = document.getElementById("progressStage");
+  const detail = document.getElementById("progressDetail");
+  card.classList.remove("d-none");
+
+  const es = new EventSource(url);
+  let grandTotal = 0;
+
+  function setBar(pct) {
+    pct = Math.min(100, Math.round(pct));
+    bar.style.width = pct + "%";
+    bar.textContent = pct + "%";
+  }
+
+  es.onmessage = function (e) {
+    const msg = JSON.parse(e.data);
+    if (msg.type === "start") {
+      grandTotal = msg.total;
+      stage.textContent = "Posting batch #" + msg.batch + " (" + grandTotal + " loans)…";
+      detail.textContent = "Expected total: KES " + msg.amount.toLocaleString();
+    } else if (msg.type === "progress") {
+      const labels = { transactions: "Writing loan transactions", running_stats: "Updating running balances" };
+      stage.textContent = labels[msg.stage] || msg.stage;
+      setBar((msg.done / msg.total) * 90);  // reserve last 10% for GL + commit
+      detail.textContent = msg.done + " / " + msg.total + " processed";
+    } else if (msg.type === "done") {
+      setBar(100);
+      bar.classList.remove("progress-bar-animated", "progress-bar-striped");
+      stage.textContent = "Completed — batch #" + msg.batch + " posted.";
+      detail.innerHTML = "<strong>KES " + msg.amount.toLocaleString() +
+        "</strong> across " + msg.total + " loans. Ref: " + msg.ref;
+      es.close();
+      setTimeout(function () {
+        window.location.href = "{% url 'loans:interest_batch_list' %}";
+      }, 1800);
+    } else if (msg.type === "error") {
+      bar.classList.add("bg-danger");
+      bar.classList.remove("progress-bar-animated");
+      stage.textContent = "Posting failed.";
+      detail.textContent = msg.message;
+      es.close();
+    }
+  };
+
+  es.onerror = function () {
+    stage.textContent = "Connection lost.";
+    detail.textContent = "The posting may still have completed — check the run history.";
+    es.close();
+  };
+})();
+</script>
+{% endif %}
+{% endblock %}

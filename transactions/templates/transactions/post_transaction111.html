@@ -1,0 +1,365 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<style>
+    /* Premium but Ultra-Compact UI Card Styling */
+    .compact-card { 
+        padding: 0.75rem !important; /* Reduced from 1.25rem */
+        margin-bottom: 0.5rem !important; 
+        border: none;
+        border-radius: 6px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+        background-color: #ffffff;
+    }
+    
+    /* Tighter Typography & Labeling */
+    .form-label { 
+        margin-bottom: 0.1rem; /* Extremely tight to input */
+        font-size: 0.75rem; 
+        font-weight: 600; 
+        color: #555;
+        text-transform: uppercase;
+        letter-spacing: 0.3px;
+    }
+    
+    /* Micro-Inputs for Data Entry Density */
+    #postingForm input[type="text"], 
+    #postingForm input[type="number"], 
+    #postingForm input[type="date"], 
+    #postingForm select {
+        display: block;
+        width: 100%;
+        height: 30px; /* Fixed small height */
+        padding: 0.15rem 0.5rem; /* Minimal padding */
+        font-size: 0.85rem;
+        line-height: 1.2;
+        color: #495057;
+        background-color: #fff;
+        border: 1px solid #ced4da;
+        border-radius: 4px;
+        transition: border-color 0.15s;
+    }
+    
+    #postingForm input:focus, 
+    #postingForm select:focus {
+        border-color: #86b7fe;
+        outline: 0;
+        box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.15);
+    }
+    
+    input[readonly] { background-color: #f8f9fa !important; color: #6c757d; cursor: not-allowed; }
+
+    /* Condensed Formset rows */
+    .formset-row { 
+        border-bottom: 1px dashed #e9ecef; 
+        padding-bottom: 4px; /* Reduced */
+        margin-bottom: 4px;  /* Reduced */
+        transition: background-color 0.2s;
+    }
+    .formset-row:hover { background-color: #f8f9fa; border-radius: 3px; }
+    .formset-row:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
+    
+    /* Slim Section Headers */
+    .section-title { 
+        font-size: 0.9rem; 
+        font-weight: 600;
+        border-bottom: 1px solid #f1f3f5; 
+        padding-bottom: 4px; 
+        margin-bottom: 8px; /* Tighter gap below title */
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+
+    /* Receipt Paper Effect - Adjusted for height */
+    .receipt-container { 
+        background: #fffdf5; 
+        border: 1px solid #e0e0e0; 
+        padding: 1rem; 
+        min-height: 200px; 
+        max-height: 400px; /* Keeps it strictly contained */
+        overflow-y: auto; 
+        font-family: 'Courier New', Courier, monospace; 
+        font-size: 0.8rem;
+        color: #333;
+        box-shadow: inset 0 0 10px rgba(0,0,0,0.02);
+        position: relative;
+    }
+    .receipt-container::before {
+        content: "";
+        position: absolute;
+        top: 0; left: 0; right: 0;
+        height: 3px;
+        background: repeating-linear-gradient(45deg, transparent, transparent 3px, #e0e0e0 3px, #e0e0e0 6px);
+    }
+    
+    /* Compact Buttons */
+    .btn-link { text-decoration: none; font-weight: 600; font-size: 0.8rem; padding: 0 !important; }
+    .btn-link:hover { text-decoration: underline; }
+    .remove-row { 
+        color: #dc3545; background: rgba(220, 53, 69, 0.1); 
+        border-radius: 4px; width: 22px; height: 22px; 
+        padding: 0; line-height: 1; display: inline-flex; 
+        align-items: center; justify-content: center; 
+    }
+    .remove-row:hover { background: #dc3545; color: white; }
+</style>
+<div class="container my-10">
+    {% include 'transactions/includes/transactions_quick_actions.html' %}
+<div class="container-fluid px-3 my-2">
+
+    
+    {% if messages %}
+    <div class="mt-2 mb-2">
+        {% for message in messages %}
+            <div class="alert alert-{% if message.tags %}{{ message.tags }}{% else %}info{% endif %} alert-dismissible fade show shadow-sm py-2 mb-1" role="alert">
+                <small>{{ message }}</small>
+                <button type="button" class="btn-close py-2" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <div class="row g-2 mt-1">
+        <div class="col-lg-8">
+            <form method="post" novalidate id="postingForm">
+                {% csrf_token %}
+                
+                <div class="compact-card">
+                    <h5 class="section-title text-primary">
+                        <i class="bi bi-person-badge"></i> Primary Details
+                    </h5>
+                    <div class="row g-2">
+                        <div class="col-md-3">
+                            <label class="form-label">Customer No</label>
+                            {{ form.cust_no }}
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Customer Name</label>
+                            <input id="cust_name" type="text" value="{{ customer.full_name|default:'' }}" readonly>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Date</label>
+                            {{ form.date }}
+                        </div>
+                        
+                        <div class="col-md-3 mt-2">
+                            <label class="form-label">Amount Paid</label>
+                            {{ form.amount_paid }}
+                        </div>
+                        <div class="col-md-6 mt-2">
+                            <label class="form-label">Description</label>
+                            {{ form.description }}
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row g-2">
+                    <div class="col-md-6">
+                        <div class="compact-card h-100 mb-0">
+                            <h5 class="section-title text-success">
+                                <i class="bi bi-piggy-bank"></i> Savings/Shares
+                            </h5>
+                            <div id="savings-rows" data-prefix="savings">
+                                {{ savings_formset.management_form }}
+                                {% for s_form in savings_formset %}
+                                    <div class="row g-1 align-items-center formset-row">
+                                        <div class="col-6">{{ s_form.account_type }}</div>
+                                        <div class="col-4">{{ s_form.amount }}</div>
+                                        <div class="col-1 text-end">
+                                            <button type="button" class="btn remove-row" title="Remove">×</button>
+                                        </div>
+                                        {% if s_form.DELETE %}<div class="d-none">{{ s_form.DELETE }}</div>{% endif %}
+                                    </div>
+                                {% endfor %}
+                            </div>
+                            <button type="button" id="addSavings" class="btn btn-link mt-2 text-success">
+                                <i class="bi bi-plus-circle"></i> Add Saving Split
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="col-md-6">
+                        <div class="compact-card h-100 mb-0">
+                            <h5 class="section-title text-danger">
+                                <i class="bi bi-cash-stack"></i> Loan Payments
+                            </h5>
+                            <div id="loan-rows" data-prefix="loan">
+                                {{ loan_formset.management_form }}
+                                {% for loan_form in loan_formset %}
+                                    <div class="row g-1 align-items-center formset-row">
+                                        <div class="col-6">{{ loan_form.loan_no }}</div>
+                                        <div class="col-4">{{ loan_form.amount }}</div>
+                                        <div class="col-1 text-end">
+                                            <button type="button" class="btn remove-row" title="Remove">×</button>
+                                        </div>
+                                        {% if loan_form.DELETE %}<div class="d-none">{{ loan_form.DELETE }}</div>{% endif %}
+                                    </div>
+                                {% endfor %}
+                            </div>
+                            <button type="button" id="addLoan" class="btn btn-link mt-2 text-danger">
+                                <i class="bi bi-plus-circle"></i> Add Loan Payment
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="compact-card mt-2 sticky-bottom d-flex justify-content-end align-items-center bg-light border-0 py-2 shadow-sm" style="bottom: 5px; z-index: 1020;">
+                    <a href="{% url 'transactions:post_transaction_empty' %}" class="btn btn-sm btn-outline-secondary px-3 me-auto">Reset Form</a>
+                    <button type="submit" name="preview" class="btn btn-sm btn-secondary px-3 me-2">Preview</button>
+                    <button type="submit" name="post" class="btn btn-sm btn-primary px-4 fw-bold shadow-sm">Post to DB</button>
+                </div>
+            </form>
+        </div>
+
+        <div class="col-lg-4">
+            <div class="compact-card sticky-top" style="top: 100px; z-index: 1000;">
+                <h5 class="section-title text-dark">
+                    <i class="bi bi-receipt"></i> Receipt Preview
+                </h5>
+                <div id="previewBox" class="receipt-container rounded">
+                    {% if preview_text %}
+                        <pre class="m-0 border-0 bg-transparent p-0">{{ preview_text }}</pre>
+                    {% else %}
+                        <div class="text-center text-muted py-4 d-flex flex-column align-items-center justify-content-center h-100">
+                            <i class="bi bi-receipt-cutoff d-block mb-2 text-black-50" style="font-size: 2.5rem;"></i>
+                            <p class="mb-0 small">Waiting for data...</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="empty-savings-form-template" class="d-none">
+    <div class="row g-1 align-items-center formset-row">
+        <div class="col-6">
+            <select name="savings-__prefix__-account_type">
+                <option value="" selected>---------</option>
+                {% for choice in savings_choices %}
+                    <option value="{{ choice.account_type }}">{{ choice.account_name }}</option>
+                {% endfor %}
+            </select>
+            <input type="hidden" name="savings-__prefix__-DELETE">
+        </div>
+        <div class="col-4">
+            <input type="number" name="savings-__prefix__-amount" step="0.01">
+        </div>
+        <div class="col-1 text-end">
+            <button type="button" class="btn remove-row" title="Remove">×</button>
+        </div>
+    </div>
+</div>
+
+<div id="empty-loan-form-template" class="d-none">
+    <div class="row g-1 align-items-center formset-row">
+        <div class="col-6">
+            <select name="loan-__prefix__-loan_no">
+                <option value="" selected>---------</option>
+            </select>
+            <input type="hidden" name="loan-__prefix__-DELETE">
+        </div>
+        <div class="col-4">
+            <input type="number" name="loan-__prefix__-amount" step="0.01">
+        </div>
+        <div class="col-1 text-end">
+            <button type="button" class="btn remove-row" title="Remove">×</button>
+        </div>
+    </div>
+</div>
+
+<script>
+// JS Remains Identical
+(function(){
+    function updateFormsetIndices(container) {
+        const prefix = container.getAttribute('data-prefix');
+        const rows = container.querySelectorAll('.formset-row');
+        const totalForms = document.querySelector(`input[name="${prefix}-TOTAL_FORMS"]`);
+        
+        rows.forEach((row, i) => {
+            row.querySelectorAll('select, input').forEach(el => {
+                if (el.name) {
+                    const parts = el.name.split('-');
+                    const base = parts.pop(); 
+                    el.name = `${prefix}-${i}-${base}`;
+                    el.id = `id_${prefix}-${i}-${base}`;
+                }
+            });
+        });
+        if (totalForms) totalForms.value = rows.length;
+    }
+
+    function setupFormset(containerId, addButtonId, templateId) {
+        const container = document.getElementById(containerId);
+        const addBtn = document.getElementById(addButtonId);
+        const template = document.getElementById(templateId).firstElementChild;
+
+        addBtn.addEventListener('click', () => {
+            const totalFormsInput = document.querySelector(`input[name="${container.dataset.prefix}-TOTAL_FORMS"]`);
+            const count = parseInt(totalFormsInput.value);
+            
+            const newRow = template.cloneNode(true);
+            const html = newRow.innerHTML.replace(/__prefix__/g, count);
+            newRow.innerHTML = html;
+            
+            const select = newRow.querySelector('select');
+            if(select) select.selectedIndex = 0;
+
+            container.appendChild(newRow);
+            totalFormsInput.value = count + 1;
+            
+            newRow.querySelector('.remove-row').addEventListener('click', () => {
+                newRow.remove();
+                updateFormsetIndices(container);
+            });
+        });
+
+        container.querySelectorAll('.remove-row').forEach(btn => {
+            btn.addEventListener('click', () => {
+                btn.closest('.formset-row').remove();
+                updateFormsetIndices(container);
+            });
+        });
+    }
+
+    setupFormset('savings-rows', 'addSavings', 'empty-savings-form-template');
+    setupFormset('loan-rows', 'addLoan', 'empty-loan-form-template');
+
+    const custInput = document.getElementById('id_cust_no');
+    const custNameInput = document.getElementById('cust_name');
+
+    function fetchLoans(custNo) {
+        if (!custNo) return;
+        fetch(`{% url 'transactions:ajax_get_loans' %}?cust_no=${custNo}`)
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    const selects = document.querySelectorAll('select[name$="-loan_no"], #empty-loan-form-template select');
+                    selects.forEach(select => {
+                        const current = select.value;
+                        select.innerHTML = '<option value="">---------</option>';
+                        data.loans.forEach(loan => {
+                            select.add(new Option(loan.name, loan.id));
+                        });
+                        select.value = current;
+                    });
+                }
+            });
+    }
+
+    custInput.addEventListener('blur', function() {
+        const q = this.value.trim();
+        if(!q) { custNameInput.value = ''; return; }
+        
+        fetch(`/transactions/api/customers/by_cust_no/?cust_no=${encodeURIComponent(q)}`)
+            .then(r => r.json())
+            .then(data => {
+                custNameInput.value = data.found ? data.full_name : 'Customer Not Found';
+                if(data.found) fetchLoans(q);
+            });
+    });
+})();
+</script>
+{% endblock %}

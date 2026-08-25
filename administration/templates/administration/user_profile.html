@@ -1,0 +1,38 @@
+{% extends 'base.html' %}
+{% load humanize %}
+{% block content %}
+ {% include 'administration/includes/administration_quick_actions.html' %}
+
+    {% if messages %}
+    <div class="container mt-4">
+        {% for message in messages %}
+            <div class="alert {% if message.tags %}alert-{{ message.tags }}{% else %}alert-info{% endif %}" role="alert">
+                {{ message }}
+                <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+        <h1 class="text-3xl font-bold mb-6">System User Profile</h1>
+
+        <!-- User Profile Information -->
+        <div class="bg-gray-100 text-black p-6 rounded-lg shadow-lg mb-6">
+            <h2 class="text-2xl font-bold">Profile Information</h2>
+            <p><strong>Username:</strong> {{ user.username }}</p>
+            <p><strong>Email:</strong> {{ user.email }}</p>
+            <p><strong>Access Role:</strong> {{ user.role}}</p>
+            <p><strong>First Name:</strong> {{ user.first_name }}</p>
+            <p><strong>Last Name:</strong> {{ user.last_name }}</p>
+        </div>
+
+</div>
+
+                
+ 
+               
+                
+
+        </div>
+{% endblock %}

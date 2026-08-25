@@ -1,0 +1,65 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container mx-auto mt-5">
+    <h2 class="text-2xl font-bold mb-4">Step 2: Assign Officials to Report - {{ report.name }}</h2>
+
+    <!-- Add Official Form -->
+    <form method="post" class="mb-4">
+        {% csrf_token %}
+        <div class="mb-3">
+            {{ form.as_p }}
+        </div>
+        <button type="submit" class="btn btn-primary">Add Official</button>
+        <a href="{% url 'accounting:automated_reports_list' %}" class="btn btn-secondary">Back to Reports</a>
+    </form>
+
+    <!-- Officials Table -->
+    <h3 class="text-xl font-semibold mt-5">Assigned Officials</h3>
+    <table class="table table-bordered table-striped mt-3">
+        <thead class="table-dark">
+            <tr><th>Name</th>
+                
+                <th>Position</th>
+                <th>Email</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for official in officials %}
+            <tr>
+                <td>{{ official.official.official_name }}</td>
+                <td>{{ official.official.position }}</td>
+                <td>{{ official.official.email }}</td>
+                <td>
+                    <a href="{% url 'accounting:remove_automated_report_official' official.id %}" class="btn btn-danger btn-sm">Remove</a>
+                </td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="2" class="text-center">No officials assigned yet.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script>
+$(document).ready(function() {
+    var reportId = "{{ report.id }}";  // Get the report ID from the template
+
+    $.ajax({
+        url: "{% url 'accounting:load_officials' %}",  // Update with the correct URL
+        data: {'report_id': reportId},
+        success: function(data) {
+            $("#id_official").empty();
+            $.each(data.officials, function(index, official) {
+                $("#id_official").append($('<option>', {
+                    value: official.id,
+                    text: official.name
+                }));
+            });
+        }
+    });
+});
+</script>

@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+
+{% block title %}{% if editing %}Edit Product{% else %}Add Savings Product{% endif %} - NODi Lite{% endblock %}
+
+{% block content %}
+<div class="d365-page-head">
+    <a href="{% url 'transactions:product_list' %}" class="d365-btn d365-btn-back">
+        <i class="fluent-icon">arrow_left</i> Back to Products
+    </a>
+    <h1>{% if editing %}Edit Product{% else %}Add Savings Product{% endif %}</h1>
+</div>
+
+{% if errors %}
+<div class="d365-alert d365-alert-danger">
+    <ul>
+        {% for error in errors %}
+        <li>{{ error }}</li>
+        {% endfor %}
+    </ul>
+</div>
+{% endif %}
+
+<div class="d365-card">
+    <form method="post" class="d365-form">
+        {% csrf_token %}
+
+        <div class="d365-form-group">
+            <label class="d365-label" for="name">Name <span class="d365-required">*</span></label>
+            <input type="text" id="name" name="name" class="d365-input"
+                   value="{% if editing %}{{ product.name }}{% else %}{{ request.POST.name }}{% endif %}" required>
+        </div>
+
+        <div class="d365-form-group">
+            <label class="d365-label" for="code">Code <span class="d365-required">*</span></label>
+            <input type="text" id="code" name="code" class="d365-input"
+                   value="{% if editing %}{{ product.code }}{% else %}{{ request.POST.code }}{% endif %}" required>
+        </div>
+
+        <div class="d365-form-group">
+            <label class="d365-label" for="type">Type <span class="d365-required">*</span></label>
+            <select id="type" name="type" class="d365-select" required>
+                <option value="">-- Select Type --</option>
+                {% for value, label in product_types %}
+                <option value="{{ value }}"
+                    {% if editing and product.type == value %}selected{% endif %}
+                    {% if not editing and request.POST.type == value %}selected{% endif %}>
+                    {{ label }}
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="d365-form-group">
+            <label class="d365-label" for="min_balance">Minimum Balance</label>
+            <input type="number" id="min_balance" name="min_balance" class="d365-input" step="0.01" min="0"
+                   value="{% if editing %}{{ product.min_balance }}{% else %}{{ request.POST.min_balance }}{% endif %}">
+        </div>
+
+        <div class="d365-form-group">
+            <label class="d365-label" for="interest_rate">Interest Rate (%)</label>
+            <input type="number" id="interest_rate" name="interest_rate" class="d365-input" step="0.01" min="0"
+                   value="{% if editing %}{{ product.interest_rate }}{% else %}{{ request.POST.interest_rate }}{% endif %}">
+        </div>
+
+        <div class="d365-form-group d365-form-group-checkbox">
+            <label class="d365-checkbox-label">
+                <input type="checkbox" id="is_active" name="is_active" class="d365-checkbox"
+                       {% if editing and product.is_active %}checked{% endif %}
+                       {% if not editing and request.POST.is_active %}checked{% endif %}
+                       {% if not editing and request.method == "GET" %}checked{% endif %}>
+                <span>Active</span>
+            </label>
+        </div>
+
+        <div class="d365-form-actions">
+            <button type="submit" class="d365-btn d365-btn-primary">
+                {% if editing %}Save Changes{% else %}Add Product{% endif %}
+            </button>
+            <a href="{% url 'transactions:product_list' %}" class="d365-btn d365-btn-secondary">Cancel</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

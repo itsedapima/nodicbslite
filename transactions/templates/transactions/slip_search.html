@@ -1,0 +1,110 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block content %}
+{% include 'transactions/includes/transactions_quick_actions.html' %}
+<div class="container my-5">
+
+    <div class="row justify-content-center">
+        <div class="col-lg-10">
+            
+            <!-- Search Section -->
+            <div class="card shadow-sm border-0 mb-4">
+                <div class="card-header text-white py-3">
+                    <h5 class="mb-0">
+                        <i class="fas fa-search me-2"></i> Find Member Dividend Slips
+                    </h5>
+                </div>
+                <div class="card-body p-4">
+                    <form method="GET" action="{% url 'transactions:search_dividend_slip' %}" class="row g-3 align-items-end">
+                        <div class="col-md-8">
+                            <label for="cust_no" class="form-label fw-bold">Enter Member Number (cust_no)</label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-light"><i class="fas fa-user"></i></span>
+                                <input type="text" name="cust_no" id="cust_no" class="form-control form-control-lg" 
+                                       placeholder="e.g. 00292" value="{{ cust_no|default:'' }}" required>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <button type="submit" class="btn btn-primary btn-lg w-100">
+                                <i class="fas fa-filter me-2"></i> Search Records
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Results Section -->
+            {% if cust_no %}
+            <div class="card shadow-sm border-0">
+                <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+                    <h6 class="mb-0 text-uppercase fw-bold text-muted">
+                        Search Results for: <span class="text-primary">{{ cust_no }}</span>
+                    </h6>
+                    <span class="badge bg-info text-dark">{{ results|length }} Records Found</span>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th class="ps-4">Batch No</th>
+                                    <th>Account Type</th>
+                                    <th>Cut-Off Date</th>
+                                    <th class="text-end">Gross Int.</th>
+                                    <th class="text-end">Net Payout</th>
+                                    <th class="text-center">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for detail in results %}
+                                <tr>
+                                    <td class="ps-4">
+                                        <span class="fw-bold text-dark">{{ detail.batch.batch_no }}</span>
+                                        <div class="small text-muted">Posted on {{ detail.batch.created_at|date:"d M Y" }}</div>
+                                    </td>
+                                    <td>
+                                        <span class="badge rounded-pill bg-light text-dark border">
+                                            {{ detail.batch.get_saving_type_display }}
+                                        </span>
+                                    </td>
+                                    <td>{{ detail.batch.cut_off_date|date:"d-m-Y" }}</td>
+                                    <td class="text-end text-muted">{{ detail.gross_interest|floatformat:2 }}</td>
+                                    <td class="text-end fw-bold text-success">{{ detail.net_payout|floatformat:2 }}</td>
+                                    <td class="text-center">
+                                        <div class="btn-group">
+                                            <a href="{% url 'transactions:preview_dividend_slip' detail.id %}" 
+                                               class="btn btn-sm btn-outline-primary" title="View/Print Preview">
+                                                <i class="bi bi-eye"></i>
+                                            </a>
+                                            <a href="{% url 'transactions:download_dividend_slip_pdf' detail.id %}" 
+                                               class="btn btn-sm btn-outline-danger" title="Download PDF">
+                                                <i class="bi bi-file-pdf"></i>
+                                            </a>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="6" class="py-5 text-center text-muted">
+                                        <i class="fas fa-folder-open fa-3x mb-3 d-block"></i>
+                                        No posted dividend records found for member <strong>{{ cust_no }}</strong>.
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            {% else %}
+            <!-- Initial State / Placeholder -->
+            <div class="text-center py-5">
+                <img src="{% static 'images/search_placeholder.svg' %}" alt="Search" style="width: 150px; opacity: 0.5;" class="mb-3">
+                <h5 class="text-muted">Enter a member number above to retrieve dividend history.</h5>
+            </div>
+            {% endif %}
+
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,257 @@
+{% extends "base.html" %}
+{% block content %}
+{% include 'transactions/includes/transactions_quick_actions.html' %}
+<div class="container my-5">
+
+    
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h3 class="text-primary"><i class="bi bi-arrow-left-right"></i> Inter-Account Fund Transfer</h3>
+        <span class="badge bg-secondary">Internal Transaction</span>
+    </div>
+
+    <div id="alert-container">
+        {% for msg in messages %}
+        <div class="alert alert-{{ msg.tags }} alert-dismissible fade show" role="alert">
+            {{ msg }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+        {% endfor %}
+    </div>
+
+    <form id="transferForm" method="POST">
+        {% csrf_token %}
+
+        <div class="row">
+            <div class="col-md-6">
+                <div class="card shadow-sm mb-4 border-0 border-top border-danger border-4">
+                    <div class="card-body">
+                        <h5 class="card-title text-danger mb-3">Debit From (Source)</h5>
+                        
+                        <label class="form-label">Search Member</label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-white"><i class="bi bi-search text-muted"></i></span>
+                            <input id="src_search" type="text" class="form-control border-start-0" placeholder="Member No or Name..." autocomplete="off">
+                        </div>
+                        
+                        <div id="src_results" class="list-group mt-1 shadow-lg" style="position: absolute; z-index: 1050; width: 90%; display: none;"></div>
+                        
+                        <input type="hidden" name="from_cust_no" id="from_cust_no_hidden" required>
+                        
+                        <div id="src_display_box" class="mt-3 p-3 bg-light border rounded d-none">
+                            <div class="d-flex align-items-center">
+                                <div class="flex-shrink-0">
+                                    <i class="bi bi-person-circle fs-2 text-danger"></i>
+                                </div>
+                                <div class="flex-grow-1 ms-3">
+                                    <small class="text-muted d-block">Source Member</small>
+                                    <strong id="src_member_name" class="text-dark"></strong>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mt-3">
+                            <label class="form-label">Select Savings Account</label>
+                            <select id="from_account" name="from_account" class="form-select" required>
+                                <option value="">Select Member First</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-6">
+                <div class="card shadow-sm mb-4 border-0 border-top border-success border-4">
+                    <div class="card-body">
+                        <h5 class="card-title text-success mb-3">Credit To (Destination)</h5>
+                        
+                        <label class="form-label">Search Member</label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-white"><i class="bi bi-search text-muted"></i></span>
+                            <input id="dest_search" type="text" class="form-control border-start-0" placeholder="Member No or Name..." autocomplete="off">
+                        </div>
+                        
+                        <div id="dest_results" class="list-group mt-1 shadow-lg" style="position: absolute; z-index: 1050; width: 90%; display: none;"></div>
+                        
+                        <input type="hidden" name="to_cust_no" id="to_cust_no_hidden" required>
+                        
+                        <div id="dest_display_box" class="mt-3 p-3 bg-light border rounded d-none">
+                            <div class="d-flex align-items-center">
+                                <div class="flex-shrink-0">
+                                    <i class="bi bi-person-circle fs-2 text-success"></i>
+                                </div>
+                                <div class="flex-grow-1 ms-3">
+                                    <small class="text-muted d-block">Destination Member</small>
+                                    <strong id="dest_member_name" class="text-dark"></strong>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mt-3">
+                            <label class="form-label">Select Destination Account</label>
+                            <select id="to_account" name="to_account" class="form-select" required>
+                                <option value="">Select Member First</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card shadow-sm p-4 border-0 bg-white">
+            <div class="row align-items-end">
+                <div class="col-md-6">
+                    <label class="form-label fw-bold">Amount to Transfer</label>
+                    <div class="input-group input-group-lg">
+                        <span class="input-group-text bg-primary text-white border-primary">KES</span>
+                        <input type="number" step="0.01" name="amount" id="amount" class="form-control border-primary" placeholder="0.00" required>
+                    </div>
+                    <small class="text-muted">System will auto-generate reference: <strong>TRF[Timestamp]</strong></small>
+                </div>
+                <div class="col-md-6">
+                    <button type="submit" id="submitBtn" class="btn btn-primary btn-lg w-100 py-3 mt-3 mt-md-0 shadow-sm">
+                        <i class="bi bi-arrow-left-right me-2"></i> Execute Transfer
+                    </button>
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
+
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
+<script>
+$(document).ready(function() {
+
+    // --- REUSABLE LIVE SEARCH LOGIC ---
+    function setupSearch(inputId, resultsId, hiddenId, displayBoxId, displayNameId, accountSelectId) {
+        $(inputId).on('keyup', function() {
+            let query = $(this).val();
+            if (query.length > 1) {
+                $.ajax({
+                    url: '{% url "transactions:search_customer_api" %}',
+                    data: { 'q': query },
+                    success: function(data) {
+                        let html = '';
+                        if (data.results.length > 0) {
+                            data.results.forEach(cust => {
+                                html += `<button type="button" class="list-group-item list-group-item-action py-2 select-btn" 
+                                            data-id="${cust.id}" 
+                                            data-name="${cust.text}"
+                                            data-hidden="${hiddenId}"
+                                            data-displaybox="${displayBoxId}"
+                                            data-displayname="${displayNameId}"
+                                            data-results="${resultsId}"
+                                            data-input="${inputId}"
+                                            data-accselect="${accountSelectId}">
+                                            <i class="bi bi-person-check me-2 text-primary"></i> ${cust.text}
+                                         </button>`;
+                            });
+                            $(resultsId).html(html).fadeIn(200);
+                        } else {
+                            $(resultsId).html('<div class="list-group-item text-muted">No members found</div>').fadeIn(200);
+                        }
+                    }
+                });
+            } else {
+                $(resultsId).fadeOut(100);
+            }
+        });
+    }
+
+    // --- SELECTION HANDLER ---
+    $(document).on('click', '.select-btn', function(e) {
+        e.preventDefault();
+        const data = $(this).data();
+
+        // Update hidden input and UI displays
+        $(data.hidden).val(data.id);
+        $(data.displayname).text(data.name);
+        $(data.displaybox).removeClass('d-none');
+        
+        // Hide results and clear search input
+        $(data.results).fadeOut(100);
+        $(data.input).val('');
+
+        // Trigger account loading for THIS specific side
+        loadMemberAccounts(data.id, data.accselect);
+    });
+
+    // --- ACCOUNT LOADER ---
+    function loadMemberAccounts(custNo, selectId) {
+        const $select = $(selectId);
+        $select.html('<option>Loading accounts...</option>');
+        
+        $.ajax({
+            url: '{% url "transactions:get_customer_accounts_api" %}',
+            data: { 'cust_no': custNo },
+            success: function(data) {
+                $select.empty().append('<option value="">-- Choose Account --</option>');
+                data.results.forEach(acc => {
+                    $select.append(`<option value="${acc.id}">${acc.text}</option>`);
+                });
+            },
+            error: function() {
+                $select.html('<option>Error loading accounts</option>');
+            }
+        });
+    }
+
+    // Initialize searches for both sides with UNIQUE IDs
+    setupSearch('#src_search', '#src_results', '#from_cust_no_hidden', '#src_display_box', '#src_member_name', '#from_account');
+    setupSearch('#dest_search', '#dest_results', '#to_cust_no_hidden', '#dest_display_box', '#dest_member_name', '#to_account');
+
+    // Close results when clicking elsewhere
+    $(document).on('click', function(e) {
+        if (!$(e.target).closest('.input-group, .list-group').length) {
+            $('.list-group').fadeOut(100);
+        }
+    });
+
+    // --- FORM SUBMISSION ---
+    $('#transferForm').on('submit', function(e) {
+        e.preventDefault();
+        
+        const fromCust = $('#from_cust_no_hidden').val();
+        const toCust = $('#to_cust_no_hidden').val();
+        const fromAcc = $('#from_account').val();
+        const toAcc = $('#to_account').val();
+
+        if (fromCust === toCust && fromAcc === toAcc) {
+            alert("Error: You cannot transfer funds to the exact same account.");
+            return;
+        }
+
+        if(!confirm("Confirm transfer of KES " + $('#amount').val() + "?")) return;
+        
+        const btn = $('#submitBtn');
+        btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm me-2"></span>Processing...');
+
+        $.ajax({
+            url: '{% url "transactions:inter_account_transfer" %}',
+            type: 'POST',
+            data: $(this).serialize(),
+            success: function(res) {
+                if(res.status === 'success') {
+                    alert("Success: " + res.message);
+                    location.reload();
+                } else {
+                    alert("Error: " + res.message);
+                    btn.prop('disabled', false).html('<i class="bi bi-arrow-left-right me-2"></i> Execute Transfer');
+                }
+            },
+            error: function() {
+                alert("An unexpected system error occurred.");
+                btn.prop('disabled', false).html('<i class="bi bi-arrow-left-right me-2"></i> Execute Transfer');
+            }
+        });
+    });
+});
+</script>
+
+<style>
+    .list-group-item-action { cursor: pointer; }
+    .list-group-item-action:hover { background-color: #f8f9fa; color: #0d6efd; }
+    .card { transition: transform 0.2s; }
+    #src_results, #dest_results { max-height: 300px; overflow-y: auto; }
+</style>
+{% endblock %}

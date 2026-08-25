@@ -1,0 +1,487 @@
+{% extends "base.html" %}
+{% block content %}
+{% include 'transactions/includes/transactions_quick_actions.html' %}
+<div class="page-shell">
+
+
+    <div class="card">
+        <div class="card-body">
+            <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-3 pb-3 border-bottom">
+                <div>
+                    <h2 class="h4 mb-1"><i class="bi bi-grid-3x3-gap me-2"></i>Bulk Transactions Entry</h2>
+                    <p class="page-sub mb-0">Dynamics-style fast grid entry. Press <kbd>Tab</kbd> on the last cell to auto-insert a new row.</p>
+                </div>
+                <div class="bulk-batch-total">
+                    <span class="kpi-label d-block">Batch Total</span>
+                    <span id="batchTotalDisplay" class="fw-bold">KES 0.00</span>
+                </div>
+            </div>
+
+            <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
+                <div class="d-flex gap-2">
+                    <button type="button" onclick="addNewRow()" class="bulk-btn bulk-btn-primary">
+                        <i class="bi bi-plus-lg me-1"></i> Add Row
+                    </button>
+                    <button type="button" onclick="saveStagingQueue()" class="bulk-btn bulk-btn-ghost">
+                        <i class="bi bi-save me-1"></i> Save Progress
+                    </button>
+                </div>
+                <div class="d-flex gap-2">
+                    <button type="button" onclick="previewBatch()" class="bulk-btn bulk-btn-ghost">
+                        <i class="bi bi-eye me-1"></i> Preview Batch
+                    </button>
+                    <button type="button" onclick="submitBatch()" class="bulk-btn bulk-btn-primary fw-bold">
+                        <i class="bi bi-check2-circle me-1"></i> Post Bulk Transactions
+                    </button>
+                </div>
+            </div>
+
+            <div class="grid-scroll">
+                <table class="grid-table" id="bulkTable">
+                    <thead>
+                        <tr>
+                            <th style="width:3rem;">#</th>
+                            <th style="width:11rem;">Date</th>
+                            <th style="width:18rem;">Customer (Search/No)</th>
+                            <th style="width:16rem;">Account</th>
+                            <th style="width:11rem;">Amount (KES)</th>
+                            <th>Description</th>
+                            <th style="width:3rem;" class="text-center">Del</th>
+                        </tr>
+                    </thead>
+                    <tbody id="gridBody"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Preview Modal -->
+<div class="modal fade" id="previewModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header" style="background:var(--d365-primary); color:#fff; border:none;">
+                <h5 class="modal-title"><i class="bi bi-eye me-2"></i>Review Batch Transactions</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close" onclick="closeModal()"></button>
+            </div>
+            <div class="modal-body">
+                <div id="previewContent" class="small" style="background:var(--d365-surface-alt); padding:1rem; border-radius:var(--d365-radius-md); max-height:24rem; overflow-y:auto; white-space:pre-wrap; font-family:monospace; color:var(--d365-text);"></div>
+            </div>
+            <div class="modal-footer" style="border-top:1px solid var(--d365-border);">
+                <button type="button" class="bulk-btn bulk-btn-ghost" onclick="closeModal()">Cancel</button>
+                <button type="button" class="bulk-btn bulk-btn-primary fw-bold" onclick="confirmAndPost()">
+                    <i class="bi bi-check2-circle me-1"></i> Confirm &amp; Post
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    /* ── D365-themed buttons for Bulk Posting ────────────────────── */
+    .bulk-btn {
+        display: inline-flex; align-items: center; gap: .25rem;
+        padding: .45rem 1rem;
+        font-size: .82rem; font-weight: 600;
+        border-radius: var(--d365-radius-sm, 4px);
+        border: 1px solid transparent;
+        cursor: pointer;
+        transition: background .15s, box-shadow .15s, border-color .15s;
+        line-height: 1.4;
+    }
+    .bulk-btn-primary {
+        background: var(--d365-primary);
+        color: #fff;
+        border-color: var(--d365-primary);
+    }
+    .bulk-btn-primary:hover {
+        background: var(--d365-primary-hover);
+        border-color: var(--d365-primary-hover);
+    }
+    .bulk-btn-primary:active {
+        background: var(--d365-primary-active);
+        border-color: var(--d365-primary-active);
+    }
+    .bulk-btn-ghost {
+        background: transparent;
+        color: var(--d365-primary);
+        border-color: var(--d365-primary);
+    }
+    .bulk-btn-ghost:hover {
+        background: var(--d365-primary-tint-40);
+        color: var(--d365-primary-hover);
+    }
+    .bulk-btn-ghost:active {
+        background: var(--d365-primary-tint-30);
+    }
+
+    /* ── Batch total badge ───────────────────────────────────────── */
+    .bulk-batch-total {
+        background: var(--d365-primary-tint-40);
+        border: 1px solid var(--d365-primary-tint-30);
+        border-radius: var(--d365-radius-md, 6px);
+        padding: .5rem 1rem;
+        text-align: end;
+    }
+    .bulk-batch-total .fw-bold {
+        font-size: 1.15rem;
+        font-family: monospace;
+        color: var(--d365-primary-active);
+    }
+
+    /* ── Airtable/Excel-style blend-in inputs on the grid ────────── */
+    #gridBody input, #gridBody select {
+        border: 1px solid transparent !important;
+        background: transparent;
+        outline: none !important;
+        font-size: .82rem;
+        padding: .25rem .4rem;
+        border-radius: var(--d365-radius-sm);
+        width: 100%;
+        color: var(--d365-text);
+    }
+    #gridBody input:focus, #gridBody select:focus {
+        border: 1px solid var(--d365-primary) !important;
+        background-color: var(--d365-surface) !important;
+        box-shadow: 0 0 0 2px var(--d365-primary-tint-40) !important;
+    }
+    #gridBody .amount-input { text-align: right; font-family: monospace; }
+
+    /* ── Row delete button ───────────────────────────────────────── */
+    .bulk-remove-row {
+        background: none; border: none; cursor: pointer;
+        color: var(--d365-text-secondary);
+        font-size: 1.1rem; line-height: 1;
+        border-radius: var(--d365-radius-sm);
+        padding: .2rem .45rem;
+        transition: color .15s, background .15s;
+    }
+    .bulk-remove-row:hover {
+        color: var(--d365-primary-active);
+        background: var(--d365-primary-tint-40);
+    }
+
+    /* ── Customer search dropdown ────────────────────────────────── */
+    .search-results {
+        position: absolute; left: 0; right: 0; z-index: 2050;
+        background: var(--d365-surface);
+        box-shadow: var(--d365-shadow-8);
+        border: 1px solid var(--d365-border);
+        border-radius: var(--d365-radius-sm);
+        max-height: 10rem; overflow-y: auto;
+    }
+    .search-results .result-item {
+        padding: .4rem .6rem; cursor: pointer;
+        font-size: .8rem; border-bottom: 1px solid var(--d365-border);
+        color: var(--d365-text);
+    }
+    .search-results .result-item:hover { background: var(--d365-primary-tint-40); }
+
+    /* ── Kbd tag ─────────────────────────────────────────────────── */
+    kbd {
+        font-family: monospace; padding: .1rem .35rem;
+        background: var(--d365-surface-alt);
+        border: 1px solid var(--d365-border-strong);
+        border-radius: var(--d365-radius-sm);
+        color: var(--d365-text);
+    }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    const sessionId = "{{ session_id }}";
+    const defaultDate = "{{ today }}";
+
+    let rowCount = 0;
+
+    window.addEventListener('DOMContentLoaded', () => {
+        for(let i = 0; i < 3; i++) {
+            addNewRow(false);
+        }
+    });
+
+    function addNewRow(shouldFocus = true) {
+        rowCount++;
+        const tbody = document.getElementById("gridBody");
+        const tr = document.createElement("tr");
+        tr.setAttribute("id", `row_${rowCount}`);
+
+        tr.innerHTML = `
+            <td class="text-center text-muted">${rowCount}</td>
+            <td><input type="date" value="${defaultDate}" class="date-input"></td>
+            <td class="position-relative">
+                <input type="text" placeholder="Type member no. or name..." oninput="searchCustomer(this)" class="customer-search">
+                <div class="search-results d-none"></div>
+                <input type="hidden" class="cust-no-input">
+            </td>
+            <td>
+                <select class="account-select">
+                    <option value="">Select Customer First</option>
+                </select>
+            </td>
+            <td><input type="number" step="0.01" placeholder="0.00" oninput="calculateBatchTotal()" class="amount-input"></td>
+            <td><input type="text" value="Cash Deposit" class="desc-input"></td>
+            <td class="text-center">
+                <button type="button" onclick="deleteRow('row_${rowCount}')" class="bulk-remove-row" title="Remove">&times;</button>
+            </td>
+        `;
+        tbody.appendChild(tr);
+
+        const descInput = tr.querySelector(".desc-input");
+        descInput.addEventListener('keydown', function(e) {
+            if (e.key === 'Tab' && !e.shiftKey) {
+                const isLastRow = tr.nextElementSibling === null;
+                if (isLastRow) {
+                    e.preventDefault();
+                    addNewRow(true);
+                }
+            }
+        });
+
+        if (shouldFocus) {
+            tr.querySelector(".date-input").focus();
+        }
+    }
+
+    function deleteRow(rowId) {
+        const row = document.getElementById(rowId);
+        if (row) {
+            row.remove();
+            calculateBatchTotal();
+            reorderRowNumbers();
+        }
+    }
+
+    function reorderRowNumbers() {
+        const rows = document.querySelectorAll("#gridBody tr");
+        rows.forEach((row, idx) => {
+            row.querySelector("td:first-child").innerText = idx + 1;
+        });
+    }
+
+    function searchCustomer(input) {
+        const query = input.value.trim();
+        const resultsDiv = input.nextElementSibling;
+        const hiddenInput = resultsDiv.nextElementSibling;
+
+        if (query.length < 2) {
+            resultsDiv.classList.add("d-none");
+            return;
+        }
+
+        fetch(`/transactions/api/customers/search/?q=${encodeURIComponent(query)}`)
+            .then(res => res.json())
+            .then(data => {
+                resultsDiv.innerHTML = "";
+                if (data.results.length === 0) {
+                    resultsDiv.classList.add("d-none");
+                    return;
+                }
+
+                data.results.forEach(cust => {
+                    const div = document.createElement("div");
+                    div.className = "result-item";
+                    div.innerText = `${cust.cust_no} - ${cust.full_name} (${cust.national_id})`;
+                    div.onclick = () => {
+                        input.value = `${cust.cust_no} - ${cust.full_name}`;
+                        hiddenInput.value = cust.cust_no;
+                        resultsDiv.classList.add("d-none");
+                        populateAccounts(input.closest("tr"), cust.cust_no);
+                    };
+                    resultsDiv.appendChild(div);
+                });
+                resultsDiv.classList.remove("d-none");
+            });
+    }
+
+    document.addEventListener("click", function(e) {
+        if (!e.target.classList.contains("customer-search")) {
+            document.querySelectorAll(".search-results").forEach(el => el.classList.add("d-none"));
+        }
+    });
+
+    function populateAccounts(trElement, custNo) {
+        const select = trElement.querySelector(".account-select");
+        select.innerHTML = `<option value="">Loading...</option>`;
+
+        fetch(`/transactions/api/get-accounts/?cust_no=${custNo}`)
+            .then(res => res.json())
+            .then(data => {
+                select.innerHTML = `<option value="">-- Select Account --</option>`;
+                data.results.forEach(acc => {
+                    const opt = document.createElement("option");
+                    opt.value = acc.id;
+                    opt.innerText = acc.text;
+                    opt.dataset.isLoan = acc.is_loan;
+                    select.appendChild(opt);
+                });
+            });
+    }
+
+    function collectData() {
+        const dataRows = [];
+        const rows = document.querySelectorAll("#gridBody tr");
+
+        rows.forEach(tr => {
+            const custNoInput = tr.querySelector(".cust-no-input");
+            const selectEl = tr.querySelector(".account-select");
+            const amountInput = tr.querySelector(".amount-input");
+
+            const custNo = custNoInput ? custNoInput.value : null;
+            const amountVal = amountInput ? parseFloat(amountInput.value) : 0;
+
+            if (custNo && selectEl.value && amountVal > 0) {
+                const selectedOpt = selectEl.options[selectEl.selectedIndex];
+                const isLoan = selectedOpt.dataset.isLoan === "true";
+
+                dataRows.push({
+                    date: tr.querySelector(".date-input").value,
+                    cust_no: custNo,
+                    account_type: selectEl.value,
+                    amount: amountVal,
+                    description: tr.querySelector(".desc-input").value,
+                    is_loan: isLoan
+                });
+            }
+        });
+        return dataRows;
+    }
+
+    function calculateBatchTotal() {
+        let total = 0;
+        document.querySelectorAll(".amount-input").forEach(input => {
+            const val = parseFloat(input.value);
+            if (!isNaN(val)) {
+                total += val;
+            }
+        });
+        document.getElementById("batchTotalDisplay").innerText = "KES " + total.toLocaleString('en-US', {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2
+        });
+    }
+
+    function saveStagingQueue() {
+        const rows = collectData();
+        if (rows.length === 0) {
+            alert("No valid complete transaction rows found to save.");
+            return;
+        }
+
+        fetch("/transactions/bulk/save/", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "X-CSRFToken": getCookie("csrftoken")
+            },
+            body: JSON.stringify({ session_id: sessionId, rows: rows })
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                alert(`Progress saved! ${data.count} transaction records staged successfully.`);
+            } else {
+                alert("Error saving progress: " + data.error);
+            }
+        })
+        .catch(err => {
+            alert("Network error: " + err.message);
+        });
+    }
+
+    let previewModalInstance;
+    function getPreviewModal() {
+        if (!previewModalInstance) {
+            previewModalInstance = new bootstrap.Modal(document.getElementById('previewModal'));
+        }
+        return previewModalInstance;
+    }
+
+    function previewBatch() {
+        const rows = collectData();
+        if (rows.length === 0) {
+            alert("Enter at least one complete transaction to preview.");
+            return;
+        }
+
+        let previewText = `BATCH SUMMARY PREVIEW\n=================================\n`;
+        let total = 0;
+
+        rows.forEach((r, idx) => {
+            const typeLabel = r.is_loan ? "LOAN" : "SAVINGS";
+            const amountFormatted = r.amount.toLocaleString(undefined, {minimumFractionDigits: 2});
+
+            previewText += `${idx+1}. [${typeLabel}] Member: ${r.cust_no} | Acc: ${r.account_type} | KES ${amountFormatted}\n`;
+            total += r.amount;
+        });
+
+        previewText += `=================================\nTotal Batch: KES ${total.toLocaleString(undefined, {minimumFractionDigits: 2})}`;
+
+        document.getElementById("previewContent").innerText = previewText;
+        getPreviewModal().show();
+    }
+
+    function closeModal() {
+        getPreviewModal().hide();
+    }
+
+    function submitBatch() {
+        previewBatch();
+    }
+
+    function confirmAndPost() {
+        closeModal();
+        const rows = collectData();
+
+        fetch("/transactions/bulk/save/", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "X-CSRFToken": getCookie("csrftoken")
+            },
+            body: JSON.stringify({ session_id: sessionId, rows: rows })
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (!data.success) throw new Error(data.error);
+
+            return fetch("/transactions/bulk/post/", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "X-CSRFToken": getCookie("csrftoken")
+                },
+                body: JSON.stringify({ session_id: sessionId })
+            });
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                alert(`Success! Successfully processed ${data.processed_count} transaction entries to the general ledger.`);
+                window.location.reload();
+            } else {
+                alert("Post Failure: " + data.error);
+            }
+        })
+        .catch(err => {
+            alert("Error during processing: " + err.message);
+        });
+    }
+
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+</script>
+{% endblock %}

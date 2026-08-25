@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Transactions Posting</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        /* CSS Styles */
+        .card { border-radius: 0.5rem; }
+        .receipt-container { 
+            width: 100%; max-height: 300px; overflow-y: auto; 
+            font-family: 'Courier New', monospace; font-size: 14px; 
+            padding: 15px; background-color: #f8f9fa; border: 1px solid #dee2e6; 
+            border-radius: 0.375rem; 
+        }
+        .form-label { font-size: 0.9rem; margin-bottom: 0.2rem; }
+        .form-control, .form-select { font-size: 0.9rem; }
+        .btn-group-sm > .btn, .btn-sm { padding: 0.25rem 0.5rem; font-size: 0.875rem; }
+        .formset-row { margin-bottom: 0.5rem; }
+    </style>
+</head>
+<body class="bg-light">
+
+<div class="container py-4">
+    <h2 class="text-center mb-4 text-secondary">Transactions Posting</h2>
+
+    {% for msg in messages %}
+        <div class="alert alert-{{ msg.tags }} text-center">{{ msg }}</div>
+    {% endfor %}
+
+    <div class="row justify-content-center">
+        <div class="col-lg-10 col-md-12">
+            
+            {# Added novalidate to prevent browser validation from interfering with formset logic #}
+            <form method="post" novalidate>
+                {% csrf_token %}
+
+                <div class="row">
+                    <div class="col-md-6 mb-4">
+                        <div class="card p-3 shadow-sm h-100">
+                            <h5 class="card-title text-center text-primary mb-3">Customer & Primary Details</h5>
+                            <div class="row g-2">
+                                <div class="col-12">
+                                    <label for="{{ form.cust_no.id_for_label }}" class="form-label">Customer No</label>
+                                    {{ form.cust_no }}
+                                    <small class="form-text text-muted">Type and press Enter.</small>
+                                </div>
+                                <div class="col-12">
+                                    <label for="cust_name" class="form-label">Customer Name</label>
+                                    <input id="cust_name" class="form-control" readonly>
+                                </div>
+                                <div class="col-12">
+                                    <label for="{{ form.date.id_for_label }}" class="form-label">Date</label>
+                                    {{ form.date }}
+                                </div>
+                                <div class="col-12">
+                                    <label for="{{ form.amount_paid.id_for_label }}" class="form-label">Amount Paid</label>
+                                    {{ form.amount_paid }}
+                                </div>
+                                <div class="col-12">
+                                    <label for="{{ form.description.id_for_label }}" class="form-label">Description</label>
+                                    {{ form.description }}
+                                </div>
+                            </div>
+
+                            <hr class="my-3">
+
+                            {# ==================== SAVINGS/SHARE PAYMENTS FORMSET ==================== #}
+                            <h5 class="card-title text-center text-secondary mb-3">Savings/Share Payments</h5>
+                            <div id="savings-rows" data-prefix="savings">
+                                {{ savings_formset.management_form }}
+                                {% for s_form in savings_formset %}
+                                    <div class="row g-2 mb-2 align-items-center formset-row">
+                                        <div class="col-6">
+                                            {# Render the Django form field #}
+                                            {{ s_form.account_type }} 
+                                            {% if s_form.DELETE %}{{ s_form.DELETE }}{% endif %}
+                                        </div>
+                                        <div class="col-4">
+                                            {{ s_form.amount }}
+                                        </div>
+                                        <div class="col-2 text-end">
+                                            <button type="button" class="btn btn-danger btn-sm remove-row">X</button>
+                                        </div>
+                                    </div>
+                                {% endfor %}
+
+                                {# Hidden Template Row for Cloning Savings/Share Forms #}
+                                <div id="empty-savings-form-template" style="display: none;">
+                                    <div class="row g-2 mb-2 align-items-center formset-row">
+                                        <div class="col-6">
+                                            {# CRITICAL FIX: Removed 'required' attribute #}
+                                            <select name="__prefix__-account_type" class="form-select">
+                                                <option value="" selected>---------</option>
+                                                {% for choice in savings_choices %}
+                                                    <option value="{{ choice.account_type }}">{{ choice.account_name }}</option>
+                                                {% endfor %}
+                                            </select>
+                                            {# Added hidden DELETE field for clean row management #}
+                                            <input type="hidden" name="__prefix__-DELETE" id="id___prefix__-DELETE">
+                                        </div>
+                                        <div class="col-4">
+                                            {# CRITICAL FIX: Removed 'required' attribute #}
+                                            <input type="number" name="__prefix__-amount" class="form-control" step="0.01" min="0">
+                                        </div>
+                                        <div class="col-2 text-end">
+                                            <button type="button" class="btn btn-danger btn-sm remove-row">X</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="text-center mt-2">
+                                <button type="button" id="addSavings" class="btn btn-outline-secondary btn-sm">Add Savings/Shares</button>
+                            </div>
+                            
+                            <hr class="my-3">
+                            
+                            {# ==================== LOAN PAYMENTS FORMSET ==================== #}
+                            <h5 class="card-title text-center text-primary mb-3">Loan Payments</h5>
+                            <div id="loan-rows" data-prefix="loan">
+                                {{ loan_formset.management_form }}
+                                {% for loan_form in loan_formset %}
+                                    <div class="row g-2 mb-2 align-items-center formset-row">
+                                        <div class="col-6">
+                                            {{ loan_form.loan_type }}
+                                            {% if loan_form.DELETE %}{{ loan_form.DELETE }}{% endif %}
+                                        </div>
+                                        <div class="col-4">{{ loan_form.amount }}</div>
+                                        <div class="col-2 text-end">
+                                            <button type="button" class="btn btn-danger btn-sm remove-row">X</button>
+                                        </div>
+                                    </div>
+                                {% endfor %}
+
+                                {# Hidden Template Row for Cloning Loan Forms #}
+                                <div id="empty-loan-form-template" style="display: none;">
+                                    <div class="row g-2 mb-2 align-items-center formset-row">
+                                        <div class="col-6">
+                                            {# CRITICAL FIX: Removed 'required' attribute #}
+                                            <select name="__prefix__-loan_type" class="form-select">
+                                                <option value="" selected>---------</option>
+                                                {% for choice in loan_choices %}
+                                                    <option value="{{ choice.account_type }}">{{ choice.account_name }}</option>
+                                                {% endfor %}
+                                            </select>
+                                            {# Added hidden DELETE field for clean row management #}
+                                            <input type="hidden" name="__prefix__-DELETE" id="id___prefix__-DELETE">
+                                        </div>
+                                        <div class="col-4">
+                                            {# CRITICAL FIX: Removed 'required' attribute #}
+                                            <input type="number" name="__prefix__-amount" class="form-control" step="0.01" min="0">
+                                        </div>
+                                        <div class="col-2 text-end">
+                                            <button type="button" class="btn btn-danger btn-sm remove-row">X</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="text-center mt-2">
+                                <button type="button" id="addLoan" class="btn btn-outline-primary btn-sm">Add More Loans</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-md-6 mb-4">
+                        <div class="card p-3 shadow-sm h-100">
+                            <h5 class="card-title text-center text-primary mb-3">Preview Receipt</h5>
+                            <div id="previewBox" class="receipt-container mx-auto">
+                                {% if preview_text %}
+                                    <pre>{{ preview_text }}</pre>
+                                {% else %}
+                                    <p class="text-muted text-center">Enter data and click "Preview Split".</p>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-12 text-center mt-3">
+                    <button type="submit" name="preview" class="btn btn-secondary me-2">Preview Split</button>
+                    <button type="submit" name="post" class="btn btn-success me-2">Post to DB</button>
+                    <a href="{% url 'transactions:post_transaction_popup' %}" class="btn btn-outline-secondary">Reset</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+(function(){
+
+    // =========================================================================
+    // 1. Generic Formset Management Functions
+    // =========================================================================
+
+    function attachRemove(btn, container) {
+        if (!btn) return;
+        btn.addEventListener('click', function() {
+            const row = btn.closest('.formset-row');
+            if (row) {
+                // Remove the row from the DOM
+                row.remove();
+                // Re-index all remaining rows
+                updateFormsetIndices(container);
+            }
+        });
+    }
+
+    function updateFormsetIndices(container) {
+        const prefix = container.getAttribute('data-prefix'); // 'savings' or 'loan'
+        const rows = container.querySelectorAll('.formset-row');
+        // Find the TOTAL_FORMS management input
+        const totalForms = container.querySelector(`input[name$="TOTAL_FORMS"]`);
+
+        rows.forEach((row, i) => {
+            row.querySelectorAll('select, input').forEach(el => {
+                const nameAttr = el.name;
+                
+                // Only update elements that use the 'form-i-fieldname' structure
+                if (nameAttr && nameAttr.includes('-')) {
+                    // This logic assumes field names don't contain a hyphen *except* the index part
+                    const parts = nameAttr.split('-');
+                    const base = parts.slice(-1)[0]; 
+                    
+                    // Update name and ID attributes using the new index 'i'
+                    el.name = `${prefix}-${i}-${base}`;
+                    el.id = `id_${prefix}-${i}-${base}`;
+                }
+            });
+        });
+        
+        // Update the TOTAL_FORMS count
+        if (totalForms) totalForms.value = rows.length;
+    }
+
+    function setupFormset(containerId, addButtonId, templateId) {
+        const container = document.getElementById(containerId);
+        const addBtn = document.getElementById(addButtonId);
+        const templateContainer = document.getElementById(templateId);
+        // Use outerHTML and remove the wrapper div to get the inner row HTML
+        const templateHtml = templateContainer.querySelector('.formset-row').outerHTML; 
+        
+        // 1. Setup Add Button
+        if (addBtn) {
+            addBtn.addEventListener('click', function() {
+                const totalForms = container.querySelector(`input[name$="TOTAL_FORMS"]`);
+                const currentIndex = parseInt(totalForms.value, 10);
+                
+                // Replace '__prefix__' with the current index, ensuring Django's prefix is used
+                const prefix = container.getAttribute('data-prefix');
+                const newIndexPlaceholder = `${prefix}-${currentIndex}`;
+                
+                // Replace '__prefix__' with the new index placeholder
+                let newFormHtml = templateHtml.replace(/__prefix__/g, newIndexPlaceholder);
+
+                // Use the container to hold the new element temporarily for parsing
+                const tempDiv = document.createElement('div');
+                tempDiv.innerHTML = newFormHtml.trim();
+                const newRow = tempDiv.firstChild;
+
+                container.appendChild(newRow);
+                attachRemove(newRow.querySelector('.remove-row'), container);
+                
+                // Manually update TOTAL_FORMS, re-indexing is handled by the remove logic later, but we update the count immediately
+                totalForms.value = currentIndex + 1;
+            });
+        }
+
+        // 2. Setup Remove Buttons for initial rows
+        container.querySelectorAll('.remove-row').forEach(btn => attachRemove(btn, container));
+        
+        // Note: Initial rows rendered by Django already have correct indices and names.
+    }
+
+    // =========================================================================
+    // 2. Initialization
+    // =========================================================================
+    
+    // Setup Savings Formset
+    setupFormset('savings-rows', 'addSavings', 'empty-savings-form-template');
+    
+    // Setup Loan Formset
+    setupFormset('loan-rows', 'addLoan', 'empty-loan-form-template');
+
+    // =========================================================================
+    // 3. Customer Lookup
+    // =========================================================================
+    const custInput = document.getElementById('id_cust_no');
+    const custNameInput = document.getElementById('cust_name');
+    if(custInput){
+        custInput.addEventListener('blur', function(){
+            const q = custInput.value.trim();
+            if(!q) {
+                custNameInput.value = '';
+                return;
+            }
+            // ASSUMING YOUR API ENDPOINT IS /transactions/api/customers/by_cust_no/
+            fetch(`/transactions/api/customers/by_cust_no/?cust_no=${encodeURIComponent(q)}`) 
+                .then(r => r.json())
+                .then(data => {
+                    custNameInput.value = data.found ? data.full_name : 'Customer Not Found';
+                })
+                .catch(err => {
+                    console.error("Customer lookup error:", err);
+                    custNameInput.value = 'Error fetching customer data';
+                });
+        });
+    }
+
+    // =========================================================================
+    // 4. Preview Display (Handles initial load if preview was run)
+    // =========================================================================
+    const previewBox = document.getElementById('previewBox');
+    {% if preview_text %}
+        // Use |safe filter if content is guaranteed safe, or escapejs as you did
+        previewBox.innerHTML = '<pre>' + '{{ preview_text|escapejs }}' + '</pre>';
+    {% endif %}
+
+})();
+</script>
+
+</body>
+</html>

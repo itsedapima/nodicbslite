@@ -1,0 +1,86 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block title %}Loan Charges — NODi Lite{% endblock %}
+
+{% block content %}
+<div class="page-shell">
+
+    {# ── App Toolbar ──────────────────────────────────────────────────── #}
+    <div class="app-toolbar">
+        <div class="app-toolbar-body">
+            <h1 class="toolbar-title">
+                <span class="toolbar-badge"><i class="bi bi-tag"></i></span> Loan Charges
+            </h1>
+            <div class="toolbar-actions">
+                <a href="{% url 'loans:charge_add' %}" class="btn btn-primary">
+                    <i class="bi bi-plus-lg me-1"></i> Add Charge
+                </a>
+                <a href="{% url 'loans:list' %}" class="btn btn-outline-secondary">
+                    <i class="bi bi-arrow-left me-1"></i> Loans
+                </a>
+            </div>
+        </div>
+    </div>
+
+    {# ── Messages ─────────────────────────────────────────────────────── #}
+    {% if messages %}
+    <div class="mb-3">
+        {% for message in messages %}
+        <div class="alert alert-{{ message.tags|default:'info' }} alert-dismissible fade show" role="alert">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    {# ── Charges Table ────────────────────────────────────────────────── #}
+    <div class="data-card">
+        <div class="grid-scroll">
+            <table class="grid-table">
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Type</th>
+                        <th class="num">Value</th>
+                        <th>Active</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for charge in charges %}
+                    <tr>
+                        <td><strong>{{ charge.name }}</strong></td>
+                        <td>
+                            {% if charge.charge_type == 'percentage' %}
+                                <span class="badge bg-info">Percentage</span>
+                            {% else %}
+                                <span class="badge bg-secondary">Fixed</span>
+                            {% endif %}
+                        </td>
+                        <td class="num">
+                            {{ charge.value|floatformat:2|intcomma }}{% if charge.charge_type == 'percentage' %}%{% endif %}
+                        </td>
+                        <td>
+                            {% if charge.is_active %}
+                                <span class="badge bg-success">Active</span>
+                            {% else %}
+                                <span class="badge bg-danger">Inactive</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="4" class="text-center text-muted py-5">
+                            <i class="bi bi-inbox fs-1 d-block mb-2"></i>
+                            No charges configured. Click <strong>Add Charge</strong> to create one.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+</div>
+{% endblock %}

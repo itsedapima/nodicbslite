@@ -1,0 +1,69 @@
+{% comment %}
+  statements_quick_actions.html — D365 quick-links toolbar
+  Mirrors the dashboard quick-links pill style for visual consistency.
+{% endcomment %}
+
+<style>
+  .quick-links {
+    position: -webkit-sticky;
+    position: sticky;
+    top: var(--header-height, 3.25rem);
+    z-index: 1030;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    display: flex;
+    flex-wrap: wrap;
+    gap: .35rem;
+    margin-bottom: 1.5rem;
+    padding: .55rem .7rem;
+    background: #f5f7fb;
+    border: 1px solid #e3e6ec;
+    border-radius: .45rem;
+  }
+  .quick-links .ql-label {
+    font-size: .7rem;
+    color: #6c757d;
+    text-transform: uppercase;
+    letter-spacing: .05em;
+    align-self: center;
+    margin-right: .35rem;
+    font-weight: 700;
+  }
+  .quick-links a,
+  .quick-links .ql-dropdown > button {
+    font-size: .8rem;
+    padding: .25rem .65rem;
+    background: #fff;
+    border: 1px solid #d8dde5;
+    border-radius: 999px;
+    color: #0E2B4D;
+    text-decoration: none;
+    transition: all .15s ease;
+    white-space: nowrap;
+    cursor: pointer;
+  }
+  .quick-links a:hover,
+  .quick-links .ql-dropdown > button:hover {
+    background: #0E2B4D;
+    color: #fff;
+    border-color: #0E2B4D;
+  }
+  .quick-links a i,
+  .quick-links .ql-dropdown > button i { font-size: .85rem; margin-right: .25rem; }
+</style>
+
+<div class="quick-links">
+    <span class="ql-label">Statements</span>
+
+    <a href="{% url 'statements:panel' %}">
+        <i class="bi bi-file-earmark-bar-graph"></i> Statements
+    </a>
+                <a href="{% url 'transactions:search_dividend_slip' %}">
+                <i class="bi bi-file-earmark-pdf"></i> Dividend Slips
+            </a>
+    <a href="{% url 'statements:statement_dashboard' %}">
+        <i class="bi bi-clock-history"></i> Automated Full Statements
+    </a>
+    <a href="{% url 'transactions:bulk_post_transaction' %}">
+        <i class="bi bi-layers-half"></i> Bulk Posting
+    </a>
+</div>

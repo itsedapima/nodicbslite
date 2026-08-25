@@ -1,0 +1,232 @@
+{% extends "base.html" %}
+{% load humanize %}
+{% block title %}Loan Restructure – NODi CBS{% endblock %}
+{% block extra_css %}
+<style>
+.page-hero { background: linear-gradient(135deg, #0E2B4D 0%, #1a4170 100%); color: #fff; padding: 1.5rem; border-radius: .75rem; margin-bottom: 1.25rem; }
+.page-hero h1 { font-size: 1.4rem; font-weight: 700; margin: 0 0 .15rem; color: #fff; }
+.page-hero p { margin: 0; opacity: .85; font-size: .85rem; color: #fff; }
+.page-hero i { color: #fff; }
+.detail-card { background: var(--d365-surface, #fff); border: 1px solid var(--d365-border, #EDEBE9); border-radius: .5rem; box-shadow: var(--d365-shadow-2); overflow: hidden; margin-bottom: 1.25rem; }
+.detail-card-header { background: var(--d365-surface-alt, #FAF9F8); border-bottom: 2px solid var(--d365-border, #EDEBE9); padding: .75rem 1rem; font-size: .8rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--d365-text-secondary, #605E5C); display: flex; justify-content: space-between; align-items: center; }
+.detail-card-body { padding: 1rem; }
+.info-row { display: flex; justify-content: space-between; padding: .4rem 0; border-bottom: 1px solid var(--d365-border, #EDEBE9); font-size: .84rem; }
+.info-row:last-child { border-bottom: none; }
+.info-row .label { color: var(--d365-text-secondary, #605E5C); }
+.info-row .value { color: var(--d365-text, #323130); font-weight: 600; }
+.preview-box { border: 1px solid var(--d365-primary-tint-30, #C7E0F4); background: var(--d365-primary-tint-40, #DEECF9); border-radius: .5rem; padding: 1rem; }
+.btn-d365 { font-size: .82rem; padding: .35rem .85rem; border-radius: .4rem; font-weight: 600; transition: all .15s ease; }
+.btn-d365-primary { background: var(--d365-primary, #0078D4); color: #fff; border: 1px solid var(--d365-primary, #0078D4); }
+.btn-d365-primary:hover { background: var(--d365-primary-hover, #106EBE); border-color: var(--d365-primary-hover, #106EBE); color: #fff; }
+.btn-d365-outline { background: var(--d365-surface, #fff); color: var(--d365-text, #323130); border: 1px solid var(--d365-border-strong, #D2D0CE); }
+.btn-d365-outline:hover { background: var(--d365-primary-tint-40, #DEECF9); color: var(--d365-primary, #0078D4); border-color: var(--d365-primary, #0078D4); }
+.form-label { font-weight: 600; font-size: .82rem; color: var(--d365-text, #323130); }
+.form-text { color: var(--d365-text-secondary, #605E5C); }
+</style>
+{% endblock %}
+{% block content %}
+{% include 'loans/includes/loans_quick_actions.html' %}
+
+{% if messages %}
+{% for message in messages %}
+<div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert" style="border-radius:.4rem;">
+    {{ message }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+{% endfor %}
+{% endif %}
+
+<div class="page-hero">
+    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+        <div>
+            <h1><i class="bi bi-sliders me-2"></i>Restructure Loan: {{ loan.loan_no }}</h1>
+            <p>{{ loan.customer.full_name }} · {{ loan.loan_type.account_name }}</p>
+        </div>
+        <span class="badge" style="background: rgba(255,255,255,.15); color: #fff; font-size: .78rem; padding: .35rem .75rem; border-radius: .35rem;">
+            {% if loan.is_restructured %}Previously Restructured{% else %}First Restructure{% endif %}
+        </span>
+    </div>
+</div>
+
+<div class="row justify-content-center">
+  <div class="col-lg-10">
+
+    {# ── Loan Snapshot ──────────────────────────────────────── #}
+    <div class="row g-3 mb-3">
+        <div class="col-md-6">
+            <div class="detail-card" style="margin-bottom:0;">
+                <div class="detail-card-header">
+                    <span><i class="bi bi-person me-1"></i> Member & Terms</span>
+                </div>
+                <div class="detail-card-body">
+                    <div class="fw-bold mb-1" style="color: var(--d365-text, #323130);">{{ loan.customer.full_name }}</div>
+                    <div class="small mb-2" style="color: var(--d365-text-secondary, #605E5C);">{{ loan.customer.cust_no }} · {{ loan.customer.phone|default:"—" }}</div>
+                    <div class="info-row"><span class="label">Product</span><span class="value">{{ loan.loan_type.account_name }}</span></div>
+                    <div class="info-row"><span class="label">Interest Rate</span><span class="value">{{ loan.interest_rate }}% ({{ loan.loan_type.get_interest_calc_method_display|default:loan.loan_type.interest_calc_method }})</span></div>
+                    <div class="info-row"><span class="label">Original Loan Date</span><span class="value">{{ loan.loan_date|date:"d M Y" }}</span></div>
+                    <div class="info-row"><span class="label">Original Period</span><span class="value">{{ loan.loan_period }} months</span></div>
+                    <div class="info-row"><span class="label">Original Installment</span><span class="value">KES {{ loan.installment|floatformat:2|intcomma }}</span></div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="detail-card" style="margin-bottom:0;">
+                <div class="detail-card-header">
+                    <span><i class="bi bi-cash-stack me-1"></i> Balances at Now</span>
+                </div>
+                <div class="detail-card-body">
+                    <div class="info-row" style="border-bottom: 2px solid var(--d365-border, #EDEBE9);">
+                        <span class="label">Outstanding</span>
+                        <strong id="outstanding-val" data-value="{{ outstanding|stringformat:'s' }}" style="color: var(--d365-danger, #D13438); font-size: .95rem;">KES {{ outstanding|floatformat:2|intcomma }}</strong>
+                    </div>
+                    <div class="info-row"><span class="label">· Principal portion</span><span class="value">KES {{ principal_balance|floatformat:2|intcomma }}</span></div>
+                    <div class="info-row"><span class="label">· Interest portion</span><span class="value">KES {{ interest_balance|floatformat:2|intcomma }}</span></div>
+                    <div class="small mt-2" style="color: var(--d365-text-secondary, #605E5C);">
+                        On submit, the outstanding balance becomes the <em>new principal</em>. Aging resets to zero from the new loan date.
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {# ── Restructure Form ───────────────────────────────────── #}
+    <div class="detail-card">
+        <div class="detail-card-header">
+            <span><i class="bi bi-pencil-square me-1"></i> New Terms</span>
+        </div>
+        <div class="detail-card-body">
+            <form method="post" novalidate id="restructureForm">
+                {% csrf_token %}
+
+                {% if form.non_field_errors %}
+                <div class="alert alert-danger" style="border-radius:.4rem;">{{ form.non_field_errors }}</div>
+                {% endif %}
+
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        <label class="form-label">New Loan Date</label>
+                        {{ form.new_loan_date }}
+                        {% if form.new_loan_date.errors %}<div class="text-danger small">{{ form.new_loan_date.errors|join:", " }}</div>{% endif %}
+                        <div class="form-text">{{ form.new_loan_date.help_text }}</div>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">New Repayment Period (Months)</label>
+                        {{ form.new_period }}
+                        {% if form.new_period.errors %}<div class="text-danger small">{{ form.new_period.errors|join:", " }}</div>{% endif %}
+                        <div class="form-text">Max: {{ loan.loan_type.max_repayment_period }} months</div>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">New Monthly Installment</label>
+                        {{ form.new_installment }}
+                        {% if form.new_installment.errors %}<div class="text-danger small">{{ form.new_installment.errors|join:", " }}</div>{% endif %}
+                        <div class="form-text">
+                            Leave 0 to auto-calculate.
+                            <button type="button" class="btn btn-link btn-sm p-0" id="autoCalcBtn" style="color: var(--d365-primary, #0078D4);">Preview auto</button>
+                            &rarr; <span id="autoCalcResult" class="fw-bold" style="color: var(--d365-primary, #0078D4);"></span>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Restructure Fee (%)</label>
+                        {{ form.restructure_fee_rate }}
+                        {% if form.restructure_fee_rate.errors %}<div class="text-danger small">{{ form.restructure_fee_rate.errors|join:", " }}</div>{% endif %}
+                        <div class="form-text">Charged as: <span id="feePreview" class="fw-bold" style="color: var(--d365-danger, #D13438);">KES 0.00</span></div>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Reason for Restructure</label>
+                        {{ form.reason }}
+                        {% if form.reason.errors %}<div class="text-danger small">{{ form.reason.errors|join:", " }}</div>{% endif %}
+                    </div>
+                </div>
+
+                {# ── Preview ─────────────────────────────────────── #}
+                <div class="preview-box mt-3">
+                    <h6 class="mb-2" style="color: var(--d365-primary, #0078D4); font-size: .82rem; font-weight: 700;"><i class="bi bi-arrow-repeat me-1"></i> After Restructure (Preview)</h6>
+                    <div class="row small">
+                        <div class="col-md-6">
+                            <div>New principal: <strong>KES {{ outstanding|floatformat:2|intcomma }}</strong></div>
+                            <div>New loan date: <strong id="prev-loan-date">—</strong></div>
+                            <div>New period: <strong id="prev-period">—</strong> months</div>
+                        </div>
+                        <div class="col-md-6">
+                            <div>New installment: <strong id="prev-installment">—</strong></div>
+                            <div>Restructure fee: <strong id="prev-fee">KES 0.00</strong></div>
+                            <div>Arrears: <strong>Reset to 0</strong></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="d-flex justify-content-between pt-3 mt-2">
+                    <a href="{% url 'loans:view_loan_details' loan.pk %}" class="btn btn-d365 btn-d365-outline">
+                        <i class="bi bi-x-circle me-1"></i>Cancel
+                    </a>
+                    <button type="submit" class="btn btn-d365 btn-d365-primary"
+                            onclick="return confirm('Apply this restructure? A PDF summary will be generated.');">
+                        <i class="bi bi-check-circle-fill me-1"></i>Apply Restructure
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+(function () {
+  const outstanding = parseFloat({{ outstanding|default:0|stringformat:'.2f' }});
+  const interestRate = parseFloat({{ loan.interest_rate|default:0|stringformat:'.4f' }});
+  const method = "{{ loan.loan_type.interest_calc_method|default:'reducing_balance' }}";
+
+  const fmt = (v) => 'KES ' + (isFinite(v) ? v : 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
+
+  function calcInstallment(principal, annualPct, n) {
+    if (!principal || principal <= 0 || !n || n <= 0) return 0;
+    const r = (annualPct / 100) / 12;
+    if (method === "flat_rate") {
+      return principal / n + principal * r;
+    }
+    if (r === 0) return principal / n;
+    const c = Math.pow(1 + r, n);
+    return principal * (r * c) / (c - 1);
+  }
+
+  const periodInput = document.querySelector('[name="new_period"]');
+  const installmentInput = document.querySelector('[name="new_installment"]');
+  const feeInput = document.querySelector('[name="restructure_fee_rate"]');
+  const dateInput = document.querySelector('[name="new_loan_date"]');
+
+  const feePreview = document.getElementById('feePreview');
+  const autoCalcResult = document.getElementById('autoCalcResult');
+  const prevLoanDate = document.getElementById('prev-loan-date');
+  const prevPeriod = document.getElementById('prev-period');
+  const prevInstallment = document.getElementById('prev-installment');
+  const prevFee = document.getElementById('prev-fee');
+
+  function update() {
+    const n = parseInt(periodInput.value, 10) || 0;
+    const feeRate = parseFloat(feeInput.value) || 0;
+    const userInstallment = parseFloat(installmentInput.value) || 0;
+    const fee = outstanding * feeRate / 100;
+    const effectiveInstallment = userInstallment > 0 ? userInstallment : calcInstallment(outstanding, interestRate, n);
+
+    feePreview.textContent = fmt(fee);
+    prevLoanDate.textContent = dateInput.value || '—';
+    prevPeriod.textContent = n || '—';
+    prevInstallment.textContent = fmt(effectiveInstallment);
+    prevFee.textContent = fmt(fee);
+  }
+
+  document.getElementById('autoCalcBtn').addEventListener('click', function () {
+    const n = parseInt(periodInput.value, 10) || 0;
+    const v = calcInstallment(outstanding, interestRate, n);
+    autoCalcResult.textContent = fmt(v);
+    installmentInput.value = v.toFixed(2);
+    update();
+  });
+
+  [periodInput, installmentInput, feeInput, dateInput].forEach(el => {
+    if (el) el.addEventListener('input', update);
+  });
+  update();
+})();
+</script>
+{% endblock %}

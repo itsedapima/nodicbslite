@@ -1,0 +1,119 @@
+{% extends "base.html" %}
+{% block content %}
+{% include 'transactions/includes/transactions_quick_actions.html' %}
+
+<div class="container my-5">
+
+    
+    <div class="row justify-content-center mt-4">
+        <div class="col-md-6 col-lg-5">
+            
+            <div class="card shadow-sm border-0">
+                <div class="card-header bg-white py-3 border-bottom border-light">
+                    <div class="d-flex align-items-center">
+                        <div class="bg-primary bg-opacity-10 p-2 rounded me-3 text-primary">
+                            <i class="bi bi-gear-fill lh-1 d-block fs-5"></i>
+                        </div>
+                        <div>
+                            <h6 class="mb-0 fw-bold text-dark text-uppercase tracking-wide" style="letter-spacing: 0.5px;">Account Product Setup</h6>
+                            <small class="text-muted">Configure financial product parameters</small>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card-body p-4">
+                    <form method="post" novalidate autocomplete="off">
+                        {% csrf_token %}
+
+                        {% if form.non_field_errors %}
+                            <div class="alert alert-danger p-2 small mb-3 rounded shadow-sm">
+                                {% for error in form.non_field_errors %}
+                                    <div class="d-flex align-items-center">
+                                        <i class="bi bi-exclamation-triangle-fill me-2"></i> {{ error }}
+                                    </div>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+
+                        {% for field in form %}
+                            <div class="mb-3">
+                                {% if field.name == 'is_loan' %}
+                                    <label class="form-label small fw-bold text-secondary mb-2 d-block">
+                                        {{ field.label }}
+                                    </label>
+                                    <div class="p-3 bg-light rounded border d-flex justify-content-start gap-4">
+                                        {% for radio in field %}
+                                            <div class="form-check form-check-inline mb-0">
+                                                {{ radio.tag }}
+                                                <label class="form-check-label small fw-medium cursor-pointer text-dark" for="{{ radio.id_for_label }}">
+                                                    {{ radio.choice_label }}
+                                                </label>
+                                            </div>
+                                        {% endfor %}
+                                    </div>
+                                
+                                {% else %}
+                                    <label class="form-label small fw-bold text-secondary mb-1" for="{{ field.id_for_label }}">
+                                        {{ field.label }}
+                                    </label>
+                                    {{ field }}
+                                {% endif %}
+
+                                {% if field.errors %}
+                                    <div class="invalid-feedback d-block mt-1">
+                                        {% for error in field.errors %}
+                                            <div class="small d-flex align-items-center text-danger fw-medium">
+                                                <i class="bi bi-x-circle-fill me-1 small"></i> {{ error }}
+                                            </div>
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        {% endfor %}
+
+                        <div class="d-grid gap-2 mt-4 pt-2">
+                            <button type="submit" class="btn btn-primary btn-sm py-2 fw-bold shadow-sm">
+                                <i class="bi bi-check-circle-fill me-1"></i> Save Account Settings
+                            </button>
+                            <a href="{% url 'transactions:account_list' %}" class="btn btn-light btn-sm py-2 text-muted border-0 bg-transparent">
+                                Cancel
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<style>
+    .cursor-pointer { cursor: pointer; }
+</style>
+
+{# JAVASCRIPT REAL-TIME TRANSFORMATION ENGINE #}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const accountNameInput = document.getElementById('id_account_name');
+        const accountTypeInput = document.getElementById('id_account_type');
+
+        // PRE-POPULATE ON EDIT: If model already has a value saved, show it on UI load
+        if (accountTypeInput && !accountTypeInput.value && accountNameInput) {
+            updateSlug(accountNameInput.value);
+        }
+
+        if (accountNameInput && accountTypeInput) {
+            accountNameInput.addEventListener('input', function() {
+                updateSlug(this.value);
+            });
+        }
+
+        function updateSlug(text) {
+            let value = text.toLowerCase();
+            value = value.replace(/[^a-z0-9]+/g, '_');
+            value = value.replace(/^_+|_+$/g, '');
+            accountTypeInput.value = value;
+        }
+    });
+</script>
+{% endblock %}

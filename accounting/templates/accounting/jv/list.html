@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+{% load humanize %}
+{% block title %}Journal Vouchers – NODi CBS{% endblock %}
+{% block content %}
+{% include 'accounting/includes/accounting_quick_actions.html' %}
+
+{% include 'accounting/jv/_theme.html' %}
+
+<div class="d365-shell">
+  <div class="d365-topbar">
+    <h1><i class="bi bi-journal-text"></i> Journal Vouchers</h1>
+    <div class="d365-crumbs">
+      <a href="{% url 'accounting:sacco_account_list' %}">Accounting</a>
+      &rsaquo; <span>Journal Vouchers</span>
+    </div>
+  </div>
+
+  <div class="d365-command-bar">
+    <a class="d365-btn primary" href="{% url 'accounting:jv_new' %}">
+      <i class="bi bi-plus-lg"></i> New voucher
+    </a>
+    <a class="d365-btn" href="{% url 'accounting:jv_template' %}">
+      <i class="bi bi-file-earmark-arrow-down"></i> Download template
+    </a>
+  </div>
+
+  <div class="d365-page">
+    <div class="d365-panel">
+      <div class="d365-panel-body" style="padding:0;">
+        <table class="d365-grid">
+          <thead>
+            <tr>
+              <th>Voucher No.</th>
+              <th>Date</th>
+              <th>Description</th>
+              <th>Lines</th>
+              <th style="text-align:right;">Total (KES)</th>
+              <th>Status</th>
+              <th>Created By</th>
+              <th>Posted At</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for v in vouchers %}
+              <tr>
+                <td><a href="{% url 'accounting:jv_detail' v.pk %}" style="color: var(--d365-primary);">{{ v.voucher_no }}</a></td>
+                <td>{{ v.voucher_date|date:"Y-m-d" }}</td>
+                <td>{{ v.description|truncatechars:60 }}</td>
+                <td>{{ v.lines.count }}</td>
+                <td style="text-align:right;">{{ v.total_amount|floatformat:2|intcomma }}</td>
+                <td>
+                  <span class="d365-status-pill
+                    {% if v.status == 'posted' %}d365-status-ok
+                    {% elif v.status == 'rejected' %}d365-status-err
+                    {% else %}d365-status-warn{% endif %}">
+                    {{ v.get_status_display }}
+                  </span>
+                </td>
+                <td>{{ v.created_by.username|default:"—" }}</td>
+                <td>{{ v.posted_at|date:"Y-m-d H:i"|default:"—" }}</td>
+                <td>
+                  <a class="d365-btn" href="{% url 'accounting:jv_pdf' v.pk %}" target="_blank" title="PDF">
+                    <i class="bi bi-file-earmark-pdf"></i>
+                  </a>
+                </td>
+              </tr>
+            {% empty %}
+              <tr><td colspan="9" style="text-align:center; padding: 40px; color: var(--d365-text-3);">No journal vouchers yet.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

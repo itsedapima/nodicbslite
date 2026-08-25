@@ -1,0 +1,55 @@
+{% extends 'base.html' %}
+{% block content %}
+{% include 'administration/includes/administration_quick_actions.html' %}
+<div class="container my-5">
+
+    <h2 class="text-2xl font-bold mb-4">Chama Information</h2>
+
+    <div class="bg-white shadow-md rounded-lg p-6">
+        {% if chama_info.company_logo %}
+            <div class="text-center mb-4">
+                <img src="{{ chama_info.chama_logo.url }}" alt="Chama Logo" class="h-24 mx-auto">
+            </div>
+        {% endif %}
+
+        <table class="table-auto w-full border-collapse border border-gray-300">
+                <tr class="border border-gray-300">
+                <th class="px-4 py-2 text-left bg-gray-100">Brand Name:</th>
+                <td class="px-4 py-2">{{ chama_info.brand_name }}</td>
+            </tr>
+                <tr class="border border-gray-300">
+                <th class="px-4 py-2 text-left bg-gray-100">Brand Footer:</th>
+                <td class="px-4 py-2">{{ chama_info.brand_footer }}</td>
+            </tr>
+            <tr class="border border-gray-300">
+                <th class="px-4 py-2 text-left bg-gray-100">Chama Name:</th>
+                <td class="px-4 py-2">{{ chama_info.chama_name }}</td>
+            </tr>
+            <tr class="border border-gray-300">
+                <th class="px-4 py-2 text-left bg-gray-100">Address:</th>
+                <td class="px-4 py-2">{{ company_info.chama_address }}</td>
+            </tr>
+            <tr class="border border-gray-300">
+                <th class="px-4 py-2 text-left bg-gray-100">Contact:</th>
+                <td class="px-4 py-2">{{ company_info.chama_contact }}</td>
+            </tr>
+            <tr class="border border-gray-300">
+                <th class="px-4 py-2 text-left bg-gray-100">Location:</th>
+                <td class="px-4 py-2">{{ company_info.chama_location }}</td>
+            </tr>
+            <tr class="border border-gray-300">
+                <th class="px-4 py-2 text-left bg-gray-100">Chama Footer Text:</th>
+                <td class="px-4 py-2">{{ company_info.chama_footer }}</td>
+            </tr>
+            <tr class="border border-gray-300">
+                <th class="px-4 py-2 text-left bg-gray-100">Created At:</th>
+                <td class="px-4 py-2">{{ chama_info.created_at|date:"d M Y, H:i A" }}</td>
+            </tr>
+        </table>
+        
+        <div class="mt-4">
+            <a href="{% url 'administration:edit_chama_info' %}" class="px-4 py-2 bg-blue-600 text-white rounded">Edit Info</a>
+        </div>
+    </div>
+</div>
+{% endblock %}
