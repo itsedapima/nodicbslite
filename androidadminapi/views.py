@@ -100,7 +100,9 @@ def _parse_tr_date(data, field="tr_date"):
 @permission_classes([AllowAny])
 def admin_login_view(request):
     """POST /androidadminapi/auth/login/
-    Officials login with username + password. Returns JWT tokens."""
+    Officials login with username + password + device_id. Returns JWT tokens.
+    Device locking: first login binds the user to that device_id.
+    Subsequent logins from a different device_id are rejected."""
     serializer = AdminLoginSerializer(data=request.data)
     if not serializer.is_valid():
         errors = serializer.errors
@@ -112,6 +114,20 @@ def admin_login_view(request):
         return Response({'error': msg}, status=status.HTTP_401_UNAUTHORIZED)
 
     user = serializer.validated_data['user']
+
+    # ── Device lock check ─────────────────────────────────────────────
+    device_id = request.data.get('device_id', '').strip()
+    if device_id:
+        if user.device_id and user.device_id != device_id:
+            return Response(
+                {'error': 'This account is locked to another device. Contact your administrator.'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+        if not user.device_id:
+            # First login — bind to this device
+            user.device_id = device_id
+            user.save(update_fields=['device_id'])
+
     refresh = RefreshToken.for_user(user)
 
     return Response({
@@ -1951,20 +1967,20 @@ def customer_accounts_list_view(request, cust_no):
     ).values('account_code', 'account_name', 'account_type').distinct()
 
     for acc in savings_accounts:
-        if not include_zero:
-            bal = SavingsTransaction.objects.filter(
-                cust_no=padded, saving_type=acc['account_type']
-            ).aggregate(
-                balance=Sum('credit_amount', default=Decimal('0')) - Sum('debit_amount', default=Decimal('0'))
-            )['balance'] or Decimal('0')
-            if bal == 0:
-                continue
+        bal = SavingsTransaction.objects.filter(
+            cust_no=padded, saving_type=acc['account_type']
+        ).aggregate(
+            balance=Sum('credit_amount', default=Decimal('0')) - Sum('debit_amount', default=Decimal('0'))
+        )['balance'] or Decimal('0')
+        if not include_zero and bal == 0:
+            continue
 
         results.append({
             'account_id': acc['account_type'],
             'account_code': acc['account_code'],
             'account_name': acc['account_name'],
             'is_loan': False,
+            'balance': float(bal),
         })
 
     # 2. Loan accounts — active loans only (exclude settled)
@@ -1995,6 +2011,7 @@ def customer_accounts_list_view(request, cust_no):
             'account_code': loan.loan_no,
             'account_name': f'{loan_label} - {loan.loan_no}',
             'is_loan': True,
+            'balance': float(bal),
         })
 
     return Response(results)
@@ -2170,7 +2187,7 @@ def statement_download_view(request, cust_no, account_id):
             running = running + credit - debit
 
         data.append([
-            tr_date, tr_ref, tr_desc[:40],
+            tr_date, tr_ref[:12], tr_desc[:25],
             f'{debit:,.2f}' if debit else '',
             f'{credit:,.2f}' if credit else '',
             f'{running:,.2f}',
@@ -2231,9 +2248,20 @@ def inter_account_transfer_view(request):
     from_padded = _pad_cust_no(from_cust)
     to_padded = _pad_cust_no(to_cust)
 
+    # Resolve from_account — could be account_code or account_type
+    from_setup = CustomerAccountsSetup.objects.filter(
+        Q(account_code=from_account) | Q(account_type=from_account),
+        is_active=True, is_loan_account=False,
+    ).first()
+    if not from_setup:
+        return Response({'error': f'Source account "{from_account}" not found.'},
+                        status=status.HTTP_400_BAD_REQUEST)
+    from_saving_type = from_setup.account_type
+    from_account_code = from_setup.account_code
+
     # Overdraw protection on source savings
     bal = SavingsTransaction.objects.filter(
-        cust_no=from_padded, saving_type=from_account
+        cust_no=from_padded, saving_type=from_saving_type
     ).aggregate(
         balance=Sum('credit_amount', default=Decimal('0')) - Sum('debit_amount', default=Decimal('0'))
     )['balance'] or Decimal('0')
@@ -2241,7 +2269,7 @@ def inter_account_transfer_view(request):
     tr_date_val = _parse_tr_date(request.data)
     if bal < amount:
         return Response({
-            'error': f'Insufficient funds. Current balance: {bal:,.2f}'
+            'error': f'Insufficient funds. Current balance: KES {bal:,.2f}'
         }, status=status.HTTP_400_BAD_REQUEST)
 
     tr_ref = _generate_tr_ref('TRF')
@@ -2250,7 +2278,8 @@ def inter_account_transfer_view(request):
     # Debit source savings
     SavingsTransaction.objects.create(
         cust_no=from_padded,
-        saving_type=from_account,
+        saving_type=from_saving_type,
+        account_code=from_account_code,
         tr_date=tr_date_val,
         tr_ref=tr_ref,
         tr_desc=f'Transfer to {to_padded}: {desc_suffix}',
