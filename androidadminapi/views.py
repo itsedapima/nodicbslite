@@ -2392,7 +2392,7 @@ def request_otp_view(request):
         'created': timezone.now(),
     }
 
-    # Send via SMS if phone is available
+    # Send via SMS — log to SMSLog, let the queue job deliver later
     sent_via = []
     if hasattr(user, 'phone') and user.phone:
         try:
@@ -2402,23 +2402,29 @@ def request_otp_view(request):
                 f'Your NODi Lite password reset code is: {otp}. '
                 f'This code expires in 10 minutes.',
                 created_by='password_reset',
+                send_now=False,          # queued — picked up by SMS job
             )
             sent_via.append('sms')
         except Exception as e:
             logger.warning('OTP SMS failed for %s: %s', identifier, e)
 
-    # Send via email if available
+    # Send via email — send immediately, no EmailLog
     if user.email:
         try:
             from django.core.mail import send_mail
+            from django.conf import settings as django_settings
+            chama = getattr(django_settings, 'CHAMA_DISPLAY_NAME', '') or \
+                    getattr(django_settings, 'CHAMA_NAME', '') or 'NODi Lite'
             send_mail(
-                'NODi Lite Password Reset',
+                f'{chama} — Password Reset Code',
+                f'Hello {user.first_name or user.username},\n\n'
                 f'Your password reset code is: {otp}\n\n'
                 f'This code expires in 10 minutes.\n'
-                f'If you did not request this, please ignore.',
-                None,
+                f'If you did not request this, please ignore this email.\n\n'
+                f'— {chama}',
+                getattr(django_settings, 'DEFAULT_FROM_EMAIL', None),
                 [user.email],
-                fail_silently=True,
+                fail_silently=False,
             )
             sent_via.append('email')
         except Exception as e:
