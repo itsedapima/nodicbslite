@@ -567,21 +567,21 @@ def _commit_savings_txn(rows, opts, user):
                 gl_objs.append(SaccoAccountsLedger(
                     sacco_account=cash, reference=ref, external_reference=ext,
                     description=desc, amount=amt,
-                    debit_amount=amt, credit_amount=ZERO, created_by=username))
+                    debit_amount=amt, credit_amount=ZERO, created_by=user))
                 gl_objs.append(SaccoAccountsLedger(
                     sacco_account=gl, reference=ref, external_reference=ext,
                     description=desc, amount=amt,
-                    debit_amount=ZERO, credit_amount=amt, created_by=username))
+                    debit_amount=ZERO, credit_amount=amt, created_by=user))
             else:
                 amt = r["debit_amount"]
                 gl_objs.append(SaccoAccountsLedger(
                     sacco_account=gl, reference=ref, external_reference=ext,
                     description=desc, amount=amt,
-                    debit_amount=amt, credit_amount=ZERO, created_by=username))
+                    debit_amount=amt, credit_amount=ZERO, created_by=user))
                 gl_objs.append(SaccoAccountsLedger(
                     sacco_account=cash, reference=ref, external_reference=ext,
                     description=desc, amount=amt,
-                    debit_amount=ZERO, credit_amount=amt, created_by=username))
+                    debit_amount=ZERO, credit_amount=amt, created_by=user))
 
     SavingsTransaction.objects.bulk_create(txn_objs, batch_size=BULK_BATCH)
     if gl_objs:
@@ -721,21 +721,21 @@ def _commit_loan_txn(rows, opts, user):
                 gl_objs.append(SaccoAccountsLedger(
                     sacco_account=gl, reference=ref, external_reference=ext,
                     description=desc, amount=amt,
-                    debit_amount=amt, credit_amount=ZERO, created_by=username))
+                    debit_amount=amt, credit_amount=ZERO, created_by=user))
                 gl_objs.append(SaccoAccountsLedger(
                     sacco_account=cash, reference=ref, external_reference=ext,
                     description=desc, amount=amt,
-                    debit_amount=ZERO, credit_amount=amt, created_by=username))
+                    debit_amount=ZERO, credit_amount=amt, created_by=user))
             else:
                 amt = r["credit_amount"]
                 gl_objs.append(SaccoAccountsLedger(
                     sacco_account=cash, reference=ref, external_reference=ext,
                     description=desc, amount=amt,
-                    debit_amount=amt, credit_amount=ZERO, created_by=username))
+                    debit_amount=amt, credit_amount=ZERO, created_by=user))
                 gl_objs.append(SaccoAccountsLedger(
                     sacco_account=gl, reference=ref, external_reference=ext,
                     description=desc, amount=amt,
-                    debit_amount=ZERO, credit_amount=amt, created_by=username))
+                    debit_amount=ZERO, credit_amount=amt, created_by=user))
 
     LoanTransaction.objects.bulk_create(txn_objs, batch_size=BULK_BATCH)
     if gl_objs:
@@ -968,7 +968,7 @@ def _commit_sacco_balances(rows, opts, user):
                 description=f"{desc_base} | {acc.account_code}",
                 amount=dr if dr > ZERO else cr,
                 debit_amount=dr, credit_amount=cr,
-                created_by=username,
+                created_by=user,
             ))
 
         # If imbalance is allowed and present, post difference to equity
@@ -991,7 +991,7 @@ def _commit_sacco_balances(rows, opts, user):
                         ),
                         amount=abs(tb_diff),
                         debit_amount=ZERO, credit_amount=abs(tb_diff),
-                        created_by=username,
+                        created_by=user,
                     ))
                 else:
                     gl_objs.append(SaccoAccountsLedger(
@@ -1003,7 +1003,7 @@ def _commit_sacco_balances(rows, opts, user):
                         ),
                         amount=abs(tb_diff),
                         debit_amount=abs(tb_diff), credit_amount=ZERO,
-                        created_by=username,
+                        created_by=user,
                     ))
                 problems.append(
                     f"TB was out of balance by KES {tb_diff:,.2f}. "

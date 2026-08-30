@@ -52,3 +52,4 @@ pgbouncer/userlist.txt
 pgbouncer/userlist.txt
 tigerbeetle/
 *.tigerbeetle
+docker-compose.yml
