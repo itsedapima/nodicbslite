@@ -6,7 +6,7 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 # System deps for PostgreSQL, Pillow, weasyprint
 RUN apt-get update && apt-get install -y --no-install-recommends \
     gcc libpq-dev libjpeg62-turbo-dev zlib1g-dev \
-    libffi-dev libcairo2 libpango-1.0-0 libgdk-pixbuf2.0-0 \
+    libffi-dev libcairo2 libpango-1.0-0 libgdk-pixbuf-2.0-0 \
     curl \
     && rm -rf /var/lib/apt/lists/*
 
