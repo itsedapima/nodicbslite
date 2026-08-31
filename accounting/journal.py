@@ -187,19 +187,23 @@ def journal_entry(
     # ── TB-FIRST: Write to TigerBeetle (authoritative) ─────────────
     try:
         from accounting.tigerbeetle import tb_post_journal, TBPostingError
-        tb_lines = [
-            {'account_code': acct.account_code,
-             'debit': lg.debit,
-             'credit': lg.credit}
-            for lg, acct in resolved
-        ]
-        tb_post_journal(tb_lines, reference=reference, description=description)
-    except TBPostingError as e:
-        raise JournalImbalanceError(
-            f"TigerBeetle rejected journal '{reference}': {e}"
-        )
     except ImportError:
-        pass  # tigerbeetle not installed — PG-only mode
+        tb_post_journal = None  # tigerbeetle not installed — PG-only mode
+        TBPostingError = None
+
+    if tb_post_journal is not None:
+        try:
+            tb_lines = [
+                {'account_code': acct.account_code,
+                 'debit': lg.debit,
+                 'credit': lg.credit}
+                for lg, acct in resolved
+            ]
+            tb_post_journal(tb_lines, reference=reference, description=description)
+        except TBPostingError as e:
+            raise JournalImbalanceError(
+                f"TigerBeetle rejected journal '{reference}': {e}"
+            )
 
     # ── Write to PostgreSQL (query layer + balance cache) ──────────
     rows = []
@@ -285,17 +289,21 @@ def bulk_journal_entry(
     # ── Phase 1b: TigerBeetle (if enabled) ────────────────────────────
     try:
         from accounting.tigerbeetle import tb_post_journal, TBPostingError
-        for ref, desc, ext_ref, resolved in resolved_entries:
-            tb_lines = [
-                {'account_code': acct.account_code,
-                 'debit': lg.debit, 'credit': lg.credit}
-                for lg, acct in resolved
-            ]
-            tb_post_journal(tb_lines, reference=ref, description=desc)
-    except TBPostingError as e:
-        raise JournalImbalanceError(f"TigerBeetle rejected batch: {e}")
     except ImportError:
-        pass  # PG-only mode
+        tb_post_journal = None  # PG-only mode
+        TBPostingError = None
+
+    if tb_post_journal is not None:
+        try:
+            for ref, desc, ext_ref, resolved in resolved_entries:
+                tb_lines = [
+                    {'account_code': acct.account_code,
+                     'debit': lg.debit, 'credit': lg.credit}
+                    for lg, acct in resolved
+                ]
+                tb_post_journal(tb_lines, reference=ref, description=desc)
+        except TBPostingError as e:
+            raise JournalImbalanceError(f"TigerBeetle rejected batch: {e}")
 
     # ── Phase 2: Build all ledger rows in memory ──────────────────────
     ledger_rows = []
