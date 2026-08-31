@@ -34,7 +34,7 @@ Usage:
     journal_entry(
         reference="CHQ-001234",
         description="Banker's cheque #001234 - Acme Supplies",
-        created_by=request.user.username,
+        created_by=request.user,  # CustomUser instance or username string
         legs=[
             leg(bank_acc,    credit=10_000),
             leg(expense_acc, debit=10_000),
@@ -54,6 +54,25 @@ from django.db import transaction as db_tx
 # 0.01 covers a single-cent rounding gap; anything bigger is a real bug.
 TOLERANCE = Decimal("0.01")
 ZERO = Decimal("0")
+
+
+def _resolve_user(created_by):
+    """
+    Accept a CustomUser instance, a username string, or None.
+    Returns a CustomUser instance or None (safe for FK assignment).
+    """
+    if created_by is None:
+        return None
+    # Already a model instance — return as-is
+    from django.contrib.auth import get_user_model
+    User = get_user_model()
+    if isinstance(created_by, User):
+        return created_by
+    # String — look up by username
+    try:
+        return User.objects.get(username=str(created_by))
+    except User.DoesNotExist:
+        return None
 
 
 class JournalImbalanceError(ValueError):
@@ -206,6 +225,7 @@ def journal_entry(
             )
 
     # ── Write to PostgreSQL (query layer + balance cache) ──────────
+    resolved_user = _resolve_user(created_by)
     rows = []
     with db_tx.atomic():
         for lg, account in resolved:
@@ -219,7 +239,7 @@ def journal_entry(
                 amount=lg.debit or lg.credit,
                 debit_amount=lg.debit,
                 credit_amount=lg.credit,
-                created_by=str(created_by)[:100],
+                created_by=resolved_user,
             )
             rows.append(row)
 
@@ -306,6 +326,7 @@ def bulk_journal_entry(
             raise JournalImbalanceError(f"TigerBeetle rejected batch: {e}")
 
     # ── Phase 2: Build all ledger rows in memory ──────────────────────
+    resolved_user = _resolve_user(created_by)
     ledger_rows = []
     balance_deltas = {}  # {account_id: Decimal delta}
 
@@ -321,7 +342,7 @@ def bulk_journal_entry(
                 amount=lg.debit or lg.credit,
                 debit_amount=lg.debit,
                 credit_amount=lg.credit,
-                created_by=str(created_by)[:100],
+                created_by=resolved_user,
             ))
 
             # Aggregate balance delta per account
