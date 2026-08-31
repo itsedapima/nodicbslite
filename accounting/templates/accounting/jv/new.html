@@ -323,7 +323,7 @@
     tr.querySelector('.cust-name').value = '(loading…)';
     try {
       const r = await fetch(`{% url 'accounting:jv_lookup_customer' %}?cust_no=${encodeURIComponent(custNo)}`);
-      const j = await r.json();
+      const j = await safeJson(r);
       if (!j.ok) {
         tr.querySelector('.cust-name').value = '';
         tr.querySelector('.cust-no').classList.add('error');
@@ -484,6 +484,21 @@
     });
   }
 
+  // ─── Safe JSON parser (handles 403/500 HTML responses) ────
+  async function safeJson(r) {
+    const ct = (r.headers.get('content-type') || '');
+    if (ct.includes('application/json')) {
+      return await r.json();
+    }
+    // Non-JSON response — likely a Django error page (403 CSRF, 500, etc.)
+    const text = await r.text();
+    let msg = `Server error (${r.status})`;
+    if (r.status === 403) msg = 'Permission denied — your session may have expired. Please refresh the page and try again.';
+    else if (r.status >= 500) msg = `Server error (${r.status}) — please try again or contact support.`;
+    else if (text.length < 200) msg = text;
+    return {ok: false, errors: [{row: 0, message: msg}], warnings: []};
+  }
+
   // ─── Validate & Post buttons ──────────────────────────────
   async function validateNow() {
     const lines = collectLines();
@@ -491,22 +506,27 @@
       showErrors([{row: 0, message: 'Add at least two lines before validating.'}], []);
       return null;
     }
-    const r = await fetch("{% url 'accounting:jv_validate' %}", {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json', 'X-CSRFToken': CSRF},
-      body: JSON.stringify({lines: lines}),
-    });
-    const j = await r.json();
-    showErrors(j.errors, j.warnings);
-    if (j.ok) {
-      const div = document.createElement('div');
-      div.className = 'd365-toast success';
-      div.textContent = `✓ Validation passed. ${j.resolved_display.length} line(s), balanced at KES ${j.total_debit}.`;
-      errorsPanel.innerHTML = '';
-      errorsPanel.appendChild(div);
-      errorsPanel.style.display = 'block';
+    try {
+      const r = await fetch("{% url 'accounting:jv_validate' %}", {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json', 'X-CSRFToken': CSRF},
+        body: JSON.stringify({lines: lines}),
+      });
+      const j = await safeJson(r);
+      showErrors(j.errors, j.warnings);
+      if (j.ok) {
+        const div = document.createElement('div');
+        div.className = 'd365-toast success';
+        div.textContent = `✓ Validation passed. ${j.resolved_display.length} line(s), balanced at KES ${j.total_debit}.`;
+        errorsPanel.innerHTML = '';
+        errorsPanel.appendChild(div);
+        errorsPanel.style.display = 'block';
+      }
+      return j;
+    } catch (err) {
+      showErrors([{row: 0, message: 'Network error — check your connection and try again.'}], []);
+      return null;
     }
-    return j;
   }
 
   let _postingInProgress = false;
@@ -559,7 +579,7 @@
           session_key: SESSION_ID,
         }),
       });
-      const j = await r.json();
+      const j = await safeJson(r);
       if (j.ok) {
         _alreadyPosted = true;
         // Stop autosave — voucher is committed
@@ -611,7 +631,7 @@
       headers: {'X-CSRFToken': CSRF},
       body: fd,
     });
-    const j = await r.json();
+    const j = await safeJson(r);
     ev.target.value = '';
     if (!j.ok) {
       showErrors([{row: 0, message: j.error || 'Upload failed.'}], []);
@@ -669,7 +689,7 @@
       headers: {'Content-Type': 'application/json', 'X-CSRFToken': CSRF},
       body: JSON.stringify(payload),
     })
-    .then(r => r.json())
+    .then(r => safeJson(r))
     .then(d => {
       if (d.success) {
         const now = new Date();
