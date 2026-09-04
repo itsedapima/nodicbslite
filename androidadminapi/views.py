@@ -2064,14 +2064,14 @@ def customer_accounts_list_view(request, cust_no):
     for loan in active_loans:
         loan_label = loan.loan_type.account_name if loan.loan_type else 'Loan'
 
-        if not include_zero:
-            bal = LoanTransaction.objects.filter(
-                cust_no=padded, loan_no=loan.loan_no
-            ).aggregate(
-                balance=Sum('debit_amount', default=Decimal('0')) - Sum('credit_amount', default=Decimal('0'))
-            )['balance'] or Decimal('0')
-            if bal <= 0:
-                continue
+        bal = LoanTransaction.objects.filter(
+            cust_no=padded, loan_no=loan.loan_no
+        ).aggregate(
+            balance=Sum('debit_amount', default=Decimal('0')) - Sum('credit_amount', default=Decimal('0'))
+        )['balance'] or Decimal('0')
+
+        if not include_zero and bal <= 0:
+            continue
 
         results.append({
             'account_id': loan.loan_no,
