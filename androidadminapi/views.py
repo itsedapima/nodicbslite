@@ -462,6 +462,58 @@ def member_detail_view(request, cust_no):
     return Response(data)
 
 
+@api_view(['PUT'])
+@permission_classes([IsAuthenticated])
+def member_update_view(request, cust_no):
+    """PUT /androidadminapi/members/<cust_no>/edit/
+    Update editable fields for an existing member."""
+    gate = _require_official(request.user)
+    if gate:
+        return gate
+
+    padded = _pad_cust_no(cust_no)
+    try:
+        customer = Customer.objects.get(cust_no=padded)
+    except Customer.DoesNotExist:
+        return Response({'error': 'Member not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+    data = request.data
+    # Update allowed fields
+    if 'first_name' in data:
+        customer.first_name = data['first_name'].strip()
+    if 'middle_name' in data:
+        customer.middle_name = data['middle_name'].strip()
+    if 'last_name' in data:
+        customer.last_name = data['last_name'].strip()
+    if 'phone' in data:
+        customer.phone = data['phone'].strip()
+    if 'national_id' in data:
+        customer.national_id = data['national_id'].strip()
+    if 'reg_email' in data:
+        customer.reg_email = data['reg_email'].strip()
+    if 'gender' in data and data['gender'] in ('Male', 'Female'):
+        customer.gender = data['gender']
+    if 'dob' in data:
+        customer.dob = data['dob'] or None
+    if 'postal_address' in data:
+        customer.postal_address = data['postal_address'].strip()
+    if 'town' in data:
+        customer.town = data['town'].strip()
+    if 'kra_pin' in data:
+        customer.kra_pin = data['kra_pin'].strip()
+
+    # Rebuild full_name
+    parts = [customer.first_name or '', customer.middle_name or '', customer.last_name or '']
+    customer.full_name = ' '.join(p for p in parts if p).strip()
+
+    customer.save()
+
+    return Response({
+        'message': f'Member {customer.full_name} updated successfully.',
+        'member': CustomerDetailSerializer(customer).data,
+    })
+
+
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def member_accounts_view(request, cust_no):
@@ -1185,6 +1237,16 @@ def loan_approve_view(request, loan_no):
 
     if loan.is_approved:
         return Response({'error': 'Loan already approved.'}, status=status.HTTP_400_BAD_REQUEST)
+
+    # Workflow: superuser can self-approve; others need at least manager approval
+    created_by_username = getattr(loan, 'created_by', None) or ''
+    is_own_loan_entry = str(created_by_username) == request.user.username
+    if is_own_loan_entry and not request.user.is_superuser:
+        if request.user.role not in ('admin', 'manager'):
+            return Response(
+                {'error': 'You cannot approve your own loan entry. A manager or admin must approve it.'},
+                status=status.HTTP_403_FORBIDDEN,
+            )
 
     loan.is_approved = True
     loan.approved_by = request.user.username

@@ -32,6 +32,7 @@ urlpatterns = [
     path('members/<str:cust_no>/accounts-list/', views.customer_accounts_list_view),
     path('members/<str:cust_no>/accounts-detail/', views.member_accounts_detail_view),
     path('members/<str:cust_no>/', views.member_detail_view),
+    path('members/<str:cust_no>/edit/', views.member_update_view),
     path('members/<str:cust_no>/accounts/', views.member_accounts_view),
     path('members/<str:cust_no>/kins/', views.member_kins_view),
     path('members/<str:cust_no>/loans/', views.member_loans_view),
