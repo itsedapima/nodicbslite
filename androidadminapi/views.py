@@ -1373,18 +1373,31 @@ def journal_entry_view(request):
 
     customer = Customer.objects.get(cust_no=cust_no)
 
-    # Resolve debit account — could be a member product account or sacco GL
+    # Resolve debit account — could be a member product, sacco GL, or loan
     debit_member_product = CustomerAccountsSetup.objects.filter(
         Q(account_code=debit_acct_code) | Q(account_type=debit_acct_code),
         is_active=True,
     ).first()
     debit_sacco = SaccoAccount.objects.filter(account_code=debit_acct_code).first()
+    debit_loan = None
+    if not (debit_member_product or debit_sacco):
+        # Check if it's a loan number (e.g. LN000025)
+        debit_loan = LoanHistory.objects.select_related('loan_type').filter(
+            loan_no=debit_acct_code).first()
+        if debit_loan:
+            debit_member_product = debit_loan.loan_type
 
     credit_member_product = CustomerAccountsSetup.objects.filter(
         Q(account_code=credit_acct_code) | Q(account_type=credit_acct_code),
         is_active=True,
     ).first()
     credit_sacco = SaccoAccount.objects.filter(account_code=credit_acct_code).first()
+    credit_loan = None
+    if not (credit_member_product or credit_sacco):
+        credit_loan = LoanHistory.objects.select_related('loan_type').filter(
+            loan_no=credit_acct_code).first()
+        if credit_loan:
+            credit_member_product = credit_loan.loan_type
 
     if not (debit_member_product or debit_sacco):
         return Response({'error': f'Debit account {debit_acct_code} not found.'},
@@ -1417,7 +1430,9 @@ def journal_entry_view(request):
         customer=customer,
         member_product=debit_member_product,
         sacco_account=debit_sacco,
-        member_account_ref=f'{debit_member_product.acc_initials}-{cust_no}' if debit_member_product else '',
+        member_account_ref=debit_loan.loan_no if debit_loan else (
+            f'{debit_member_product.acc_initials}-{cust_no}' if debit_member_product else ''),
+        member_loan_no=debit_loan.loan_no if debit_loan else '',
     )
 
     # Credit line
@@ -1430,12 +1445,27 @@ def journal_entry_view(request):
         customer=customer,
         member_product=credit_member_product,
         sacco_account=credit_sacco,
-        member_account_ref=f'{credit_member_product.acc_initials}-{cust_no}' if credit_member_product else '',
+        member_account_ref=credit_loan.loan_no if credit_loan else (
+            f'{credit_member_product.acc_initials}-{cust_no}' if credit_member_product else ''),
+        member_loan_no=credit_loan.loan_no if credit_loan else '',
     )
 
     # Also post the actual member transaction if it's a member product account
     if debit_member_product:
-        if debit_member_product.is_loan_account:
+        if debit_loan:
+            # Loan account resolved via LoanHistory
+            LoanTransaction.objects.create(
+                cust_no=cust_no,
+                loan_id=debit_loan.id,
+                loan_no=debit_loan.loan_no,
+                loan_type=debit_member_product.account_type,
+                account_code=debit_member_product.account_code,
+                tr_date=tr_date_val, tr_ref=tr_ref,
+                tr_desc=description,
+                debit_amount=amount, credit_amount=Decimal('0'),
+                created_by=request.user.username,
+            )
+        elif debit_member_product.is_loan_account:
             LoanTransaction.objects.create(
                 cust_no=cust_no,
                 loan_type=debit_member_product.account_type,
@@ -1457,7 +1487,20 @@ def journal_entry_view(request):
             )
 
     if credit_member_product:
-        if credit_member_product.is_loan_account:
+        if credit_loan:
+            # Loan account resolved via LoanHistory
+            LoanTransaction.objects.create(
+                cust_no=cust_no,
+                loan_id=credit_loan.id,
+                loan_no=credit_loan.loan_no,
+                loan_type=credit_member_product.account_type,
+                account_code=credit_member_product.account_code,
+                tr_date=tr_date_val, tr_ref=tr_ref,
+                tr_desc=description,
+                debit_amount=Decimal('0'), credit_amount=amount,
+                created_by=request.user.username,
+            )
+        elif credit_member_product.is_loan_account:
             LoanTransaction.objects.create(
                 cust_no=cust_no,
                 loan_type=credit_member_product.account_type,
