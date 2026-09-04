@@ -10,6 +10,7 @@ from decimal import Decimal
 
 from django.db.models import Sum, Q, Count
 from django.utils import timezone
+from django.utils.timezone import localtime
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny, IsAuthenticated
@@ -1051,7 +1052,7 @@ def member_full_statement_view(request, cust_no):
             else:
                 running = running + Decimal(str(credit)) - Decimal(str(debit))
             entries.append({
-                'date': txn.tr_date.strftime('%Y-%m-%d'),
+                'date': localtime(txn.tr_date).strftime('%d-%m-%Y'),
                 'reference': txn.tr_ref,
                 'description': txn.tr_desc,
                 'debit': debit if debit > 0 else None,
@@ -1145,7 +1146,7 @@ def member_account_statement_view(request, cust_no, account_type):
         else:
             running += Decimal(str(c)) - Decimal(str(d))
         entries.append({
-            'date': txn.tr_date.strftime('%Y-%m-%d'),
+            'date': localtime(txn.tr_date).strftime('%d-%m-%Y'),
             'reference': txn.tr_ref,
             'description': txn.tr_desc,
             'debit': d if d > 0 else None,
@@ -2241,7 +2242,7 @@ def statement_download_view(request, cust_no, account_id):
     data.append(['', '', 'Opening Balance', '', '', f'{ob:,.2f}'])
 
     for txn in qs:
-        tr_date = txn.tr_date.strftime('%d/%m/%Y') if txn.tr_date else ''
+        tr_date = localtime(txn.tr_date).strftime('%d-%m-%Y') if txn.tr_date else ''
         tr_ref = txn.tr_ref or ''
         tr_desc = txn.tr_desc or ''
         debit = getattr(txn, 'debit_amount', None) or Decimal('0')
