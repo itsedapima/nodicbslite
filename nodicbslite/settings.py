@@ -310,10 +310,10 @@ SMS_SENDER_NAME = os.environ.get('SMS_SENDER_NAME', 'NODiLite')
 # ══════════════════════════════════════════════════════════════════════════
 #  EMAIL
 # ══════════════════════════════════════════════════════════════════════════
-if DEBUG:
-    EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
-else:
-    EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_BACKEND = os.environ.get(
+    'EMAIL_BACKEND',
+    'django.core.mail.backends.smtp.EmailBackend',
+)
 
 EMAIL_HOST          = os.environ.get('EMAIL_HOST', '')
 EMAIL_PORT          = int(os.environ.get('EMAIL_PORT', '587'))
