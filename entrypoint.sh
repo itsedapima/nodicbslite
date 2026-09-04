@@ -16,18 +16,9 @@ echo "Role:  ${ROLE}"
 
 # ─── Wait for PostgreSQL ──────────────────────────────────────────────────────
 wait_for_db() {
-    echo "Waiting for database..."
+    echo "Waiting for database at ${DB_HOST:-peshap_pgbouncer}:${DB_PORT:-6432}..."
     local retries=0
-    until python -c "
-import psycopg2, os
-psycopg2.connect(
-    host=os.environ.get('DB_HOST', 'peshap_pgbouncer'),
-    port=os.environ.get('DB_PORT', '6432'),
-    user=os.environ.get('DB_USER', ''),
-    password=os.environ.get('DB_PASSWORD', ''),
-    dbname=os.environ.get('DB_NAME', ''),
-)
-" 2>/dev/null; do
+    until pg_isready -h "${DB_HOST:-peshap_pgbouncer}" -p "${DB_PORT:-6432}" -U "${DB_USER:-postgres}" -q 2>/dev/null; do
         retries=$((retries + 1))
         if [ $retries -ge 30 ]; then
             echo "ERROR: Database not ready after 60s. Aborting."
@@ -72,7 +63,7 @@ start_web() {
     python manage.py migrate --noinput
 
     echo "Collecting static files..."
-    python manage.py collectstatic --noinput 2>/dev/null || true
+    python manage.py collectstatic --noinput
 
     # Create superuser if env vars are set
     if [ -n "$DJANGO_SUPERUSER_USERNAME" ] && [ -n "$DJANGO_SUPERUSER_PASSWORD" ]; then
