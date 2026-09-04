@@ -218,7 +218,8 @@ def dashboard_stats_view(request):
     first_of_year = today.replace(month=1, day=1)
 
     # Member counts
-    total_members = Customer.objects.filter(customer_status='active').count()
+    total_members = Customer.objects.count()
+    active_members = Customer.objects.filter(customer_status='active').count()
     new_this_month = Customer.objects.filter(
         customer_status='active',
         reg_date__year=today.year,
@@ -301,6 +302,7 @@ def dashboard_stats_view(request):
 
     return Response({
         'total_members': total_members,
+        'active_members': active_members,
         'new_members_this_month': new_this_month,
         'total_deposits': float(total_deposits),
         'deposits_breakdown': deposits_breakdown,
@@ -1285,7 +1287,7 @@ def member_search_view(request):
         Q(cust_no__icontains=q) |
         Q(phone__icontains=q) |
         Q(national_id__icontains=q),
-        customer_status='active',
+
     ).order_by('full_name')[:15]
 
     return Response(MemberSearchSerializer(qs, many=True).data)
