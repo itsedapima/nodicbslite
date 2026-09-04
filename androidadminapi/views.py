@@ -206,6 +206,7 @@ def chama_name_public_view(request):
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def dashboard_stats_view(request):
+    from loans.models import RunningLoanStat
     """GET /androidadminapi/dashboard/stats/
     Returns chama-wide financial summary for the dashboard."""
     gate = _require_official(request.user)
@@ -305,6 +306,7 @@ def dashboard_stats_view(request):
         'deposits_breakdown': deposits_breakdown,
         'total_loans_outstanding': float(total_loans),
         'active_loans': active_loans,
+        'overdue_loans_count': RunningLoanStat.objects.filter(total_arrears__gt=0, loan_status='Active').count(),
         'pending_loan_approvals': pending_loans,
         'today_savings_collected': float(today_savings),
         'today_loan_payments': float(today_loan_payments),
@@ -2735,3 +2737,87 @@ def mpesa_b2c_timeout_view(request):
     """
     logger.warning("B2C Timeout callback received: %s", request.data)
     return Response({'ResultCode': 0, 'ResultDesc': 'Accepted'})
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def overdue_loans_view(request):
+    """GET /androidadminapi/dashboard/overdue-loans/
+    Returns loans with arrears > 0 (overdue loans)."""
+    gate = _require_official(request.user)
+    if gate:
+        return gate
+
+    from loans.models import RunningLoanStat
+    from customers.models import Customer
+
+    overdue = RunningLoanStat.objects.filter(
+        total_arrears__gt=0,
+        loan_status='Active',
+    ).order_by('-total_arrears')
+
+    results = []
+    for loan in overdue:
+        # Get member phone from Customer
+        phone = ''
+        try:
+            cust = Customer.objects.get(cust_no=loan.cust_no)
+            phone = cust.phone or ''
+        except Customer.DoesNotExist:
+            pass
+
+        results.append({
+            'loan_no': loan.loan_no,
+            'cust_no': loan.cust_no,
+            'member_name': loan.full_name,
+            'phone': phone,
+            'arrears': float(loan.total_arrears),
+            'defaulted_days': loan.defaulted_days,
+            'loan_balance': float(loan.loan_balance),
+        })
+
+    return Response({
+        'count': len(results),
+        'loans': results,
+    })
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def outstanding_loans_view(request):
+    """GET /androidadminapi/dashboard/outstanding-loans/
+    Returns all active loans with their balances."""
+    gate = _require_official(request.user)
+    if gate:
+        return gate
+
+    from loans.models import RunningLoanStat
+    from customers.models import Customer
+
+    active = RunningLoanStat.objects.filter(
+        loan_status='Active',
+        loan_balance__gt=0,
+    ).order_by('-loan_balance')
+
+    results = []
+    for loan in active:
+        phone = ''
+        try:
+            cust = Customer.objects.get(cust_no=loan.cust_no)
+            phone = cust.phone or ''
+        except Customer.DoesNotExist:
+            pass
+
+        results.append({
+            'loan_no': loan.loan_no,
+            'cust_no': loan.cust_no,
+            'member_name': loan.full_name,
+            'phone': phone,
+            'principal': float(loan.approved_amount),
+            'loan_balance': float(loan.loan_balance),
+        })
+
+    return Response({
+        'count': len(results),
+        'loans': results,
+    })

@@ -23,6 +23,8 @@ urlpatterns = [
     # ── Dashboard / Overview ──────────────────────────────────────────
     path('dashboard/stats/', views.dashboard_stats_view),
     path('dashboard/recent-transactions/', views.recent_transactions_view),
+    path('dashboard/overdue-loans/', views.overdue_loans_view),
+    path('dashboard/outstanding-loans/', views.outstanding_loans_view),
 
     # ── Members ───────────────────────────────────────────────────────
     path('members/', views.member_list_view),
