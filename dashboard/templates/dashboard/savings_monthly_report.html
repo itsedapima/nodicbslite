@@ -1,83 +1,120 @@
 {% extends 'base.html' %}
 {% load humanize %}
 
+{% block extra_css %}
+<style>
+.report-wrapper { padding: 1rem; }
+@media (min-width: 576px) { .report-wrapper { padding: 2rem; } }
+.report-card { background: #fff; border-radius: .75rem; box-shadow: 0 1px 3px rgba(0,0,0,.08); border: 1px solid var(--d365-border, #EDEBE9); overflow: hidden; }
+.report-header { padding: 1.5rem; border-bottom: 1px solid var(--d365-border, #EDEBE9); background: var(--d365-surface-alt, #FAF9F8); }
+.report-header h1 { font-size: 1.25rem; font-weight: 700; color: var(--d365-text, #323130); margin-bottom: 1rem; }
+.report-header label { display: block; font-size: .7rem; font-weight: 700; text-transform: uppercase; color: var(--d365-text-secondary, #605E5C); margin-bottom: .25rem; }
+.report-header select,
+.report-header input[type="date"] { width: 100%; border: 1px solid var(--d365-border-strong, #D2D0CE); border-radius: .4rem; padding: .4rem .6rem; font-size: .85rem; }
+.report-header select:focus,
+.report-header input[type="date"]:focus { border-color: var(--d365-primary, #0078D4); box-shadow: 0 0 0 2px var(--d365-primary-tint-40, #DEECF9); outline: none; }
+.btn-fetch { width: 100%; background: var(--d365-primary, #0078D4); color: #fff; font-weight: 700; padding: .5rem 1rem; border: none; border-radius: .4rem; font-size: .85rem; cursor: pointer; transition: background .15s; }
+.btn-fetch:hover { background: var(--d365-primary-hover, #106EBE); }
+.toolbar { padding: .75rem 1rem; background: var(--d365-surface-alt, #FAF9F8); border-top: 1px solid var(--d365-border, #EDEBE9); display: flex; justify-content: flex-end; gap: .5rem; }
+.btn-print { padding: .4rem .85rem; background: #fff; border: 1px solid var(--d365-border-strong, #D2D0CE); border-radius: .35rem; font-size: .75rem; font-weight: 700; color: var(--d365-text-secondary, #605E5C); cursor: pointer; }
+.btn-print:hover { background: var(--d365-surface-alt, #FAF9F8); }
+.btn-excel { display: inline-flex; align-items: center; gap: .35rem; padding: .4rem .85rem; background: #198754; color: #fff; border-radius: .35rem; font-size: .75rem; font-weight: 700; text-decoration: none; border: none; transition: background .15s; }
+.btn-excel:hover { background: #146c43; color: #fff; }
+.report-table { width: 100%; border-collapse: collapse; }
+.report-table thead { background: #1e293b; color: #fff; }
+.report-table thead th { padding: .6rem .75rem; font-size: .7rem; font-weight: 700; text-transform: uppercase; white-space: nowrap; }
+.report-table thead th.col-total { background: #334155; }
+.report-table thead th.sticky-col { position: sticky; z-index: 10; background: #0f172a; }
+.sticky-col-1 { left: 0; }
+.sticky-col-2 { left: 5.5rem; border-right: 1px solid #475569; }
+.report-table tbody td { padding: .55rem .75rem; font-size: .84rem; color: var(--d365-text, #323130); border-bottom: 1px solid var(--d365-border, #EDEBE9); }
+.report-table tbody tr:hover { background: var(--d365-primary-tint-40, #DEECF9); }
+.report-table tbody td.sticky-col { position: sticky; z-index: 5; background: #fff; }
+.report-table tbody tr:hover td.sticky-col { background: var(--d365-primary-tint-40, #DEECF9); }
+.cell-zero { color: #ccc; }
+.cell-value { color: var(--d365-text, #323130); font-weight: 600; }
+.cell-total { text-align: right; font-weight: 900; background: var(--d365-surface-alt, #FAF9F8); color: var(--d365-primary, #0078D4); }
+.cell-mono { font-family: monospace; font-weight: 700; color: var(--d365-text-secondary, #605E5C); }
+.cell-name { font-weight: 500; white-space: nowrap; }
+.pager { padding: .75rem 1rem; background: var(--d365-surface-alt, #FAF9F8); border-top: 1px solid var(--d365-border, #EDEBE9); display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: .5rem; }
+.pager-info { font-size: .75rem; color: var(--d365-text-secondary, #605E5C); font-weight: 500; }
+.pager-buttons { display: inline-flex; border-radius: .4rem; overflow: hidden; box-shadow: 0 1px 2px rgba(0,0,0,.06); font-size: .75rem; }
+.pager-buttons a, .pager-buttons span { padding: .4rem .7rem; border: 1px solid var(--d365-border-strong, #D2D0CE); background: #fff; color: var(--d365-text, #323130); font-weight: 700; text-decoration: none; margin-left: -1px; }
+.pager-buttons a:hover { background: var(--d365-surface-alt, #FAF9F8); }
+.pager-buttons .disabled { background: var(--d365-surface-alt, #FAF9F8); color: #bbb; cursor: not-allowed; }
+.pager-buttons .current { background: var(--d365-primary, #0078D4); color: #fff; border-color: var(--d365-primary, #0078D4); }
+.empty-msg { padding: 2.5rem; text-align: center; color: #aaa; font-style: italic; }
+</style>
+{% endblock %}
+
 {% block content %}
-<div class="bg-gray-50 min-h-screen p-4 sm:p-8">
-    <div class="max-w-full mx-auto bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-        
-        <div class="p-6 border-b border-gray-100 bg-gray-50/50">
-            <h1 class="text-xl font-bold text-gray-800 mb-4">{{ title }}</h1>
-            
-            <form method="GET" class="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
-                <div>
-                    <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Saving Type</label>
-                    <select name="saving_type" class="w-full border-gray-300 rounded-lg text-sm focus:ring-blue-500">
-                        <option value="share_capital" {% if saving_type == 'share_capital' %}selected{% endif %}>Share Capital</option>
-                        <option value="welfare_deposit" {% if saving_type == 'welfare_deposit' %}selected{% endif %}>Welfare Deposit</option>
-                        <option value="seed_deposit" {% if saving_type == 'seed_deposit' %}selected{% endif %}>Seed Deposit</option>
-                    </select>
-                </div>
-                <div>
-                    <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Start Date</label>
-                    <input type="date" name="start_date" value="{{ start_date }}" class="w-full border-gray-300 rounded-lg text-sm">
-                </div>
-                <div>
-                    <label class="block text-xs font-bold text-gray-500 uppercase mb-1">End Date</label>
-                    <input type="date" name="end_date" value="{{ end_date }}" class="w-full border-gray-300 rounded-lg text-sm">
-                </div>
-                <div>
-                    <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg text-sm transition">
-                        Fetch History
-                    </button>
+<div class="report-wrapper">
+    <div class="report-card">
+
+        <div class="report-header">
+            <h1>{{ title }}</h1>
+            <form method="GET">
+                <div class="row g-3 align-items-end">
+                    <div class="col-12 col-md-3">
+                        <label>Saving Type</label>
+                        <select name="saving_type">
+                            <option value="share_capital" {% if saving_type == 'share_capital' %}selected{% endif %}>Share Capital</option>
+                            <option value="welfare_deposit" {% if saving_type == 'welfare_deposit' %}selected{% endif %}>Welfare Deposit</option>
+                            <option value="seed_deposit" {% if saving_type == 'seed_deposit' %}selected{% endif %}>Seed Deposit</option>
+                        </select>
+                    </div>
+                    <div class="col-12 col-md-3">
+                        <label>Start Date</label>
+                        <input type="date" name="start_date" value="{{ start_date }}">
+                    </div>
+                    <div class="col-12 col-md-3">
+                        <label>End Date</label>
+                        <input type="date" name="end_date" value="{{ end_date }}">
+                    </div>
+                    <div class="col-12 col-md-3">
+                        <button type="submit" class="btn-fetch">Fetch History</button>
+                    </div>
                 </div>
             </form>
         </div>
-        
-        <div class="p-4 bg-gray-50 border-t border-gray-100 flex justify-end space-x-3">
-            <button onclick="window.print()" class="px-4 py-2 bg-white border border-gray-300 rounded text-xs font-bold text-gray-600 hover:bg-gray-100">
-                Print PDF
-            </button>
-            
-            <a href="?{{ request.GET.urlencode }}&export=excel" 
-               class="px-4 py-2 bg-green-600 text-white rounded text-xs font-bold hover:bg-green-700 transition flex items-center">
-                <svg class="w-3 h-3 mr-2" fill="currentColor" viewBox="0 0 20 20">
+
+        <div class="toolbar">
+            <button onclick="window.print()" class="btn-print">Print PDF</button>
+            <a href="?{{ request.GET.urlencode }}&export=excel" class="btn-excel">
+                <svg width="12" height="12" fill="currentColor" viewBox="0 0 20 20">
                     <path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clip-rule="evenodd"></path>
                 </svg>
                 Export to Excel
             </a>
         </div>
 
-        <div class="overflow-x-auto">
-            <table class="min-w-full divide-y divide-gray-200 border-collapse">
-                <thead class="bg-gray-800 text-white">
+        <div style="overflow-x:auto;">
+            <table class="report-table">
+                <thead>
                     <tr>
-                        <th class="sticky left-0 bg-gray-900 px-4 py-3 text-left text-xs font-bold uppercase z-10">Cust No</th>
-                        <th class="sticky left-[5.5rem] bg-gray-900 px-4 py-3 text-left text-xs font-bold uppercase z-10 border-r border-gray-700">Full Name</th>
+                        <th class="sticky-col sticky-col-1" style="text-align:left;">Cust No</th>
+                        <th class="sticky-col sticky-col-2" style="text-align:left;">Full Name</th>
                         {% for month in months %}
-                        <th class="px-4 py-3 text-center text-xs font-bold uppercase min-w-[100px]">{{ month }}</th>
+                        <th style="text-align:center; min-width:100px;">{{ month }}</th>
                         {% endfor %}
-                        <th class="px-4 py-3 text-right text-xs font-bold uppercase bg-gray-700">Total</th>
+                        <th class="col-total" style="text-align:right;">Total</th>
                     </tr>
                 </thead>
-                <tbody class="divide-y divide-gray-200 text-sm">
+                <tbody>
                     {% for row in report_rows %}
-                    <tr class="hover:bg-blue-50 transition-colors">
-                        <td class="sticky left-0 bg-white px-4 py-3 font-mono font-bold text-gray-600">{{ row.cust_no }}</td>
-                        <td class="sticky left-[5.5rem] bg-white px-4 py-3 font-medium text-gray-900 border-r border-gray-100 whitespace-nowrap">{{ row.full_name }}</td>
-                        
+                    <tr>
+                        <td class="sticky-col sticky-col-1 cell-mono">{{ row.cust_no }}</td>
+                        <td class="sticky-col sticky-col-2 cell-name" style="border-right:1px solid var(--d365-border,#EDEBE9);">{{ row.full_name }}</td>
                         {% for val in row.monthly_values %}
-                        <td class="px-4 py-3 text-center {% if val == 0 %}text-gray-300{% else %}text-gray-700 font-semibold{% endif %}">
+                        <td style="text-align:center;" class="{% if val == 0 %}cell-zero{% else %}cell-value{% endif %}">
                             {{ val|intcomma }}
                         </td>
                         {% endfor %}
-                        
-                        <td class="px-4 py-3 text-right font-black bg-gray-50 text-blue-700">
-                            {{ row.row_total|intcomma }}
-                        </td>
+                        <td class="cell-total">{{ row.row_total|intcomma }}</td>
                     </tr>
                     {% empty %}
                     <tr>
-                        <td colspan="{{ months|length|add:3 }}" class="p-10 text-center text-gray-400 italic">No savings data found for the selected criteria.</td>
+                        <td colspan="{{ months|length|add:3 }}" class="empty-msg">No savings data found for the selected criteria.</td>
                     </tr>
                     {% endfor %}
                 </tbody>
@@ -85,33 +122,30 @@
         </div>
 
         {% if page_obj and page_obj.has_other_pages %}
-        <div class="p-4 bg-gray-50 border-t border-gray-200 flex items-center justify-between">
-            <div class="text-xs text-gray-500 font-medium">
+        <div class="pager">
+            <div class="pager-info">
                 Showing rows {{ page_obj.start_index }} to {{ page_obj.end_index }} of {{ page_obj.paginator.count|intcomma }} members
             </div>
-            <div class="inline-flex space-x-1 shadow-sm rounded-lg overflow-hidden text-xs">
+            <div class="pager-buttons">
                 {% if page_obj.has_previous %}
-                    <a href="?saving_type={{ saving_type }}&start_date={{ start_date }}&end_date={{ end_date }}&page=1" class="px-3 py-2 bg-white text-gray-700 hover:bg-gray-100 border border-gray-300 font-bold">« First</a>
-                    <a href="?saving_type={{ saving_type }}&start_date={{ start_date }}&end_date={{ end_date }}&page={{ page_obj.previous_page_number }}" class="px-3 py-2 bg-white text-gray-700 hover:bg-gray-100 border-t border-b border-r border-gray-300 font-bold">‹ Previous</a>
+                    <a href="?saving_type={{ saving_type }}&start_date={{ start_date }}&end_date={{ end_date }}&page=1">&laquo; First</a>
+                    <a href="?saving_type={{ saving_type }}&start_date={{ start_date }}&end_date={{ end_date }}&page={{ page_obj.previous_page_number }}">&lsaquo; Previous</a>
                 {% else %}
-                    <span class="px-3 py-2 bg-gray-100 text-gray-400 border border-gray-300 cursor-not-allowed font-bold">« First</span>
-                    <span class="px-3 py-2 bg-gray-100 text-gray-400 border-t border-b border-r border-gray-300 cursor-not-allowed font-bold">‹ Previous</span>
+                    <span class="disabled">&laquo; First</span>
+                    <span class="disabled">&lsaquo; Previous</span>
                 {% endif %}
-
-                <span class="px-4 py-2 bg-blue-600 text-white border-t border-b border-gray-300 font-bold">
-                    Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
-                </span>
-
+                <span class="current">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
                 {% if page_obj.has_next %}
-                    <a href="?saving_type={{ saving_type }}&start_date={{ start_date }}&end_date={{ end_date }}&page={{ page_obj.next_page_number }}" class="px-3 py-2 bg-white text-gray-700 hover:bg-gray-100 border-t border-b border-l border-gray-300 font-bold">Next ›</a>
-                    <a href="?saving_type={{ saving_type }}&start_date={{ start_date }}&end_date={{ end_date }}&page={{ page_obj.paginator.num_pages }}" class="px-3 py-2 bg-white text-gray-700 hover:bg-gray-100 border border-gray-300 font-bold">Last »</a>
+                    <a href="?saving_type={{ saving_type }}&start_date={{ start_date }}&end_date={{ end_date }}&page={{ page_obj.next_page_number }}">Next &rsaquo;</a>
+                    <a href="?saving_type={{ saving_type }}&start_date={{ start_date }}&end_date={{ end_date }}&page={{ page_obj.paginator.num_pages }}">Last &raquo;</a>
                 {% else %}
-                    <span class="px-3 py-2 bg-gray-100 text-gray-400 border-t border-b border-l border-gray-300 cursor-not-allowed font-bold">Next ›</span>
-                    <span class="px-3 py-2 bg-gray-100 text-gray-400 border border-gray-300 cursor-not-allowed font-bold">Last »</span>
+                    <span class="disabled">Next &rsaquo;</span>
+                    <span class="disabled">Last &raquo;</span>
                 {% endif %}
             </div>
         </div>
         {% endif %}
+
     </div>
 </div>
 {% endblock %}

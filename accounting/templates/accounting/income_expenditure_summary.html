@@ -3,90 +3,118 @@
 {% include 'accounting/includes/accounting_quick_actions.html' %}
 {% load humanize %}
 
-<div class="container my-5">
-  
-    <h2 class="text-2xl font-bold mb-4">Income & Expenditure Summary</h2>
-    <p>Enter dates to filter Report, Leave blank to fetch all</p>
+{% block extra_css %}
+<style>
+.ie-report h2 { font-size: 1.35rem; font-weight: 700; color: var(--d365-text, #323130); margin-bottom: .75rem; }
+.ie-report .help-text { color: var(--d365-text-secondary, #605E5C); font-size: .85rem; margin-bottom: 1rem; }
+.ie-filter { margin-bottom: 1.5rem; display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; }
+.ie-filter label { font-size: .85rem; font-weight: 600; color: var(--d365-text, #323130); }
+.ie-filter input[type="date"] { border: 1px solid var(--d365-border-strong, #D2D0CE); padding: .4rem .6rem; border-radius: .4rem; font-size: .85rem; }
+.ie-filter input[type="date"]:focus { border-color: var(--d365-primary, #0078D4); box-shadow: 0 0 0 2px var(--d365-primary-tint-40, #DEECF9); outline: none; }
+.btn-filter { background: #198754; color: #fff; padding: .4rem 1rem; border: none; border-radius: .4rem; font-size: .85rem; font-weight: 600; cursor: pointer; transition: background .15s; }
+.btn-filter:hover { background: #146c43; }
+.ie-section { font-size: 1.05rem; font-weight: 700; color: var(--d365-text, #323130); margin-top: 1.5rem; margin-bottom: .5rem; }
+.ie-table { width: 100%; border-collapse: collapse; border: 1px solid var(--d365-border, #EDEBE9); margin-bottom: 1rem; }
+.ie-table thead tr { background: var(--d365-surface-alt, #FAF9F8); }
+.ie-table th { padding: .55rem .75rem; font-size: .78rem; font-weight: 700; text-transform: uppercase; letter-spacing: .03em; color: var(--d365-text-secondary, #605E5C); border: 1px solid var(--d365-border, #EDEBE9); }
+.ie-table td { padding: .5rem .75rem; font-size: .84rem; color: var(--d365-text, #323130); border: 1px solid var(--d365-border, #EDEBE9); }
+.ie-table tbody tr:hover { background: var(--d365-primary-tint-40, #DEECF9); }
+.ie-table .total-row { font-weight: 700; background: var(--d365-surface-alt, #FAF9F8); }
+.net-balance { font-size: 1.05rem; font-weight: 700; margin-top: 1.5rem; color: var(--d365-text, #323130); }
+.net-positive { color: #198754; }
+.net-negative { color: #dc3545; }
+.export-bar { margin-top: 1.5rem; display: flex; gap: .75rem; flex-wrap: wrap; }
+.btn-export { display: inline-block; padding: .45rem 1rem; border-radius: .4rem; font-size: .85rem; font-weight: 600; text-decoration: none; color: #fff; transition: background .15s; border: none; cursor: pointer; }
+.btn-export-excel { background: var(--d365-primary, #0078D4); }
+.btn-export-excel:hover { background: var(--d365-primary-hover, #106EBE); color: #fff; }
+.btn-export-pdf { background: #dc3545; }
+.btn-export-pdf:hover { background: #bb2d3b; color: #fff; }
+</style>
+{% endblock %}
 
-    <!-- Filter Form -->
-    <form method="GET" class="mb-6">
+<div class="container my-4 ie-report">
+
+    <h2>Income & Expenditure Summary</h2>
+    <p class="help-text">Enter dates to filter Report, Leave blank to fetch all</p>
+
+    <form method="GET" class="ie-filter">
         <label>Start Date:</label>
-        <input type="date" name="start_date" value="{{ start_date }}" class="border p-2 rounded">
+        <input type="date" name="start_date" value="{{ start_date }}">
         <label>End Date:</label>
-        <input type="date" name="end_date" value="{{ end_date }}" class="border p-2 rounded">
-        <button type="submit" name="filter" value="true" class="bg-green-500 text-white px-4 py-2 rounded">Filter</button>
+        <input type="date" name="end_date" value="{{ end_date }}">
+        <button type="submit" name="filter" value="true" class="btn-filter">Filter</button>
     </form>
 
     <!-- Income Summary -->
-    <h3 class="mt-6 text-lg font-bold">Income Summary</h3>
-    <table class="table-auto w-full border-collapse border border-gray-300">
+    <h3 class="ie-section">Income Summary</h3>
+    <table class="ie-table">
         <thead>
-            <tr class="bg-gray-200">
-                <th class="border px-4 py-2">Account Code</th>
-                <th class="border px-4 py-2">Account Name</th>
-                <th class="border px-4 py-2">Total Amount (KES)</th>
+            <tr>
+                <th>Account Code</th>
+                <th>Account Name</th>
+                <th style="text-align:right;">Total Amount (KES)</th>
             </tr>
         </thead>
         <tbody>
             {% for income in income_summary %}
             <tr>
-                <td class="border px-4 py-2">{{ income.sacco_account__account_code }}</td>
-                <td class="border px-4 py-2">{{ income.sacco_account__account_name }}</td>
-                <td class="border px-4 py-2 text-right">{{ income.total_amount|floatformat:2|intcomma }}</td>
+                <td>{{ income.sacco_account__account_code }}</td>
+                <td>{{ income.sacco_account__account_name }}</td>
+                <td style="text-align:right;">{{ income.total_amount|floatformat:2|intcomma }}</td>
             </tr>
             {% empty %}
             <tr>
-                <td colspan="3" class="text-center py-2">No income records found.</td>
+                <td colspan="3" style="text-align:center; padding:1rem; color:#999;">No income records found.</td>
             </tr>
             {% endfor %}
-            <tr class="font-bold bg-gray-100">
-                <td colspan="2" class="border px-4 py-2">TOTAL</td>
-                <td class="border px-4 py-2 text-right">{{ total_income|floatformat:2|intcomma }}</td>
+            <tr class="total-row">
+                <td colspan="2">TOTAL</td>
+                <td style="text-align:right;">{{ total_income|floatformat:2|intcomma }}</td>
             </tr>
         </tbody>
     </table>
 
     <!-- Expense Summary -->
-    <h3 class="mt-6 text-lg font-bold">Expense Summary</h3>
-    <table class="table-auto w-full border-collapse border border-gray-300">
+    <h3 class="ie-section">Expense Summary</h3>
+    <table class="ie-table">
         <thead>
-            <tr class="bg-gray-200">
-                <th class="border px-4 py-2">Account Code</th>
-                <th class="border px-4 py-2">Account Name</th>
-                <th class="border px-4 py-2">Total Amount (KES)</th>
+            <tr>
+                <th>Account Code</th>
+                <th>Account Name</th>
+                <th style="text-align:right;">Total Amount (KES)</th>
             </tr>
         </thead>
         <tbody>
             {% for expense in expense_summary %}
             <tr>
-                <td class="border px-4 py-2">{{ expense.sacco_account__account_code }}</td>
-                <td class="border px-4 py-2">{{ expense.sacco_account__account_name }}</td>
-                <td class="border px-4 py-2 text-right">{{ expense.total_amount|floatformat:2|intcomma }}</td>
+                <td>{{ expense.sacco_account__account_code }}</td>
+                <td>{{ expense.sacco_account__account_name }}</td>
+                <td style="text-align:right;">{{ expense.total_amount|floatformat:2|intcomma }}</td>
             </tr>
             {% empty %}
             <tr>
-                <td colspan="3" class="text-center py-2">No expense records found.</td>
+                <td colspan="3" style="text-align:center; padding:1rem; color:#999;">No expense records found.</td>
             </tr>
             {% endfor %}
-            <tr class="font-bold bg-gray-100">
-                <td colspan="2" class="border px-4 py-2">TOTAL</td>
-                <td class="border px-4 py-2 text-right">{{ total_expense|floatformat:2|intcomma }}</td>
+            <tr class="total-row">
+                <td colspan="2">TOTAL</td>
+                <td style="text-align:right;">{{ total_expense|floatformat:2|intcomma }}</td>
             </tr>
         </tbody>
     </table>
 
     <!-- Net Balance -->
-    <h3 class="mt-6 text-lg font-bold">
-        Net Balance: 
-        <span class="{% if net_balance >= 0 %}text-green-600{% else %}text-red-600{% endif %}">
+    <h3 class="net-balance">
+        Net Balance:
+        <span class="{% if net_balance >= 0 %}net-positive{% else %}net-negative{% endif %}">
             {{ net_balance|floatformat:2|intcomma }} KES
         </span>
     </h3>
 
     <!-- Export Buttons -->
-    <div class="mt-6 flex space-x-4">
-        <a href="{% url 'accounting:download_income_expenditure_summary_excel' %}" class="bg-blue-500 text-white px-4 py-2 rounded">Download Excel</a>
-        <a href="{% url 'accounting:download_income_expenditure_summary_pdf' %}" class="bg-red-500 text-white px-4 py-2 rounded">Download PDF</a>
+    <div class="export-bar">
+        <a href="{% url 'accounting:download_income_expenditure_summary_excel' %}" class="btn-export btn-export-excel">Download Excel</a>
+        <a href="{% url 'accounting:download_income_expenditure_summary_pdf' %}" class="btn-export btn-export-pdf">Download PDF</a>
     </div>
 </div>
 
