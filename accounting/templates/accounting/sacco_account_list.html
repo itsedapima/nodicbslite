@@ -57,6 +57,7 @@
                     <th>Code</th>
                     <th>Account Name</th>
                     <th>Group</th>
+                    <th class="text-center">Flags</th>
                     <th class="text-end">Balance</th>
                     <th class="text-center">Actions</th>
                 </tr>
@@ -74,6 +75,17 @@
                         <span class="badge {% if account.account_group == 'Income' %}bg-success-subtle text-success{% elif account.account_group == 'Expenditure' %}bg-warning-subtle text-warning{% else %}bg-info-subtle text-info{% endif %}">
                             {{ account.account_group }}
                         </span>
+                    </td>
+                    <td class="text-center">
+                        {% if account.is_cash_account %}
+                            <span class="badge bg-success-subtle text-success" title="Cash/Bank Account"><i class="bi bi-cash-stack"></i></span>
+                        {% endif %}
+                        {% if account.show_on_admin_app %}
+                            <span class="badge bg-primary-subtle text-primary" title="Visible on Admin App"><i class="bi bi-phone"></i></span>
+                        {% endif %}
+                        {% if not account.is_cash_account and not account.show_on_admin_app %}
+                            <span class="text-muted" style="font-size:.75rem;">&mdash;</span>
+                        {% endif %}
                     </td>
                     <td class="text-end fw-bold">
                         {{ account.balance.balance|default:"0.00"|intcomma }}
@@ -94,7 +106,7 @@
                 </tr>
                 {% empty %}
                 <tr>
-                    <td colspan="5" class="text-center text-muted py-4">No records found.</td>
+                    <td colspan="6" class="text-center text-muted py-4">No records found.</td>
                 </tr>
                 {% endfor %}
             </tbody>

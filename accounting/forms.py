@@ -5,7 +5,24 @@ from django.utils import timezone
 class SaccoAccountForm(forms.ModelForm):
     class Meta:
         model = SaccoAccount
-        fields = ['account_code', 'account_name', 'account_group']
+        fields = ['account_code', 'account_name', 'account_group',
+                  'is_cash_account', 'show_on_admin_app']
+        widgets = {
+            'is_cash_account': forms.CheckboxInput(attrs={
+                'class': 'form-check-input', 'role': 'switch',
+            }),
+            'show_on_admin_app': forms.CheckboxInput(attrs={
+                'class': 'form-check-input', 'role': 'switch',
+            }),
+        }
+        labels = {
+            'is_cash_account': 'Cash / Bank Account',
+            'show_on_admin_app': 'Show on Admin App',
+        }
+        help_texts = {
+            'is_cash_account': 'Enable for cash-book tracking (bank, petty cash, M-Pesa).',
+            'show_on_admin_app': 'Make this account available for data entry in the mobile admin app.',
+        }
 
 
 

@@ -1,32 +1,143 @@
 {% extends "base.html" %}
+{% block title %}Edit User — {{ brand_name|default:"NODi Lite" }}{% endblock %}
+
+{% block extra_css %}
+<style>
+.edit-card {
+  background: var(--d365-surface, #fff);
+  border: 1px solid var(--d365-border, #EDEBE9);
+  border-radius: .5rem;
+  box-shadow: var(--d365-shadow-2, 0 1px 3px rgba(0,0,0,.08));
+  overflow: hidden;
+}
+.edit-card-head {
+  background: var(--d365-surface-alt, #FAF9F8);
+  border-bottom: 2px solid var(--d365-border, #EDEBE9);
+  padding: .75rem 1.25rem;
+}
+.edit-card-head h6 {
+  font-size: .8rem; font-weight: 700; text-transform: uppercase;
+  letter-spacing: .04em; color: var(--d365-text-secondary, #605E5C); margin: 0;
+}
+.flag-card {
+  background: var(--d365-surface-alt, #FAF9F8);
+  border: 1px solid var(--d365-border, #EDEBE9);
+  border-radius: .5rem;
+  padding: 1rem 1.25rem;
+}
+.flag-row {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: .6rem 0;
+}
+.flag-row + .flag-row { border-top: 1px solid var(--d365-border, #EDEBE9); }
+.flag-label { font-weight: 600; font-size: .85rem; color: var(--d365-text, #323130); }
+.flag-help { font-size: .75rem; color: var(--d365-text-secondary, #605E5C); margin-top: .15rem; }
+</style>
+{% endblock %}
+
 {% block content %}
-  {% include 'administration/includes/administration_quick_actions.html' %}
-<div class="container my-5">
+{% include 'administration/includes/administration_quick_actions.html' %}
 
-
-    <!-- Message display section -->
-    {% if messages %}
-    <div class="container mt-4">
-        {% for message in messages %}
-            <div class="alert {% if message.tags %}alert-{{ message.tags }}{% else %}alert-info{% endif %}" role="alert">
-                {{ message }}
-                <button type="button" class="close" data-dismiss="alert" aria-label="Close">
-                    <span aria-hidden="true">&times;</span>
-                </button>
-            </div>
-        {% endfor %}
+<div class="container-fluid px-4 py-4">
+  {% if messages %}
+  <div class="row justify-content-center">
+    <div class="col-lg-8">
+      {% for message in messages %}
+        <div class="alert alert-{{ message.tags|default:'info' }} alert-dismissible fade show" role="alert" style="border-radius:.4rem;">
+          {{ message }}
+          <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+      {% endfor %}
     </div>
-    {% endif %}
-    
-    <h2 class="text-2xl font-bold mb-4">Edit User</h2>
-    <p class="text-gray-600 mb-4">Update the user's details below.</p>
-    
-    <form method="POST" class="bg-gray-200 shadow-md rounded px-8 pt-6 pb-8 mb-4">
+  </div>
+  {% endif %}
+
+  <div class="row justify-content-center">
+    <div class="col-lg-8">
+
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <div>
+          <h5 class="mb-0" style="font-weight:700; color:var(--d365-text);">
+            <i class="bi bi-person-gear me-2"></i>Edit User
+          </h5>
+          <p class="mb-0" style="font-size:.84rem; color:var(--d365-text-secondary);">
+            {{ user.username }} &mdash; {{ user.first_name }} {{ user.last_name }}
+          </p>
+        </div>
+        <a href="{% url 'accounts:view_users' %}" class="btn btn-outline-secondary btn-sm">
+          <i class="bi bi-arrow-left me-1"></i> Back
+        </a>
+      </div>
+
+      <form method="POST">
         {% csrf_token %}
-        {{ form.as_p }}
-        <button type="submit" class="btn btn-success bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded">
-            Update User
-        </button>
-    </form>
+
+        <!-- Profile Fields -->
+        <div class="edit-card mb-3">
+          <div class="edit-card-head"><h6>Profile Details</h6></div>
+          <div class="p-4">
+            <div class="row g-3">
+              {% for field in form %}
+                {% if field.name != 'is_active' and field.name != 'is_allowed_to_create_records' %}
+                <div class="{% if field.name == 'email' %}col-12{% else %}col-md-6{% endif %}">
+                  <label for="{{ field.id_for_label }}" class="form-label" style="font-weight:600; font-size:.82rem; color:var(--d365-text);">
+                    {{ field.label }}
+                    {% if field.field.required %}<span class="text-danger">*</span>{% endif %}
+                  </label>
+                  {{ field }}
+                  {% if field.errors %}
+                    {% for error in field.errors %}
+                      <div class="text-danger" style="font-size:.75rem; margin-top:.25rem;">{{ error }}</div>
+                    {% endfor %}
+                  {% endif %}
+                </div>
+                {% endif %}
+              {% endfor %}
+            </div>
+          </div>
+        </div>
+
+        <!-- Flags & Permissions -->
+        <div class="edit-card mb-3">
+          <div class="edit-card-head"><h6>Permissions &amp; Flags</h6></div>
+          <div class="p-4">
+            <div class="flag-card">
+
+              <!-- is_active toggle -->
+              <div class="flag-row">
+                <div>
+                  <div class="flag-label">Account Active</div>
+                  <div class="flag-help">Deactivated users cannot log in to the system.</div>
+                </div>
+                <div class="form-check form-switch mb-0">
+                  {{ form.is_active }}
+                </div>
+              </div>
+
+              <!-- is_allowed_to_create_records toggle -->
+              <div class="flag-row">
+                <div>
+                  <div class="flag-label">{{ form.is_allowed_to_create_records.label }}</div>
+                  <div class="flag-help">{{ form.is_allowed_to_create_records.help_text }}</div>
+                </div>
+                <div class="form-check form-switch mb-0">
+                  {{ form.is_allowed_to_create_records }}
+                </div>
+              </div>
+
+            </div>
+          </div>
+        </div>
+
+        <div class="d-flex justify-content-end gap-2">
+          <a href="{% url 'accounts:view_users' %}" class="btn btn-outline-secondary">Cancel</a>
+          <button type="submit" style="background:var(--d365-primary,#0078D4); color:#fff; border:1px solid var(--d365-primary,#0078D4); border-radius:.4rem; font-weight:600; padding:.45rem 1.5rem; font-size:.85rem;">
+            <i class="bi bi-check-lg me-1"></i> Save Changes
+          </button>
+        </div>
+      </form>
+
+    </div>
+  </div>
 </div>
 {% endblock %}

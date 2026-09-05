@@ -59,7 +59,14 @@ class AdminCustomUserCreationForm(forms.ModelForm):
 class CustomUserEditForm(forms.ModelForm):
     class Meta:
         model = CustomUser
-        fields = ['email', 'first_name', 'last_name', 'phone', 'role', 'is_active']
+        fields = ['email', 'first_name', 'last_name', 'phone', 'role',
+                  'is_active', 'is_allowed_to_create_records']
+        labels = {
+            'is_allowed_to_create_records': 'Can Create Records',
+        }
+        help_texts = {
+            'is_allowed_to_create_records': 'If off, user can only view data on the admin mobile app (read-only).',
+        }
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)

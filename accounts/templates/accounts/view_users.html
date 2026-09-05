@@ -50,6 +50,7 @@
                         <th>Phone</th>
                         <th>Role</th>
                         <th>Status</th>
+                        <th class="text-center">Can Create</th>
                         <th class="text-end">Actions</th>
                     </tr>
                 </thead>
@@ -74,6 +75,13 @@
                                 <span class="status-dot blocked">Blocked</span>
                             {% endif %}
                         </td>
+                        <td class="text-center">
+                            {% if u.is_allowed_to_create_records %}
+                                <span class="badge bg-success-subtle text-success"><i class="bi bi-check-lg"></i> Yes</span>
+                            {% else %}
+                                <span class="badge bg-secondary-subtle text-secondary"><i class="bi bi-eye"></i> View only</span>
+                            {% endif %}
+                        </td>
                         <td class="text-end">
                             <a href="{% url 'accounts:edit_user' u.id %}" class="btn btn-outline-primary btn-sm">
                                 <i class="bi bi-pencil"></i> Edit
@@ -82,7 +90,7 @@
                     </tr>
                     {% empty %}
                     <tr>
-                        <td colspan="7" class="text-center text-secondary py-4">
+                        <td colspan="8" class="text-center text-secondary py-4">
                             <i class="bi bi-inbox" style="font-size:1.5rem;"></i><br>
                             No users found{% if query %} for "{{ query }}"{% endif %}.
                         </td>

@@ -1,5 +1,23 @@
 {% extends 'base.html' %}
 
+{% block extra_css %}
+<style>
+.flag-card {
+  background: var(--d365-surface-alt, #FAF9F8);
+  border: 1px solid var(--d365-border, #EDEBE9);
+  border-radius: .5rem;
+  padding: 1rem 1.25rem;
+}
+.flag-row {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: .6rem 0;
+}
+.flag-row + .flag-row { border-top: 1px solid var(--d365-border, #EDEBE9); }
+.flag-label { font-weight: 600; font-size: .85rem; color: var(--d365-text, #323130); }
+.flag-help  { font-size: .75rem; color: var(--d365-text-secondary, #605E5C); margin-top: .15rem; }
+</style>
+{% endblock %}
+
 {% block content %}
 {% include 'accounting/includes/accounting_quick_actions.html' %}
 <div class="container-fluid px-4 py-4">
@@ -22,37 +40,47 @@
 
       <div class="d-flex justify-content-between align-items-center mb-3">
         <h5 class="mb-0" style="font-weight: 700; color: var(--d365-text);">
+          <i class="bi bi-safe me-2"></i>
           {% if form.instance.pk %}Edit Sacco Account{% else %}Add New Sacco Account{% endif %}
         </h5>
-        <span style="font-size: .75rem; color: var(--d365-text-secondary); font-family: monospace;">Ledger Context File</span>
+        <a href="{% url 'accounting:sacco_account_list' %}" class="btn btn-outline-secondary btn-sm">
+          <i class="bi bi-arrow-left me-1"></i> Back
+        </a>
       </div>
 
-      <div style="background: var(--d365-surface); border: 1px solid var(--d365-border); border-radius: .5rem; box-shadow: var(--d365-shadow-2);">
-        <div style="background: var(--d365-surface-alt); border-bottom: 2px solid var(--d365-border); padding: .75rem 1.25rem; border-radius: .5rem .5rem 0 0;">
-          <span style="font-size: .8rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--d365-text-secondary);">
-            Account Details
-          </span>
-        </div>
-        <div class="p-4">
-          <form method="post">
-            {% csrf_token %}
+      <form method="post">
+        {% csrf_token %}
 
+        <!-- Core fields card -->
+        <div style="background: var(--d365-surface); border: 1px solid var(--d365-border); border-radius: .5rem; box-shadow: var(--d365-shadow-2); overflow: hidden; margin-bottom: 1rem;">
+          <div style="background: var(--d365-surface-alt); border-bottom: 2px solid var(--d365-border); padding: .75rem 1.25rem; border-radius: .5rem .5rem 0 0;">
+            <span style="font-size: .8rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--d365-text-secondary);">
+              Account Details
+            </span>
+          </div>
+          <div class="p-4">
             <div class="row g-3">
               {% for field in form %}
+                {% if field.name != 'is_cash_account' and field.name != 'show_on_admin_app' %}
                 <div class="{% if field.name == 'account_name' %}col-12{% else %}col-md-6{% endif %}">
                   <label for="{{ field.id_for_label }}" style="font-weight: 600; font-size: .82rem; color: var(--d365-text);" class="form-label">
                     {{ field.label }}
                     {% if field.field.required %}<span class="text-danger">*</span>{% endif %}
                   </label>
 
-                  {% if field.field.widget.input_type == 'select' or field.name == 'account_group' %}
+                  {% if field.name == 'account_group' %}
                     <select name="{{ field.name }}" id="{{ field.id_for_label }}" class="form-select form-select-sm">
                       {% for choice in field.field.choices %}
                         <option value="{{ choice.0 }}" {% if choice.0 == field.value %}selected{% endif %}>{{ choice.1 }}</option>
                       {% endfor %}
                     </select>
                   {% else %}
-                    <input type="{{ field.field.widget.input_type|default:'text' }}" name="{{ field.name }}" id="{{ field.id_for_label }}" value="{{ field.value|default:'' }}" class="form-control form-control-sm" placeholder="Enter {{ field.label|lower }}...">
+                    <input type="{{ field.field.widget.input_type|default:'text' }}"
+                           name="{{ field.name }}"
+                           id="{{ field.id_for_label }}"
+                           value="{{ field.value|default:'' }}"
+                           class="form-control form-control-sm"
+                           placeholder="Enter {{ field.label|lower }}...">
                   {% endif %}
 
                   {% if field.errors %}
@@ -61,19 +89,59 @@
                     {% endfor %}
                   {% endif %}
                 </div>
+                {% endif %}
               {% endfor %}
             </div>
-
-            <hr class="my-4" style="border-color: var(--d365-border);">
-
-            <div class="d-flex justify-content-end">
-              <button type="submit" style="background: var(--d365-primary); color: #fff; border: 1px solid var(--d365-primary); border-radius: .4rem; font-weight: 600; padding: .45rem 1.5rem; font-size: .85rem;">
-                Save Account
-              </button>
-            </div>
-          </form>
+          </div>
         </div>
-      </div>
+
+        <!-- Flags card -->
+        <div style="background: var(--d365-surface); border: 1px solid var(--d365-border); border-radius: .5rem; box-shadow: var(--d365-shadow-2); overflow: hidden; margin-bottom: 1rem;">
+          <div style="background: var(--d365-surface-alt); border-bottom: 2px solid var(--d365-border); padding: .75rem 1.25rem; border-radius: .5rem .5rem 0 0;">
+            <span style="font-size: .8rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--d365-text-secondary);">
+              Account Flags
+            </span>
+          </div>
+          <div class="p-4">
+            <div class="flag-card">
+
+              <div class="flag-row">
+                <div>
+                  <div class="flag-label">
+                    <i class="bi bi-cash-stack me-1 text-success"></i>
+                    {{ form.is_cash_account.label }}
+                  </div>
+                  <div class="flag-help">{{ form.is_cash_account.help_text }}</div>
+                </div>
+                <div class="form-check form-switch mb-0">
+                  {{ form.is_cash_account }}
+                </div>
+              </div>
+
+              <div class="flag-row">
+                <div>
+                  <div class="flag-label">
+                    <i class="bi bi-phone me-1 text-primary"></i>
+                    {{ form.show_on_admin_app.label }}
+                  </div>
+                  <div class="flag-help">{{ form.show_on_admin_app.help_text }}</div>
+                </div>
+                <div class="form-check form-switch mb-0">
+                  {{ form.show_on_admin_app }}
+                </div>
+              </div>
+
+            </div>
+          </div>
+        </div>
+
+        <div class="d-flex justify-content-end gap-2">
+          <a href="{% url 'accounting:sacco_account_list' %}" class="btn btn-outline-secondary">Cancel</a>
+          <button type="submit" style="background: var(--d365-primary); color: #fff; border: 1px solid var(--d365-primary); border-radius: .4rem; font-weight: 600; padding: .45rem 1.5rem; font-size: .85rem;">
+            <i class="bi bi-check-lg me-1"></i> Save Account
+          </button>
+        </div>
+      </form>
 
     </div>
   </div>
