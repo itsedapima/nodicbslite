@@ -125,10 +125,25 @@
         function openDrawer()  { drawer.classList.add('open');    drawer.setAttribute('aria-hidden', 'false'); }
         function shutDrawer()  { drawer.classList.remove('open'); drawer.setAttribute('aria-hidden', 'true'); }
 
+        // Strip Bootstrap dropdown attributes from the mobile drawer so
+        // submenus stay visible and toggles act as passive section headers.
+        if (drawer) {
+            drawer.querySelectorAll('[data-bs-toggle="dropdown"]').forEach(function (el) {
+                el.removeAttribute('data-bs-toggle');
+                el.removeAttribute('aria-expanded');
+                el.removeAttribute('aria-haspopup');
+            });
+        }
+
         if (hamburger) hamburger.addEventListener('click', function (e) { e.stopPropagation(); openDrawer(); });
         if (closeDrawer) closeDrawer.addEventListener('click', shutDrawer);
         document.addEventListener('click', function (e) {
             if (!drawer || !drawer.classList.contains('open')) return;
+            // Close drawer when clicking a nav item inside it
+            if (drawer.contains(e.target) && e.target.closest('.dropdown-item')) {
+                shutDrawer();
+                return;
+            }
             if (!drawer.contains(e.target) && e.target !== hamburger && !hamburger.contains(e.target)) {
                 shutDrawer();
             }

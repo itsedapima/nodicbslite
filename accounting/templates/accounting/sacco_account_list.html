@@ -58,7 +58,6 @@
                     <th>Account Name</th>
                     <th>Group</th>
                     <th class="text-center">Flags</th>
-                    <th class="text-end">Balance</th>
                     <th class="text-center">Actions</th>
                 </tr>
             </thead>
@@ -87,9 +86,6 @@
                             <span class="text-muted" style="font-size:.75rem;">&mdash;</span>
                         {% endif %}
                     </td>
-                    <td class="text-end fw-bold">
-                        {{ account.balance.balance|default:"0.00"|intcomma }}
-                    </td>
                     <td class="text-center">
                         <div class="d-inline-flex gap-1">
                             <a href="{% url 'accounting:sacco_account_update' account.id %}" class="action-icon" title="Edit">
@@ -106,7 +102,7 @@
                 </tr>
                 {% empty %}
                 <tr>
-                    <td colspan="6" class="text-center text-muted py-4">No records found.</td>
+                    <td colspan="5" class="text-center text-muted py-4">No records found.</td>
                 </tr>
                 {% endfor %}
             </tbody>
