@@ -14,6 +14,10 @@ class SaccoAccount(models.Model):
         default=False,
         help_text="Mark if this is a cash/bank account for cash book tracking",
     )
+    show_on_admin_app = models.BooleanField(
+        default=True,
+        help_text="If True, this GL account appears in admin mobile app journal voucher selectors.",
+    )
     created_by = models.ForeignKey(CustomUser, on_delete=models.SET_NULL, null=True, related_name='created_sacco_accounts')
     updated_by = models.ForeignKey(CustomUser, on_delete=models.SET_NULL, null=True, related_name='updated_sacco_accounts')
     updated_at = models.DateTimeField(auto_now=True)

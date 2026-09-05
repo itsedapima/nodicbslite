@@ -196,6 +196,12 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
 
     device_id = models.CharField(max_length=64, blank=True, null=True)
 
+    # ── Admin app permission ────────────────────────────────────────────
+    is_allowed_to_create_records = models.BooleanField(
+        default=True,
+        help_text="If False, user can only view data on the admin mobile app (read-only)."
+    )
+
     # ── SECURITY: Brute-force lockout fields ────────────────────────────
     failed_login_attempts = models.PositiveIntegerField(
         default=0,

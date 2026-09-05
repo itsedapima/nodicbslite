@@ -88,6 +88,14 @@ urlpatterns = [
     # -- Sacco GL Accounts -------------------------------------------------
     path('sacco-accounts/', views.sacco_accounts_view),
 
+    # -- Expenses & Incomes ------------------------------------------------
+    path('expenses/', views.expenses_view),
+    path('expenses/download-pdf/', views.expenses_pdf_view),
+    path('expense-accounts/', views.expense_accounts_view),
+    path('incomes/', views.incomes_view),
+    path('incomes/download-pdf/', views.incomes_pdf_view),
+    path('income-accounts/', views.income_accounts_view),
+
     # -- Password Reset OTP ------------------------------------------------
     path('auth/request-otp/', views.request_otp_view),
     path('auth/verify-otp/', views.verify_otp_view),

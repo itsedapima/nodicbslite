@@ -22,7 +22,10 @@ from customers.models import Customer, NextOfKin
 from transactions.models import SavingsTransaction, LoanTransaction, CustomerAccountsSetup
 from loans.models import LoanHistory, Guarantor
 from administration.models import ChamaInfo
-from accounting.models import SaccoAccount, JournalVoucher, JournalVoucherLine
+from accounting.models import (
+    SaccoAccount, JournalVoucher, JournalVoucherLine,
+    SaccoExpense, SaccoIncome,
+)
 
 from .serializers import (
     AdminUserSerializer, AdminLoginSerializer, ChamaInfoSerializer,
@@ -140,6 +143,7 @@ def admin_login_view(request):
         'first_name': user.first_name,
         'last_name': user.last_name,
         'chama_name': _get_chama_name(),
+        'can_create_records': user.is_allowed_to_create_records,
     })
 
 
@@ -2442,7 +2446,9 @@ def sacco_accounts_view(request):
     if gate:
         return gate
 
-    accounts = SaccoAccount.objects.all().order_by('account_code')
+    accounts = SaccoAccount.objects.filter(
+        show_on_admin_app=True
+    ).order_by('account_code')
     data = [{
         'account_code': a.account_code,
         'account_name': a.account_name,
@@ -2450,6 +2456,369 @@ def sacco_accounts_view(request):
     } for a in accounts]
 
     return Response(data)
+
+
+# ════════════════════════════════════════════════════════════════════════════
+# EXPENSES
+# ════════════════════════════════════════════════════════════════════════════
+
+@api_view(['GET', 'POST'])
+@permission_classes([IsAuthenticated])
+def expenses_view(request):
+    """GET  /androidadminapi/expenses/  — list (last 1 year default, filterable)
+       POST /androidadminapi/expenses/  — create a new expense"""
+    gate = _require_official(request.user)
+    if gate:
+        return gate
+
+    if request.method == 'GET':
+        from_date = request.query_params.get(
+            'from_date', (date.today() - timedelta(days=365)).isoformat())
+        to_date = request.query_params.get('to_date', date.today().isoformat())
+
+        expenses = SaccoExpense.objects.filter(
+            expense_date__date__gte=from_date,
+            expense_date__date__lte=to_date,
+        ).select_related('sacco_account').order_by('-expense_date')
+
+        data = [{
+            'id': e.id,
+            'date': localtime(e.expense_date).strftime('%d-%m-%Y') if e.expense_date else '',
+            'account_code': e.sacco_account.account_code if e.sacco_account else '',
+            'account_name': e.sacco_account.account_name if e.sacco_account else '',
+            'description': e.description,
+            'amount': str(e.amount),
+            'reference': e.reference or '',
+            'reconciliation_status': e.reconciliation_status,
+            'created_by': str(e.created_by) if e.created_by else '',
+        } for e in expenses]
+
+        return Response(data)
+
+    # POST — create
+    if not request.user.is_allowed_to_create_records:
+        return Response({'error': 'Your account is read-only.'},
+                        status=status.HTTP_403_FORBIDDEN)
+
+    amount = request.data.get('amount')
+    description = request.data.get('description', '').strip()
+    expense_date_str = request.data.get('date')
+    account_code = request.data.get('account_code', '').strip()
+
+    if not amount or not description:
+        return Response({'error': 'Amount and description are required.'},
+                        status=status.HTTP_400_BAD_REQUEST)
+
+    try:
+        amount = Decimal(amount)
+    except Exception:
+        return Response({'error': 'Invalid amount.'}, status=status.HTTP_400_BAD_REQUEST)
+
+    sacco_account = None
+    if account_code:
+        sacco_account = SaccoAccount.objects.filter(
+            account_code=account_code, account_group='Expenditure').first()
+        if not sacco_account:
+            return Response({'error': f'Expense account {account_code} not found.'},
+                            status=status.HTTP_400_BAD_REQUEST)
+
+    if expense_date_str:
+        try:
+            expense_date = datetime.strptime(expense_date_str, '%Y-%m-%d')
+            expense_date = timezone.make_aware(expense_date) if timezone.is_naive(expense_date) else expense_date
+        except ValueError:
+            return Response({'error': 'Invalid date format. Use YYYY-MM-DD.'},
+                            status=status.HTTP_400_BAD_REQUEST)
+    else:
+        expense_date = timezone.now()
+
+    if not sacco_account:
+        # Default: pick the first Expenditure account
+        sacco_account = SaccoAccount.objects.filter(account_group='Expenditure').first()
+        if not sacco_account:
+            return Response({'error': 'No expenditure accounts configured.'},
+                            status=status.HTTP_400_BAD_REQUEST)
+
+    expense = SaccoExpense.objects.create(
+        amount=amount,
+        description=description,
+        sacco_account=sacco_account,
+        expense_date=expense_date,
+        reference=request.data.get('reference', ''),
+        created_by=request.user,
+    )
+
+    return Response({
+        'message': f'Expense of KES {amount:,.2f} recorded.',
+        'id': expense.id,
+    }, status=status.HTTP_201_CREATED)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def expenses_pdf_view(request):
+    """GET /androidadminapi/expenses/download-pdf/"""
+    gate = _require_official(request.user)
+    if gate:
+        return gate
+
+    from django.http import HttpResponse
+    from io import BytesIO
+    from reportlab.lib.pagesizes import A4
+    from reportlab.lib import colors
+    from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
+    from reportlab.lib.styles import getSampleStyleSheet
+
+    from_date = request.query_params.get(
+        'from_date', (date.today() - timedelta(days=365)).isoformat())
+    to_date = request.query_params.get('to_date', date.today().isoformat())
+
+    expenses = SaccoExpense.objects.filter(
+        expense_date__date__gte=from_date,
+        expense_date__date__lte=to_date,
+    ).select_related('sacco_account').order_by('-expense_date')
+
+    chama = ChamaInfo.objects.first()
+    chama_name = chama.chama_name if chama else 'Chama'
+
+    buf = BytesIO()
+    doc = SimpleDocTemplate(buf, pagesize=A4)
+    styles = getSampleStyleSheet()
+    elements = []
+
+    elements.append(Paragraph(f'{chama_name} — Expenses Report', styles['Title']))
+    elements.append(Paragraph(f'Period: {from_date} to {to_date}', styles['Normal']))
+    elements.append(Spacer(1, 12))
+
+    header = ['Date', 'Account', 'Description', 'Amount (KES)']
+    rows = [header]
+    total = Decimal('0')
+    for e in expenses:
+        rows.append([
+            localtime(e.expense_date).strftime('%d-%m-%Y') if e.expense_date else '',
+            e.sacco_account.account_name if e.sacco_account else '',
+            e.description[:50],
+            f'{e.amount:,.2f}',
+        ])
+        total += e.amount
+
+    rows.append(['', '', 'TOTAL', f'{total:,.2f}'])
+
+    t = Table(rows, repeatRows=1)
+    t.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#6A1B9A')),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+        ('FONTSIZE', (0, 0), (-1, -1), 9),
+        ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+        ('ALIGN', (-1, 0), (-1, -1), 'RIGHT'),
+        ('FONTNAME', (0, -1), (-1, -1), 'Helvetica-Bold'),
+    ]))
+    elements.append(t)
+    doc.build(elements)
+
+    buf.seek(0)
+    response = HttpResponse(buf, content_type='application/pdf')
+    response['Content-Disposition'] = f'attachment; filename="expenses_{from_date}_{to_date}.pdf"'
+    return response
+
+
+# ════════════════════════════════════════════════════════════════════════════
+# INCOMES
+# ════════════════════════════════════════════════════════════════════════════
+
+@api_view(['GET', 'POST'])
+@permission_classes([IsAuthenticated])
+def incomes_view(request):
+    """GET  /androidadminapi/incomes/  — list (last 1 year default, filterable)
+       POST /androidadminapi/incomes/  — create a new income"""
+    gate = _require_official(request.user)
+    if gate:
+        return gate
+
+    if request.method == 'GET':
+        from_date = request.query_params.get(
+            'from_date', (date.today() - timedelta(days=365)).isoformat())
+        to_date = request.query_params.get('to_date', date.today().isoformat())
+
+        incomes = SaccoIncome.objects.filter(
+            income_date__date__gte=from_date,
+            income_date__date__lte=to_date,
+        ).select_related('sacco_account').order_by('-income_date')
+
+        data = [{
+            'id': i.id,
+            'date': localtime(i.income_date).strftime('%d-%m-%Y') if i.income_date else '',
+            'account_code': i.sacco_account.account_code if i.sacco_account else '',
+            'account_name': i.sacco_account.account_name if i.sacco_account else '',
+            'description': i.description,
+            'amount': str(i.amount),
+            'reference': i.reference or '',
+            'reconciliation_status': i.reconciliation_status,
+            'created_by': str(i.created_by) if i.created_by else '',
+        } for i in incomes]
+
+        return Response(data)
+
+    # POST — create
+    if not request.user.is_allowed_to_create_records:
+        return Response({'error': 'Your account is read-only.'},
+                        status=status.HTTP_403_FORBIDDEN)
+
+    amount = request.data.get('amount')
+    description = request.data.get('description', '').strip()
+    income_date_str = request.data.get('date')
+    account_code = request.data.get('account_code', '').strip()
+
+    if not amount or not description:
+        return Response({'error': 'Amount and description are required.'},
+                        status=status.HTTP_400_BAD_REQUEST)
+
+    try:
+        amount = Decimal(amount)
+    except Exception:
+        return Response({'error': 'Invalid amount.'}, status=status.HTTP_400_BAD_REQUEST)
+
+    sacco_account = None
+    if account_code:
+        sacco_account = SaccoAccount.objects.filter(
+            account_code=account_code, account_group='Income').first()
+        if not sacco_account:
+            return Response({'error': f'Income account {account_code} not found.'},
+                            status=status.HTTP_400_BAD_REQUEST)
+
+    if income_date_str:
+        try:
+            income_date = datetime.strptime(income_date_str, '%Y-%m-%d')
+            income_date = timezone.make_aware(income_date) if timezone.is_naive(income_date) else income_date
+        except ValueError:
+            return Response({'error': 'Invalid date format. Use YYYY-MM-DD.'},
+                            status=status.HTTP_400_BAD_REQUEST)
+    else:
+        income_date = timezone.now()
+
+    if not sacco_account:
+        sacco_account = SaccoAccount.objects.filter(account_group='Income').first()
+        if not sacco_account:
+            return Response({'error': 'No income accounts configured.'},
+                            status=status.HTTP_400_BAD_REQUEST)
+
+    income = SaccoIncome.objects.create(
+        amount=amount,
+        description=description,
+        sacco_account=sacco_account,
+        income_date=income_date,
+        reference=request.data.get('reference', ''),
+        created_by=request.user,
+    )
+
+    return Response({
+        'message': f'Income of KES {amount:,.2f} recorded.',
+        'id': income.id,
+    }, status=status.HTTP_201_CREATED)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def incomes_pdf_view(request):
+    """GET /androidadminapi/incomes/download-pdf/"""
+    gate = _require_official(request.user)
+    if gate:
+        return gate
+
+    from django.http import HttpResponse
+    from io import BytesIO
+    from reportlab.lib.pagesizes import A4
+    from reportlab.lib import colors
+    from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
+    from reportlab.lib.styles import getSampleStyleSheet
+
+    from_date = request.query_params.get(
+        'from_date', (date.today() - timedelta(days=365)).isoformat())
+    to_date = request.query_params.get('to_date', date.today().isoformat())
+
+    incomes = SaccoIncome.objects.filter(
+        income_date__date__gte=from_date,
+        income_date__date__lte=to_date,
+    ).select_related('sacco_account').order_by('-income_date')
+
+    chama = ChamaInfo.objects.first()
+    chama_name = chama.chama_name if chama else 'Chama'
+
+    buf = BytesIO()
+    doc = SimpleDocTemplate(buf, pagesize=A4)
+    styles = getSampleStyleSheet()
+    elements = []
+
+    elements.append(Paragraph(f'{chama_name} — Incomes Report', styles['Title']))
+    elements.append(Paragraph(f'Period: {from_date} to {to_date}', styles['Normal']))
+    elements.append(Spacer(1, 12))
+
+    header = ['Date', 'Account', 'Description', 'Amount (KES)']
+    rows = [header]
+    total = Decimal('0')
+    for i in incomes:
+        rows.append([
+            localtime(i.income_date).strftime('%d-%m-%Y') if i.income_date else '',
+            i.sacco_account.account_name if i.sacco_account else '',
+            i.description[:50],
+            f'{i.amount:,.2f}',
+        ])
+        total += i.amount
+
+    rows.append(['', '', 'TOTAL', f'{total:,.2f}'])
+
+    t = Table(rows, repeatRows=1)
+    t.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#2E7D32')),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+        ('FONTSIZE', (0, 0), (-1, -1), 9),
+        ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+        ('ALIGN', (-1, 0), (-1, -1), 'RIGHT'),
+        ('FONTNAME', (0, -1), (-1, -1), 'Helvetica-Bold'),
+    ]))
+    elements.append(t)
+    doc.build(elements)
+
+    buf.seek(0)
+    response = HttpResponse(buf, content_type='application/pdf')
+    response['Content-Disposition'] = f'attachment; filename="incomes_{from_date}_{to_date}.pdf"'
+    return response
+
+
+# ════════════════════════════════════════════════════════════════════════════
+# EXPENSE / INCOME ACCOUNT SELECTORS
+# ════════════════════════════════════════════════════════════════════════════
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def expense_accounts_view(request):
+    """GET /androidadminapi/expense-accounts/ — Expenditure GL accounts"""
+    gate = _require_official(request.user)
+    if gate:
+        return gate
+    accounts = SaccoAccount.objects.filter(
+        account_group='Expenditure'
+    ).order_by('account_code')
+    return Response([{
+        'account_code': a.account_code,
+        'account_name': a.account_name,
+    } for a in accounts])
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def income_accounts_view(request):
+    """GET /androidadminapi/income-accounts/ — Income GL accounts"""
+    gate = _require_official(request.user)
+    if gate:
+        return gate
+    accounts = SaccoAccount.objects.filter(
+        account_group='Income'
+    ).order_by('account_code')
+    return Response([{
+        'account_code': a.account_code,
+        'account_name': a.account_name,
+    } for a in accounts])
 
 
 # ════════════════════════════════════════════════════════════════════════════
