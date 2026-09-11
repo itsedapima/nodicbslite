@@ -29,6 +29,7 @@ class LoanHistory(models.Model):
     loan_period = models.IntegerField()
     interest_rate = models.DecimalField(max_digits=5, decimal_places=2, default=12.0)
     net_disbursed = models.DecimalField(max_digits=12, decimal_places=2)
+    upfront_interest = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     # Bridging / offset loan data — persisted so the appraisal can display
     # offset payoffs without re-querying the approval payload.
     total_offset_amount = models.DecimalField(max_digits=12, decimal_places=2, default=0)

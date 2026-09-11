@@ -539,6 +539,7 @@ class LoanApplicationSerializer(serializers.Serializer):
     repayment_period = serializers.IntegerField(min_value=1)
     interest_rate = serializers.DecimalField(max_digits=5, decimal_places=2, required=False)
     purpose = serializers.CharField(max_length=255, required=False, default='')
+    loan_date = serializers.DateField(required=False)
 
     def validate_amount(self, value):
         try:

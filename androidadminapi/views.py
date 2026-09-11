@@ -1598,15 +1598,19 @@ def loan_application_view(request):
         else:
             installment = amount / period
 
+    # Use submitted loan_date or default to today
+    loan_date_val = data.get('loan_date') or date.today()
+
     loan = LoanHistory(
         customer=customer,
-        loan_date=date.today(),
+        loan_date=loan_date_val,
         principal=amount,
         installment=installment.quantize(Decimal('0.01')),
         loan_type=loan_product,
         loan_period=period,
         interest_rate=interest_rate_pa,
         net_disbursed=Decimal('0'),
+        upfront_interest=upfront_interest.quantize(Decimal('0.01')),
         is_approved=False,
         is_disbursed=False,
         created_by=request.user.username,
@@ -1695,6 +1699,7 @@ def loan_edit_view(request, loan_no):
     rate = interest_rate_pm / Decimal('100')
 
     # Recalculate installment
+    upfront_interest = Decimal('0')
     if calc_method == 'flat_rate':
         upfront_interest = principal * rate * period
         installment = (principal + upfront_interest) / period
@@ -1712,6 +1717,7 @@ def loan_edit_view(request, loan_no):
     loan.loan_period = period
     loan.interest_rate = interest_rate_pa
     loan.installment = installment.quantize(Decimal('0.01'))
+    loan.upfront_interest = upfront_interest.quantize(Decimal('0.01'))
     loan.save()
 
     return Response({
@@ -1995,6 +2001,24 @@ def loan_disburse_approved_view(request, loan_no):
             tr_desc=f'Loan charges deducted at source',
             debit_amount=Decimal('0'),
             credit_amount=total_charges,
+            created_by=request.user.username,
+        )
+
+    # Record upfront interest for flat-rate / principal-flat-rate loans
+    stored_upfront = getattr(loan, 'upfront_interest', Decimal('0')) or Decimal('0')
+    if stored_upfront > 0:
+        ui_ref = _generate_tr_ref('UPI')
+        LoanTransaction.objects.create(
+            cust_no=loan.customer.cust_no,
+            loan_id=loan.id,
+            loan_no=loan.loan_no,
+            loan_type=loan_type_code,
+            account_code=account_code,
+            tr_date=tr_date_val,
+            tr_ref=ui_ref,
+            tr_desc='Upfront interest charged (flat rate)',
+            debit_amount=stored_upfront,
+            credit_amount=Decimal('0'),
             created_by=request.user.username,
         )
 
